@@ -1,8 +1,8 @@
 # 01 · 项目根本目的概要
 
-> **状态**：v0.1（设计基线已锁定，实现未开始）
 > **更新规则**：本文档是 Meowth 的「为什么 + 是什么 + 怎么造」的根。
 > 后续任何脱离本文档定义的设计必须先回到这里更新，再向下推进。
+> 历史在 `git log -- docs/01-project-overview.md`。
 
 ---
 
@@ -21,7 +21,7 @@ Meowth 是**运行在 macOS 本机的 coding-agent 桥接层**。
 | # | 目标 | 可验证标志 |
 |---|------|-----------|
 | G1 | 屏蔽 5 家 coding CLI 的协议差异，对外暴露统一 SDK | `Backend.Execute(ctx, prompt, opts)` 单一入口可调度 claude/copilot/codex/hermes/pi |
-| G2 | 本机 daemon 可被远程 HTTP 控制 | `POST /v1/agents/{type}/exec` 接 bearer token，返回 stream-json 事件 |
+| G2 | 本机 daemon 可被远程 HTTP 控制 | `POST /v1/agents/{type}/exec` 接 bearer token，stream NDJSON 事件（统一 envelope，封装各 backend 原生协议） |
 | G3 | dashboard 一屏看清所有运行中 agent 的状态 | 实时列出 session、token usage、stdout tail |
 | G4 | dashboard 可自助管理 bearer token | 创建/列出/撤销 token，token 仅在创建时出现一次 |
 | G5 | 全栈 6DQ 质量体系达 Tier S | L1 ≥ 95% UT、L2 100% API 真 HTTP、L3 关键流 Playwright、G1+G2 全绿、D1 SQLite test 隔离 |
@@ -58,7 +58,11 @@ V1 视为完成的客观条件（与 G1–G5 对应）：
 
 ## 6. 关键约束
 
-- **License**：multica 是 Modified Apache 2.0（含 anti-SaaS + 保留 logo 条款）。Meowth 的 SDK 继承部分**必须**保留上游 LICENSE 与 NOTICE，dashboard 重写以避开 logo 条款
+- **License**：multica 是 Modified Apache 2.0（含 anti-SaaS + 保留 logo 条款）。Meowth 的 SDK 继承部分**必须**：
+  - 保留上游 `LICENSE` 文件原文
+  - 若上游存在 `NOTICE` 则同步拷贝（截至调查时 multica 仓库**只有 LICENSE，无 NOTICE**）
+  - 在 `daemon/pkg/agent/UPSTREAM.md` 记录 source repo + 拉取时的 commit SHA + 拉取日期
+  - dashboard 完全自写，**不引入** multica 的 `apps/web/`，避开保留 logo 条款
 - **macOS only**：darwin-arm64 / darwin-amd64 二进制
 - **零云依赖**：所有持久化在 `~/.meowth/`；不要求外部 Postgres / Redis
 - **Agent 优先**：所有改动必须能在 pre-commit / pre-push 自动证明正确性，不依赖人工 QA
@@ -148,7 +152,9 @@ type Backend interface {
   - `POST /v1/sessions/{id}/cancel` — 取消
   - `GET  /v1/agents` — 列出本机已安装的 5 个 agent 与版本探测
   - `POST /v1/tokens` / `GET /v1/tokens` / `DELETE /v1/tokens/{id}` — token 管理（dashboard 用，**返回体永不含 secret**）
-  - `GET  /healthz` — **唯一免认证端点**
+  - `GET  /healthz` — 免认证
+  - `GET  /` 与静态资源 — 免认证（dashboard 静态文件，由 daemon embed）
+  - `POST /bootstrap/mint` — 见 §7.8；仅在 token 表为空时响应、仅响应一次、仅 loopback
 - **绑定**：默认 `127.0.0.1:7777`；监听其他地址需走 §7.7 远程访问规则
 
 ### 7.4 数据与本机目录
@@ -162,11 +168,10 @@ type Backend interface {
 ├── logs/
 │   └── meowthd.log      # 滚动日志
 └── runtime/
-    ├── meowthd.sock     # 本地 UNIX socket（bootstrap + 备用控制平面，见 §7.8）
     └── meowthd.pid      # daemon pid，用于 stop/restart
 ```
 
-**权限**：`~/.meowth` = 0700；`meowth.db` / socket / `*.pid` = 0600（参考 raven [`app-dirs.ts`](/Users/nocoo/workspace/personal/raven/packages/proxy/src/lib/app-dirs.ts) 的 `DIR_MODE`/`FILE_MODE` 常量）。
+**权限**：`~/.meowth` = 0700；`meowth.db` / `*.pid` = 0600（参考 raven [`app-dirs.ts`](/Users/nocoo/workspace/personal/raven/packages/proxy/src/lib/app-dirs.ts) 的 `DIR_MODE`/`FILE_MODE` 常量）。
 
 **SQLite 选型**：标准库 `database/sql` + `modernc.org/sqlite`（纯 Go，无 CGO，交叉编译友好）；schema 用 `sqlc` 生成 typed query（与 multica 一致）。
 
@@ -182,7 +187,7 @@ CREATE TABLE tokens (
   created_at  INTEGER NOT NULL,          -- unix epoch
   last_used_at INTEGER,                  -- 最近一次成功认证
   revoked_at  INTEGER,                   -- NULL = active
-  created_via TEXT NOT NULL              -- "init" | "bootstrap_socket" | "dashboard" | "cli"
+  created_via TEXT NOT NULL              -- "init" | "first_run_mint" | "dashboard" | "cli"
 );
 CREATE INDEX idx_tokens_prefix ON tokens(prefix);
 CREATE INDEX idx_tokens_active ON tokens(revoked_at) WHERE revoked_at IS NULL;
@@ -194,10 +199,15 @@ CREATE INDEX idx_tokens_active ON tokens(revoked_at) WHERE revoked_at IS NULL;
 - API 序列化模型里**不存在** `secret` 字段；编译期保证响应永不泄露
 - 撤销 = 设 `revoked_at`，**不物理删**，便于审计
 
-### 7.5 Dashboard（Vite + basalt）
+### 7.5 Dashboard（Vite + basalt，**纯浏览器单页**）
 
 - **栈**：Vite + React 19 + React Router 7 + Tailwind v4 + basalt 设计系统
-- **参考实现**：surety（[`/Users/nocoo/workspace/personal/surety`](/Users/nocoo/workspace/personal/surety)）、bat（[`/Users/nocoo/workspace/personal/bat`](/Users/nocoo/workspace/personal/bat)）——两者都是 Vite + basalt + sqlite 风格
+- **形态明确（不是 Electron / 不是 Tauri / 不是 Node CLI）**：纯静态产物（`vite build` 出来一坨 HTML+JS+CSS），由 **daemon 自己挂在 `GET /` 下提供**（embed via `go:embed`）。dashboard 因此可以同源调用 daemon，**不需要 CORS**
+  - 实现细节：daemon 启动时把 `apps/dashboard/dist` 作为 `embed.FS` 挂在 root；dev 模式下走 Vite dev server (`5173`) + Vite proxy（`/v1/*` 与 `/healthz` 转发到 `127.0.0.1:7777`）
+- **能力边界（硬约束）**：
+  - ❌ 浏览器不能读 UNIX socket
+  - ❌ 浏览器不能写 `~/.meowth/` 或 `~/Library/Application Support/`
+  - ✅ 只能走 HTTP；token 存 `localStorage`（**因此 dashboard 必须 same-origin 经 daemon 提供，否则 token 泄露面扩大**）
 - **basalt 接入**：抄源码模板（不发包），见 [basalt v1.1.1](/Users/nocoo/workspace/personal/basalt)
   - 抄 `src/index.css`（token 全文）、`src/lib/{utils,palette}.ts`、`src/components/{AppSidebar,DashboardLayout,ThemeToggle}.tsx`、按需 `src/components/ui/*`
   - Tailwind v4 `@tailwindcss/vite` 插件路线（非 PostCSS）
@@ -209,17 +219,19 @@ CREATE INDEX idx_tokens_active ON tokens(revoked_at) WHERE revoked_at IS NULL;
   - `Sessions` — 活跃与历史 session 列表 + 详情（消息流 + token usage）
   - `Tokens` — bearer token CRUD
   - `Settings` — daemon 端口/绑定/日志等级
-- **本地连通**：dashboard 与 daemon 同机，dev 默认 `http://127.0.0.1:7777`，仍发 bearer header（dev token 启动 daemon 时打印一次）
+- **连通**：dashboard 与 daemon 同源（生产由 daemon 提供，dev 由 Vite proxy 转发），所有请求带 `Authorization: Bearer <token>`
 
 ### 7.6 Agent 后端白名单（V1 硬编码）
 
-| Type | CLI 二进制 | 协议形态 | 备注 |
-|------|-----------|----------|------|
-| `claude` | `claude` | stream-json (`--output-format stream-json`) | 直接 pump multica `claude.go` |
-| `copilot` | `gh copilot` 或 `github-copilot-cli` | TBD（pump 时确认） | pump multica `copilot.go` |
-| `codex` | `codex` | stream-json | pump multica `codex.go` |
-| `hermes` | `hermes` | ACP / 自定义 | pump multica `hermes.go` |
-| `pi` | `pi` | TBD | pump multica `pi.go` |
+| Type | 默认 CLI 二进制 | argv 形态 | 协议 / 输出格式 | 备注 |
+|------|---------------|----------|---------------|------|
+| `claude` | `claude` | `claude --output-format stream-json --input-format stream-json --verbose` | NDJSON stream-json，stdin 持续接控制消息 | pump multica `claude.go` |
+| `copilot` | `copilot` | `copilot -p "<prompt>" --output-format json --allow-all --no-ask-user` | JSONL events（Copilot CLI v1.0.28+） | pump multica `copilot.go`（**不是** `gh copilot`） |
+| `codex` | `codex` | `codex app-server --listen stdio://` | JSON-RPC 2.0 over stdin/stdout（**不是 stream-json**） | pump multica `codex.go` |
+| `hermes` | `hermes` | `hermes acp <custom args>` | ACP 协议 over stdio | pump multica `hermes.go` |
+| `pi` | `pi` | `pi <prompt>`（prompt 走 argv 位置参数，配 session 文件） | 详见 `pi_invocation*.go` 平台分桶 | pump multica `pi.go` |
+
+`ExecutablePath` 可在 daemon 配置里覆盖默认二进制名。`/v1/agents` 端点对每个 type 做 `exec.LookPath` 探测，返回是否安装与解析得到的版本。
 
 新增 backend 必须改 `SupportedTypes` 白名单 + `New()` switch + `launchHeaders` + `ListModels` + 版本/thinking enum + e2e 测试，**禁止运行时注册**。
 
@@ -240,25 +252,45 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 - ❌ daemon 自签或 ACME TLS（认证职责不进 daemon）
 - ❌ 把 token 作为 query string 传（`?token=xxx`）；只允许 `Authorization` header
 
-**daemon 启动校验**：当 `bind_addr` 不在 `127.0.0.1/loopback` 也不在 `100.64.0.0/10`（Tailscale CGNAT 段）时，**强制要求** `config.toml` 显式设置 `remote_access.mode = "tailscale" | "ssh_tunnel" | "https_proxy"` 与 `remote_access.acknowledged_by = "<dashboard user>"`；否则启动失败并打印修复建议。
+**daemon 启动期 bind 校验**（mode 与 bind 必须匹配，否则启动失败并打印修复建议）：
+
+| `remote_access.mode`（config.toml） | 允许的 `bind_addr` | 拒绝的 `bind_addr` |
+|------------------------------------|------------------|-----------------|
+| _未设置（默认本机）_ | `127.0.0.1` / `::1` / `localhost` | 其他全部（含 Tailscale IP） |
+| `tailscale` | 必须在 `100.64.0.0/10`（Tailscale CGNAT 段，含 IPv4） 或 `fd7a:115c:a1e0::/48`（IPv6） | 其他全部 |
+| `ssh_tunnel` | 仅 loopback（`127.0.0.1` / `::1`） | 其他全部（包括 Tailscale IP；SSH tunnel 的语义就是 daemon 只听本机，远端靠 `-L` 转发） |
+| `https_proxy` | 仅 loopback | 其他全部（反代必须与 daemon 同机，daemon 不直接面向 Internet） |
+| _任何 mode_ | — | **`0.0.0.0` / `::` 永远拒绝**，即使 mode 设了也不行（必须明确单一接口） |
+
+`remote_access.mode` 设置后，必须同时填 `remote_access.acknowledged_by = "<dashboard user / human label>"`（防止悄悄改 config 暴露公网）。校验失败的错误信息必须打印实际的 `bind_addr`、当前 `mode`、推荐修复（如「mode=ssh_tunnel 必须 bind 127.0.0.1，请改 config.toml」）。
 
 ### 7.8 Bootstrap（首个 token 的诞生）
 
-所有 v1 端点除 `/healthz` 外均强制 bearer。零 token 时 dashboard 无法创建 token，必须有带外通路。
+所有 v1 HTTP 端点（除 `/healthz`、静态资源、`/bootstrap/*` 见下）均强制 bearer。零 token 时 dashboard 拿不到 token 就无法操作，必须有带外通路。
 
-**采用方案：`meowthd init` + 本地 UNIX socket bootstrap，双轨保险。**
+由于 dashboard 是纯浏览器单页（§7.5），**它读不到 UNIX socket、写不了本机文件系统**，所有方案都必须可以在浏览器 + 用户手工配合下完成。
 
-1. **`meowthd init`**（一次性 CLI）
+**采用方案：「CLI 必出 token」+「daemon 在零 token 状态下短暂自暴露 bootstrap 页面」双轨。**
+
+1. **`meowthd init`**（首次安装，唯一推荐路径）
    - 创建 `~/.meowth/` 目录结构（0700）与默认 `config.toml`
    - 初始化 `meowth.db` schema
-   - **生成首个 root token，明文打印到 stdout 一次**（带 `mwt_` 前缀，全权限），仅 hash 入库
-   - 提示：「请立刻保存；丢失只能用 `meowthd bootstrap-token` 重新生成」
+   - **生成首个 root token，明文打印到 stdout 一次**（带 `mwt_` 前缀，全权限），仅 argon2id hash 入库
+   - 提示：「请立刻保存；丢失可用 `meowthd bootstrap-token` 重新生成」
    - 幂等：已存在的 `~/.meowth/` 拒绝执行，避免覆盖
-2. **本地 UNIX socket bootstrap**（备用通路）
-   - daemon 始终监听 `~/.meowth/runtime/meowthd.sock`（socket 文件权限 0600，仅当前 user 可读写）
-   - socket 上的 `POST /v1/bootstrap/token` 端点**免 bearer**，但**仅在 token 表为空时**响应；有任何已存在 token 后立即返回 404
-   - dashboard 首次启动若检测到 token 表空，自动通过 socket 拉取一个 root token，缓存到 `~/Library/Application Support/meowth-dashboard/`
-3. **应急通路：`meowthd bootstrap-token`** —— 在 daemon 停机时，直接读写 SQLite 注入一个新 root token 并打印一次（用户丢失全部 token 时的最后手段）
+2. **「First-Run Mint」HTTP 端点**（备用通路，给「忘记看 init 输出」的用户）
+   - daemon 启动时检测 token 表是否为空
+   - **若空**：开放 `POST /bootstrap/mint`（**免 bearer**），仅 loopback 接受，**仅响应一次**——成功返回明文 root token 后立即在内存把开关关闭，下次必须重启 daemon 才能再开
+   - dashboard 在没有 token 时（首次加载 / token 被删光）渲染 `/setup` 页面，用户点「Mint root token」按钮即调用此端点
+   - **若不空**：`POST /bootstrap/mint` 一律 `404 Not Found`（不是 401，避免泄露状态）
+   - daemon 启动日志明确打印「first-run bootstrap window: OPEN / CLOSED」，便于审计
+3. **应急通路：`meowthd bootstrap-token`** —— daemon **停机时**直接读写 SQLite 注入一个新 root token 并打印一次（用户既丢失全部 token 又错过 stdout 时的最后手段）
+
+**Token 在 dashboard 端的存储**：
+- 浏览器 `localStorage.meowth_token = "<secret>"`
+- 因 dashboard 与 daemon 同源（§7.5），不存在跨域泄露面
+- 用户「登出」 = `localStorage.removeItem('meowth_token')`
+- 不写入 `~/Library/Application Support/`（浏览器没权限）
 
 **Token 显示策略（硬性）**：
 - 任何创建端点 / CLI 命令的响应里，secret 只出现**一次**
@@ -338,7 +370,7 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 | 1.2 | `docs(arch): 01-agent-sdk-pump-from-multica` | vendor 范围、裁剪 7 处、pump 命令、上游变更应对 |
 | 1.3 | `docs(arch): 02-daemon-http-protocol` | NDJSON event schema、v1 端点契约、错误码、流式 cancel 协议 |
 | 1.4 | `docs(arch): 03-sqlite-schema-and-tokens` | 完整 schema、argon2id 参数、migration 策略、D1 隔离表 |
-| 1.5 | `docs(arch): 04-bootstrap-and-unix-socket` | init/socket/CLI 三轨详细流程、文件权限、错误恢复 |
+| 1.5 | `docs(arch): 04-bootstrap-and-first-run-mint` | init / first-run mint endpoint / bootstrap-token CLI 三轨详细流程、文件权限、错误恢复 |
 | 1.6 | `docs(arch): 05-remote-access-modes` | Tailscale/SSH/HTTPS-proxy 三模式配置范式、启动期校验逻辑 |
 | 1.7 | `docs(arch): 06-dashboard-mvvm-and-basalt` | 5 个页面的 model/viewmodel/page 分层映射、basalt token 接入清单 |
 | 1.8 | `docs(arch): 07-6dq-hooks-wiring` | 每层测试的具体工具、阈值、husky 脚本、CI matrix |
@@ -368,14 +400,14 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 
 | # | Commit | 内容 |
 |---|--------|------|
-| 3.1 | `feat(daemon): vendor multica pkg/agent verbatim` | 整目录拷贝 + LICENSE/NOTICE + package path 改名；上游测试套全绿 |
+| 3.1 | `feat(daemon): vendor multica pkg/agent verbatim` | 整目录拷贝 + `LICENSE`（若上游有 `NOTICE` 也同步）+ `UPSTREAM.md`（source repo + commit SHA + date）+ package path 改名；上游测试套全绿 |
 | 3.2 | `feat(daemon): trim agent SDK to 5 whitelisted backends` | 7 处同步裁；测试仍全绿 |
 | 3.3 | `feat(daemon): ~/.meowth path resolver` | 红：写 home_test.go；绿：实现；重构 |
 | 3.4 | `feat(daemon): sqlite store with tokens schema (hash only)` | 红：schema/CRUD 单测；绿：sqlc 代码 + argon2id |
 | 3.5 | `feat(daemon): meowthd init command` | 红：CLI e2e 测试；绿：实现 |
 | 3.6 | `feat(daemon): bearer auth middleware (constant-time compare)` | TDD |
 | 3.7 | `feat(daemon): chi router + healthz + token CRUD` | TDD + L2 端点覆盖 |
-| 3.8 | `feat(daemon): unix socket bootstrap endpoint` | TDD + L2 socket 测试 |
+| 3.8 | `feat(daemon): first-run mint endpoint (loopback + one-shot)` | TDD：token 表空时 `POST /bootstrap/mint` 返 token，调用后内存开关关；非空时 404 |
 | 3.9 | `feat(daemon): remote_access config + bind validation` | TDD |
 | 3.10 | `feat(daemon): agent exec endpoint streaming NDJSON` | TDD + 一个 backend e2e（claude） |
 | 3.11 | `feat(daemon): wire all 5 backends with smoke tests` | 每个 backend 一个 L2 happy-path |
@@ -383,10 +415,11 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 | 3.13 | `feat(dashboard): app shell + theme init` | TDD（vitest + RTL） |
 | 3.14 | `feat(dashboard): 5 page skeletons (MVVM 三段式)` | 每页 model/viewmodel 测试先行 |
 | 3.15 | `feat(dashboard): daemon http client + bearer storage` | TDD |
-| 3.16 | `feat(dashboard): first-run bootstrap via unix socket` | TDD（mock socket） |
-| 3.17 | `feat(dashboard): wire 5 pages to live daemon` | L3 playwright happy path 跑通 |
-| 3.18 | `test(e2e): full happy path (init → token → claude exec → view messages)` | L3 完整 |
-| 3.19 | `chore: bump coverage thresholds to S-tier (daemon 95% / dashboard 90%)` | 强制 gate |
+| 3.16 | `feat(dashboard): /setup page wired to first-run mint endpoint` | TDD（mock fetch）；token 表空时跳 `/setup`，按钮触发 `POST /bootstrap/mint` |
+| 3.17 | `feat(dashboard): wire 5 pages to live daemon` | L3 playwright happy path 跑通（dev 通过 Vite proxy） |
+| 3.18 | `feat(daemon): embed dashboard dist via go:embed at GET /` | turbo `dashboard:build` 产出 `dist/` → daemon `embed.FS`；prod 同源访问、零 CORS |
+| 3.19 | `test(e2e): full happy path against prod daemon (init → /setup → mint → claude exec → view messages)` | L3 完整，跑 daemon 单二进制（无 Vite dev server） |
+| 3.20 | `chore: bump coverage thresholds to S-tier (daemon 95% / dashboard 90%)` | 强制 gate |
 
 **每个 commit 都满足**：自带必要测试 + 六维 hooks 通过 + 不留 TODO。
 
@@ -402,7 +435,7 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
   - `docs/architecture/01-agent-sdk-pump-from-multica.md`
   - `docs/architecture/02-daemon-http-protocol.md`
   - `docs/architecture/03-sqlite-schema-and-tokens.md`
-  - `docs/architecture/04-bootstrap-and-unix-socket.md`
+  - `docs/architecture/04-bootstrap-and-first-run-mint.md`
   - `docs/architecture/05-remote-access-modes.md`
   - `docs/architecture/06-dashboard-mvvm-and-basalt.md`
   - `docs/architecture/07-6dq-hooks-wiring.md`
