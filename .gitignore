@@ -5,6 +5,9 @@ build
 .turbo
 *.tsbuildinfo
 
+# daemon (Go) build artifacts
+/daemon/meowthd
+
 # env
 .env
 .env.local
