@@ -13,7 +13,10 @@
     "format": "biome format --write .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "daemon:build": "cd daemon && go build ./...",
+    "daemon:vet": "cd daemon && go vet ./...",
+    "daemon:test": "cd daemon && go test ./... -count=1 -parallel=1"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
