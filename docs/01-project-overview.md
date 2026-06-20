@@ -207,7 +207,7 @@ CREATE INDEX idx_tokens_active ON tokens(revoked_at) WHERE revoked_at IS NULL;
 - **能力边界（硬约束）**：
   - ❌ 浏览器不能读 UNIX socket
   - ❌ 浏览器不能写 `~/.meowth/` 或 `~/Library/Application Support/`
-  - ✅ 只能走 HTTP；token 存 `localStorage`（**因此 dashboard 必须 same-origin 经 daemon 提供，否则 token 泄露面扩大**）
+  - ✅ 只能走 HTTP；token 存 `localStorage`（**必须 same-origin 经 daemon 提供以避开跨域风险；XSS 防御见 §7.9**）
 - **basalt 接入**：抄源码模板（不发包），见 [basalt v1.1.1](/Users/nocoo/workspace/personal/basalt)
   - 抄 `src/index.css`（token 全文）、`src/lib/{utils,palette}.ts`、`src/components/{AppSidebar,DashboardLayout,ThemeToggle}.tsx`、按需 `src/components/ui/*`
   - Tailwind v4 `@tailwindcss/vite` 插件路线（非 PostCSS）
@@ -270,32 +270,79 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 
 由于 dashboard 是纯浏览器单页（§7.5），**它读不到 UNIX socket、写不了本机文件系统**，所有方案都必须可以在浏览器 + 用户手工配合下完成。
 
-**采用方案：「CLI 必出 token」+「daemon 在零 token 状态下短暂自暴露 bootstrap 页面」双轨。**
+**两条互斥路径**（用户二选一，daemon 严格保证两者不会同时生效）：
 
-1. **`meowthd init`**（首次安装，唯一推荐路径）
-   - 创建 `~/.meowth/` 目录结构（0700）与默认 `config.toml`
-   - 初始化 `meowth.db` schema
-   - **生成首个 root token，明文打印到 stdout 一次**（带 `mwt_` 前缀，全权限），仅 argon2id hash 入库
-   - 提示：「请立刻保存；丢失可用 `meowthd bootstrap-token` 重新生成」
-   - 幂等：已存在的 `~/.meowth/` 拒绝执行，避免覆盖
-2. **「First-Run Mint」HTTP 端点**（备用通路，给「忘记看 init 输出」的用户）
-   - daemon 启动时检测 token 表是否为空
-   - **若空**：开放 `POST /bootstrap/mint`（**免 bearer**），仅 loopback 接受，**仅响应一次**——成功返回明文 root token 后立即在内存把开关关闭，下次必须重启 daemon 才能再开
-   - dashboard 在没有 token 时（首次加载 / token 被删光）渲染 `/setup` 页面，用户点「Mint root token」按钮即调用此端点
-   - **若不空**：`POST /bootstrap/mint` 一律 `404 Not Found`（不是 401，避免泄露状态）
-   - daemon 启动日志明确打印「first-run bootstrap window: OPEN / CLOSED」，便于审计
-3. **应急通路：`meowthd bootstrap-token`** —— daemon **停机时**直接读写 SQLite 注入一个新 root token 并打印一次（用户既丢失全部 token 又错过 stdout 时的最后手段）
+#### 路径 A · `meowthd init` 直发 token（推荐默认）
 
-**Token 在 dashboard 端的存储**：
-- 浏览器 `localStorage.meowth_token = "<secret>"`
-- 因 dashboard 与 daemon 同源（§7.5），不存在跨域泄露面
-- 用户「登出」 = `localStorage.removeItem('meowth_token')`
-- 不写入 `~/Library/Application Support/`（浏览器没权限）
+适用：用户能看终端输出。
 
-**Token 显示策略（硬性）**：
+1. `meowthd init` 创建 `~/.meowth/` 目录结构（0700）与默认 `config.toml`
+2. 初始化 `meowth.db` schema
+3. **生成首个 root token，明文打印到 stdout 一次**（带 `mwt_` 前缀，全权限），仅 argon2id hash 入库
+4. 终端额外打印 dashboard URL + 「请把 token 粘到 dashboard 的 token 输入框」
+5. 用户首次打开 dashboard 看到 `/setup` 页面，**模式 A：手输入框**，粘贴 token 即可
+6. 幂等：已存在的 `~/.meowth/` 拒绝执行
+
+→ **此路径下 token 表非空，`/bootstrap/mint` 永远 404**。
+
+#### 路径 B · `meowthd init --skip-token` 后由 dashboard 自助 mint
+
+适用：脚本化部署、headless 安装、无终端输出可看。
+
+1. `meowthd init --skip-token` 只初始化目录与 schema，**不生成 token**（token 表为空）
+2. daemon 启动时检测到 token 表为空 → 开启 first-run mint 窗口
+3. 用户访问 dashboard 见 `/setup` 页面，**模式 B：Mint 按钮**
+4. 点击后请求 `POST /bootstrap/mint`，daemon 响应一次明文 root token 后**立即在内存关闭窗口**（必须重启 daemon 才能再开）
+5. dashboard 自动把 token 存进 `localStorage` 并跳转 `/overview`
+
+→ **此路径下 `meowthd init --skip-token` 之后第一次 mint 之前的窗口期是 root token 的源头**，必须由 §7.7 远程访问校验 + 下方 mint 端点的强约束共同保护。
+
+#### 端点 `POST /bootstrap/mint` 的硬约束（防误开公网）
+
+- **`remote_access.mode` 不是默认（本机）时一律拒绝** —— 即使 token 表为空也 404。也就是：tailscale / ssh_tunnel / https_proxy 模式下 daemon 启动期就拒绝挂载此 endpoint；用户必须先在本机走完 bootstrap，再开远程访问
+- **仅 loopback 接收** —— 远程方向（含 Tailscale 接口、反代上游）一律 404，daemon 检查 `c.RemoteAddr()` 是否在 `127.0.0.1/8` 或 `::1`
+- **One-shot** —— 成功 mint 一次后内存开关关闭；要再次 mint 必须 daemon 停机 + 清空 token 表 + 重启
+- **额外终端 nonce（路径 B 必须）**：`meowthd init --skip-token` 在 stdout **打印一段一次性 6 位数字 nonce**（如 `setup-code: 482917`），dashboard `/setup` 页要求用户输入 nonce 后才会请求 mint；nonce 内存保留至首次 mint 完成或 daemon 重启
+- 失败时统一 404，**不区分「mode 不允许」「表非空」「nonce 错误」**，避免用尝试探测 daemon 状态
+- daemon 启动日志明确打印「first-run mint window: OPEN(nonce=482917) / CLOSED(reason=token_exists|remote_access_mode|consumed)」
+
+#### 应急通路 · `meowthd bootstrap-token`
+
+daemon **停机时**直接读写 SQLite 注入一个新 root token 并打印一次。用户既丢失全部 token 又错过 stdout 时的最后手段。**不通过 HTTP，无法被远程触发**。
+
+#### Token 显示策略（硬性，跨所有通路）
+
 - 任何创建端点 / CLI 命令的响应里，secret 只出现**一次**
 - 之后 `GET /v1/tokens` 只返回 `id`、`name`、`prefix`（如 `mwt_abc...`）、`created_at`、`last_used_at`、`revoked_at`，**永不返回完整 secret**
 - dashboard 创建 token 后弹出 modal 让用户复制，关闭即失
+
+### 7.9 Dashboard 安全（防 XSS / 防 token 泄露）
+
+token 存 `localStorage`，**XSS 即等价 root token 泄露**。必须把所有可执行脚本注入面堵死。
+
+**强制约束**（违反任一项 = 不许 release）：
+
+1. **CSP 由 daemon 在 `GET /` 与 `index.html` 响应里强制注入**（不依赖 meta），固定值：
+   ```
+   default-src 'self';
+   script-src 'self';
+   style-src 'self' 'unsafe-inline';     // Tailwind 注入 inline style 必需，但脚本严禁 inline
+   img-src 'self' data:;
+   connect-src 'self';                   // 锁死同源，禁止打到外部
+   font-src 'self' data:;
+   object-src 'none';
+   base-uri 'none';
+   frame-ancestors 'none';
+   form-action 'self';
+   ```
+2. **禁止远程脚本** —— Vite 构建产物所有 JS/CSS/字体必须 `'self'`；任何 `<script src="https://...">` / `<link rel="stylesheet" href="https://...">` 都禁止
+3. **React 端禁用 `dangerouslySetInnerHTML`** —— Biome / ESLint 规则 `react/no-danger` 设 error，G1 阻断
+4. **Markdown / 日志输出强 sanitize** —— agent stdout、stderr、消息流任何展示前都过 `DOMPurify` 等成熟库；禁止直接 `innerHTML`；ANSI 着色用结构化转 React 节点而非 HTML 字符串
+5. **HTTP header 由 daemon 同步设**：`X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer`、`Cross-Origin-Opener-Policy: same-origin`、`Cross-Origin-Resource-Policy: same-origin`、`Permissions-Policy: ...` 关闭所有非必需能力
+6. **第三方依赖审查**：dashboard 不引入会动态求值用户输入的库（禁 `eval` / `new Function`）；CI 用 osv-scanner 跑过 G2
+7. **token UI 防偷窥**：dashboard 显示 token secret 时默认遮罩，点击「复制」直接 `navigator.clipboard.writeText`，不在 DOM 留全文本
+
+**测试**：L1 单测覆盖 sanitizer 调用点；L3 playwright 验证响应 header 含 CSP；G2 用 `osv-scanner` + `gitleaks` 把住依赖与提交。
 
 ---
 
@@ -338,6 +385,7 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 - G2：osv-scanner/gitleaks/govulncheck 在 pre-push 通
 - D1：测试用 `~/.meowth-test/` 路径与 `_test_marker` 表 schema 就位
 - harness 提交独立成 commit，绿了才进 Stage 3
+- **验证 harness 强度的 fail-sample（故意触发失败的样本代码）只在本地临时注入，验证后立即删除，不进入 commit**——否则 gate 永远红
 
 **Stage 3 · TDD 实现**
 - 严格红绿重构：先写失败测试，再写最少代码让测试绿，再重构
@@ -373,7 +421,8 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 | 1.5 | `docs(arch): 04-bootstrap-and-first-run-mint` | init / first-run mint endpoint / bootstrap-token CLI 三轨详细流程、文件权限、错误恢复 |
 | 1.6 | `docs(arch): 05-remote-access-modes` | Tailscale/SSH/HTTPS-proxy 三模式配置范式、启动期校验逻辑 |
 | 1.7 | `docs(arch): 06-dashboard-mvvm-and-basalt` | 5 个页面的 model/viewmodel/page 分层映射、basalt token 接入清单 |
-| 1.8 | `docs(arch): 07-6dq-hooks-wiring` | 每层测试的具体工具、阈值、husky 脚本、CI matrix |
+| 1.8 | `docs(arch): 07-dashboard-security-csp-and-xss` | §7.9 落地细节：CSP header 由 daemon 注入的代码点、sanitizer 库选型、Biome `react/no-danger` 规则配置、osv-scanner 例外清单 |
+| 1.9 | `docs(arch): 08-6dq-hooks-wiring` | 每层测试的具体工具、阈值、husky 脚本、CI matrix |
 
 **Phase 1 出口条件**：作者逐篇 review 通过 + Phase 2 的 harness commit 计划在每篇文档里写死。
 
@@ -383,8 +432,8 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 |---|--------|------|
 | 2.1 | `chore(daemon): scaffold go module with meowthd entrypoint` | `daemon/go.mod` + `daemon/cmd/meowthd/main.go` 仅打印版本号，`go build` / `go vet` 绿 |
 | 2.2 | `chore: add daemon shell tasks to turbo + root scripts` | 根 `package.json` 增加 `daemon:build` / `daemon:test`，turbo 接入 |
-| 2.3 | `chore(daemon): G1 wiring (gofmt + go vet + golangci-lint)` | config + 一个故意 fail 的样本测试 vet 出来，证明 G1 真有效 |
-| 2.4 | `chore(dashboard): G1 wiring (biome strict + tsc strict)` | 已就位，加一个故意 fail 样本证明强度 |
+| 2.3 | `chore(daemon): G1 wiring (gofmt + go vet + golangci-lint)` | 接通配置；commit message 里记录「本地用注入式 fail-sample 验过」（fail-sample 不入 commit，避免破坏 gate） |
+| 2.4 | `chore(dashboard): G1 wiring (biome strict + tsc strict)` | 同上：commit 只交配置；fail-sample 仅本地临时验证，PR 描述写「已验证」 |
 | 2.5 | `chore: husky + pre-commit (G1 placeholder)` | hook 安装，pre-commit 跑 G1，<5s |
 | 2.6 | `test(daemon): L1 harness (go test + go-cover) with placeholder` | `daemon/pkg/.../foo_test.go` skipped；`go test ./...` 退 0 |
 | 2.7 | `test(dashboard): L1 harness (vitest) with placeholder` | empty `*.test.ts`；`pnpm test` 退 0 |
@@ -404,22 +453,27 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 | 3.2 | `feat(daemon): trim agent SDK to 5 whitelisted backends` | 7 处同步裁；测试仍全绿 |
 | 3.3 | `feat(daemon): ~/.meowth path resolver` | 红：写 home_test.go；绿：实现；重构 |
 | 3.4 | `feat(daemon): sqlite store with tokens schema (hash only)` | 红：schema/CRUD 单测；绿：sqlc 代码 + argon2id |
-| 3.5 | `feat(daemon): meowthd init command` | 红：CLI e2e 测试；绿：实现 |
+| 3.5 | `feat(daemon): meowthd init command (+ --skip-token)` | 红：CLI e2e 两条分支 (默认 = 出 token；--skip-token = 不出 token 仅打印 setup-code nonce)；绿：实现 |
 | 3.6 | `feat(daemon): bearer auth middleware (constant-time compare)` | TDD |
 | 3.7 | `feat(daemon): chi router + healthz + token CRUD` | TDD + L2 端点覆盖 |
-| 3.8 | `feat(daemon): first-run mint endpoint (loopback + one-shot)` | TDD：token 表空时 `POST /bootstrap/mint` 返 token，调用后内存开关关；非空时 404 |
-| 3.9 | `feat(daemon): remote_access config + bind validation` | TDD |
-| 3.10 | `feat(daemon): agent exec endpoint streaming NDJSON` | TDD + 一个 backend e2e（claude） |
-| 3.11 | `feat(daemon): wire all 5 backends with smoke tests` | 每个 backend 一个 L2 happy-path |
-| 3.12 | `feat(dashboard): vite + basalt token system` | basalt CSS/lib 抄过来，对应 vitest snapshot |
-| 3.13 | `feat(dashboard): app shell + theme init` | TDD（vitest + RTL） |
-| 3.14 | `feat(dashboard): 5 page skeletons (MVVM 三段式)` | 每页 model/viewmodel 测试先行 |
-| 3.15 | `feat(dashboard): daemon http client + bearer storage` | TDD |
-| 3.16 | `feat(dashboard): /setup page wired to first-run mint endpoint` | TDD（mock fetch）；token 表空时跳 `/setup`，按钮触发 `POST /bootstrap/mint` |
-| 3.17 | `feat(dashboard): wire 5 pages to live daemon` | L3 playwright happy path 跑通（dev 通过 Vite proxy） |
-| 3.18 | `feat(daemon): embed dashboard dist via go:embed at GET /` | turbo `dashboard:build` 产出 `dist/` → daemon `embed.FS`；prod 同源访问、零 CORS |
-| 3.19 | `test(e2e): full happy path against prod daemon (init → /setup → mint → claude exec → view messages)` | L3 完整，跑 daemon 单二进制（无 Vite dev server） |
-| 3.20 | `chore: bump coverage thresholds to S-tier (daemon 95% / dashboard 90%)` | 强制 gate |
+| 3.8 | `feat(daemon): first-run mint endpoint (loopback + nonce + mode-gated + one-shot)` | TDD：表空 + remote_access.mode 默认 + loopback + nonce 正确才 200；其他一律 404；one-shot 后内存开关关 |
+| 3.9 | `feat(daemon): remote_access config + bind validation` | TDD（含 mint 端点在非默认 mode 下启动期被禁用的断言） |
+| 3.10 | `feat(daemon): security headers middleware (CSP + nosniff + Referrer-Policy ...)` | TDD：在 `GET /` 与 `index.html` 设置 §7.9 固定 CSP；L2 检测 header 出现 |
+| 3.11 | `feat(daemon): agent exec endpoint streaming NDJSON` | TDD + 一个 backend e2e（claude） |
+| 3.12 | `feat(daemon): wire all 5 backends with smoke tests` | 每个 backend 一个 L2 happy-path |
+| 3.13 | `feat(dashboard): vite + basalt token system` | basalt CSS/lib 抄过来，对应 vitest snapshot |
+| 3.14 | `feat(dashboard): app shell + theme init` | TDD（vitest + RTL） |
+| 3.15 | `chore(dashboard): biome rule react/no-danger=error + osv-scanner baseline` | G1/G2 在源头禁用 dangerouslySetInnerHTML |
+| 3.16 | `feat(dashboard): sanitizer wrapper for agent stdout / messages` | TDD：DOMPurify 包装 + ANSI → React nodes 结构化转换 |
+| 3.17 | `feat(dashboard): 5 page skeletons (MVVM 三段式)` | 每页 model/viewmodel 测试先行 |
+| 3.18 | `feat(dashboard): daemon http client + bearer storage` | TDD |
+| 3.19 | `feat(dashboard): /setup page (mode A 手输 + mode B nonce + mint)` | TDD（mock fetch）：检测 token 表空/非空 + 两模式分支 |
+| 3.20 | `feat(dashboard): wire 5 pages to live daemon` | L3 playwright happy path 跑通（dev 通过 Vite proxy） |
+| 3.21 | `feat(daemon): embed dashboard dist via go:embed at GET /` | turbo `dashboard:build` 产出 `dist/` → daemon `embed.FS`；prod 同源访问、零 CORS |
+| 3.22 | `test(e2e): happy path A (init → paste token to /setup → claude exec → view messages)` | L3：`meowthd init` 出 token → dashboard `/setup` 手输入框粘贴 → 调通 |
+| 3.23 | `test(e2e): happy path B (init --skip-token → /setup nonce → mint → claude exec)` | L3：`meowthd init --skip-token` 拿 nonce → `/setup` 输 nonce 点 Mint → 调通；远程模式下验证 mint 端点 404 |
+| 3.24 | `test(e2e): security headers + XSS sanitization assertions` | L3：响应 header 含 §7.9 CSP；agent stdout 含 `<script>` 注入时 dashboard 显示为转义文本而非可执行 |
+| 3.25 | `chore: bump coverage thresholds to S-tier (daemon 95% / dashboard 90%)` | 强制 gate |
 
 **每个 commit 都满足**：自带必要测试 + 六维 hooks 通过 + 不留 TODO。
 
@@ -438,4 +492,5 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
   - `docs/architecture/04-bootstrap-and-first-run-mint.md`
   - `docs/architecture/05-remote-access-modes.md`
   - `docs/architecture/06-dashboard-mvvm-and-basalt.md`
-  - `docs/architecture/07-6dq-hooks-wiring.md`
+  - `docs/architecture/07-dashboard-security-csp-and-xss.md`
+  - `docs/architecture/08-6dq-hooks-wiring.md`
