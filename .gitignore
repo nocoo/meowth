@@ -8,6 +8,11 @@ build
 # daemon (Go) build artifacts
 /daemon/meowthd
 
+# daemon coverage profiles (Phase 2.6)
+/daemon/coverage.out
+/daemon/coverage.html
+/daemon/cover.out
+
 # env
 .env
 .env.local
