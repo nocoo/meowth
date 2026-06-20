@@ -21,6 +21,11 @@ build
 /scripts/run-l2-output/
 /.meowth-test/
 
+# L3 Playwright runtime output (Phase 2.9)
+/apps/dashboard/playwright-report/
+/apps/dashboard/test-results/
+/apps/dashboard/.playwright/
+
 # env
 .env
 .env.local

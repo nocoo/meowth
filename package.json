@@ -30,6 +30,7 @@
     "dashboard:test:cover": "pnpm --filter @meowth/dashboard --filter @meowth/shared test:cover",
     "dashboard:g1": "pnpm dashboard:fmt:check && pnpm dashboard:lint && pnpm dashboard:typecheck",
     "test:l2": "tsx scripts/run-l2.ts",
+    "dashboard:e2e": "pnpm --filter @meowth/dashboard e2e",
     "prepare": "husky"
   },
   "lint-staged": {
