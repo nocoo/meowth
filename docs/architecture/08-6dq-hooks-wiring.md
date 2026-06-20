@@ -374,9 +374,9 @@ jobs:
 
 `MEOWTH_CLI_SMOKE=1` env 触发的真实 CLI smoke job：
 
-- 不在默认 CI 跑（GitHub runner 不预装 claude/copilot/codex/hermes/pi）
-- 仅在本机 / release 前手工触发：`MEOWTH_CLI_SMOKE=1 pnpm test:smoke`
-- 该 job 跑 `daemon/test/cli-smoke/*` 下的 happy path
+- 不在默认 CI 跑（GitHub runner 不预装 claude/codex/hermes/pi 等 CLI）
+- 仅在本机 / release 前手工触发：`cd daemon && MEOWTH_CLI_SMOKE=1 go test ./test/cli-smoke/...`（pnpm script wrapper `pnpm test:smoke` 待 Phase 2.11 husky 接通时再定义；§10 同条触发说明）
+- 该 job 跑 `daemon/test/cli-smoke/*` 下的 happy path，required real-smoke 集合 = `claude` / `codex` / `hermes` / `pi`（copilot 在 SDK 白名单内但暂未纳入真实 smoke，详 [`01`](01-agent-sdk-pump-from-multica.md) §10.1 P5 行）
 
 自动化 CI gate **永远不**依赖真实 CLI 可用（[`01`](01-agent-sdk-pump-from-multica.md) §8 决策一致）。
 
@@ -448,9 +448,23 @@ echo "D1 static check: OK"
 本文档接线：
 
 - 真实 smoke 测试位置：`daemon/test/cli-smoke/`
-- 触发：`MEOWTH_CLI_SMOKE=1 pnpm test:smoke`
+- 触发：`cd daemon && MEOWTH_CLI_SMOKE=1 go test ./test/cli-smoke/...`（pnpm script wrapper `pnpm test:smoke` 待 Phase 2.11 husky 接通时再定义）
 - 默认 CI：**skip**
-- release 前由 SDE 在本机手动跑一次 5 backend happy path（[`01`](01-agent-sdk-pump-from-multica.md) §11 #1 决策由此一致）
+- release 前由 SDE 在本机手动跑一次 4 backend happy path（claude / codex / hermes / pi；copilot 暂未在 smoke，详 [`01`](01-agent-sdk-pump-from-multica.md) §10.1 P5 行 + commit `0ca5cc9`）
+
+### 10.1 实际已落地（截至当前）
+
+- `daemon/test/cli-smoke/cli_smoke_test.go` 是真实 smoke 入口（commit `0ca5cc9` + amend）
+- 硬约束已实现且经验证：
+  - opt-in + required CLI 缺任一 → fast fail（不静默 partial-pass）
+  - 复合验收：`Result.Status=="completed"` AND（`Result.Output` 非空 OR 至少一条非空 `MessageText`）
+  - 失败 transcript 日志 "last N of M" 用真实 total 数
+- `daemon/test/cli-smoke/cli_smoke_unit_test.go`（commit `a1c7019`）把上述负向 gate 固化为默认 L1 自动测试（12 个 test + 5 parametrized 子测），默认 `go test ./...` 可跑，不依赖任何真实 CLI
+- 本机验证（截至 commit `0ca5cc9` amend 与 `a487f67` Pi error mapping fix 之后）：4/4 backend `Result.Status="completed"` + 非空 user-visible content
+  - `claude` 2.1.183 (Claude Code)
+  - `codex` codex-cli 0.140.0
+  - `hermes` Hermes Agent v0.16.0 (2026.6.5)
+  - `pi` 0.79.3
 
 ---
 
@@ -517,6 +531,23 @@ echo "D1 static check: OK"
 | 5 | [`docs/01-project-overview.md`](../01-project-overview.md) §8 Husky hooks 表 | "pre-commit = L1+G1；pre-push = L2+G2" 是简写；本文档 §2 / §5 实际把 L1 下移到 pre-push 以达成 < 30s pre-commit 目标 | 独立 commit：`docs(01): align Husky table with 08 (L1 moved to pre-push)` |
 
 这些勘误**不**在本 1.9 commit 中处理；08 commit 只新增本文件 + 索引一行。
+
+### 14.1 Phase 3.1 落地后的实际状态
+
+截至 Phase 3.1 / cli-smoke / P6–P8 落地，上述 5 条 errata **仍未触发**，因为它们都关于尚未实施的 dashboard / HTTP / SQLite / hooks 范围；当这些 phase 真正开工时，需要在那一批 commit 里同步处理对应 errata。
+
+Phase 3.1 落地另外引出的、**已在 doc alignment commit 中就地解决**的文档与实现 drift（不再保留为悬挂 errata）：
+
+- `README.md` `Go >= 1.22` → `Go >= 1.26.1`（与 `daemon/go.mod` 对齐）
+- [`01`](01-agent-sdk-pump-from-multica.md) §4.4 保留清单含 4 个 windows shim 但 P3.2 已删（cursor helper 同源被裁）
+- [`01`](01-agent-sdk-pump-from-multica.md) §2.2 调研 SHA `c0c41fa0...` vs 实际 vendor SHA `4bbaf536...`（远端 HEAD 在两次之间前移；以 `UPSTREAM.md` 为权威）
+- [`01`](01-agent-sdk-pump-from-multica.md) §7.3 / §11 #1 daemon Go 版本决策从"待定"标为"已锁 1.26.1"
+- [`01`](01-agent-sdk-pump-from-multica.md) §10 新增 §10.1（实际落地 commit 链）与 §10.2（上游本地补丁清单）
+- [`08`](08-6dq-hooks-wiring.md) §10 cli-smoke 触发命令与 4-backend 列表（copilot 暂未在 smoke）
+- README 新增"实施状态"段说明已落地范围
+- `daemon/pkg/agent/agent.go` `Session` godoc 对齐真实 contract（buffered Result，drain-then-read 安全；无 Messages-before-Result close 约束）→ Phase P8 内已处理
+
+`daemon/pkg/agent/UPSTREAM.md` 是 vendored agent SDK 的本地补丁权威；任何 pump 时改动应先看那个文件，再决定是否同步到 [`01`](01-agent-sdk-pump-from-multica.md) §10.2。
 
 ---
 

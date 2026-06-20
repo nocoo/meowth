@@ -42,11 +42,11 @@
 
 ### 2.2 调研结果（写文档当下）
 
-写本文档时核验的事实，仅作调研快照；后续 vendor 时必须重新核验：
+写本文档时核验的事实，仅作调研快照；后续 vendor 时必须重新核验。**实际 Phase 3.1 vendor 锚定的 commit_sha 不一定等于本表当下记录**——以 `daemon/pkg/agent/UPSTREAM.md` 为权威；写文档时为 `c0c41fa0...`，P3.1 落地时为 `4bbaf5363c5ddf1e3087b50f587dfae06f113b34`（远端 HEAD 在两次之间向前移动）。
 
 | 项 | 值 |
 |----|----|
-| 远端 HEAD `git ls-remote origin HEAD` | `c0c41fa0b4015355c9d6dbd38501b8381a61a29a` |
+| 远端 HEAD `git ls-remote origin HEAD` | `c0c41fa0b4015355c9d6dbd38501b8381a61a29a`（**写文档当下**；P3.1 vendor 时已变为 `4bbaf5363...`，见 `UPSTREAM.md`） |
 | 本机镜像 HEAD（`~/workspace/reference/multica`） | `63b9b10df5b82169998cd37e4513ffd57a04f2ac`（比远端旧，仅作参考） |
 | `server/pkg/agent/` 文件总数 | 61（递归含 `testdata/` 中 1 个 fixture）；顶层（不含 testdata 内文件）60 |
 | `server/pkg/agent/testdata/` 内容 | 仅 `openclaw-2026.5.5-stdout.json`（属被裁 provider；§4.2 删除清单含它） |
@@ -298,8 +298,10 @@ copilot_test.go
 copilot_invocation.go
 copilot_invocation_other.go
 copilot_invocation_test.go
-copilot_invocation_windows.go
-copilot_invocation_windows_test.go
+# 注：`copilot_invocation_windows{,_test}.go` 在 Phase 3.2 trim 时同步删除——
+# 它们依赖 cursor 子树里被裁的 `rewriteCmdToPS1` / `powerShellLookup` helper；
+# meowth 是 darwin-only（[`docs/01-project-overview.md`](../01-project-overview.md) §6），
+# 不抽 helper 到 daemon 本地以保持 vendor 边界。详 P3 trim commit 的"Beyond §4.2"段。
 
 claude.go
 claude_test.go
@@ -316,11 +318,11 @@ pi_test.go
 pi_invocation.go
 pi_invocation_other.go
 pi_invocation_test.go
-pi_invocation_windows.go
-pi_invocation_windows_test.go
+# 注：`pi_invocation_windows{,_test}.go` 在 Phase 3.2 trim 时同步删除（与
+# copilot windows shim 同源原因；见上面 copilot 块注释）。
 ```
 
-合计 ≈ 36 个 `.go` 文件。`testdata/` 当前**不**保留任何 fixture（§2.2 调研下，唯一的 fixture 属于被裁的 openclaw，已在 §4.2 删除清单中）。pump 时若上游为白名单 provider 新增 testdata，自动落在 `daemon/pkg/agent/testdata/` 下并保留。
+合计 ≈ 32 个 `.go` 文件（原 36 减去 4 个被同步删除的 windows shim）。`testdata/` 当前**不**保留任何 fixture（§2.2 调研下，唯一的 fixture 属于被裁的 openclaw，已在 §4.2 删除清单中）。pump 时若上游为白名单 provider 新增 testdata，自动落在 `daemon/pkg/agent/testdata/` 下并保留。
 
 ---
 
@@ -503,12 +505,8 @@ Rationale: <一句话理由>
 
 ### 7.3 与 README 的同步
 
-- `README.md` 当前写 `Go >= 1.22`，是 Phase 0 阶段的占位。
-- Phase 3.1 落地 daemon `go.mod` 时，若实际 Go 版本不是 1.22，立即用一个最小勘误 commit 更新 README：
-  ```
-  docs(readme): bump Go requirement to <X.Y> for vendored agent SDK
-  ```
-- 该勘误 commit 不依赖本文档的修订，属于 §10 工作流约束的应用而非额外规划。
+- `README.md` 已在 Phase 3.1 落地时同步更新为 `Go >= 1.26.1`（即 daemon `go.mod` 实际声明值，与上游 multica `server/go.mod` 对齐）。
+- 此项由 @zheng-li 在 Phase 3.1 kickoff 时确认"先用上游版本，长线选主流较新版本"，落地结果落在 `daemon/go.mod` 与 README"环境要求"段。
 
 ---
 
@@ -550,13 +548,29 @@ CI 默认**不安装**任何真实 CLI，因此 CI gate 永不依赖 §未决问
 
 每个 commit 自带必要测试 + 6DQ hook 全绿 + 不留 TODO。
 
+### 10.1 实际落地的 commit 链（截至当前）
+
+| 顺序 | Commit | 范围 |
+|------|--------|------|
+| Phase 2.1 | `61aa47b chore(daemon): scaffold go module with meowthd entrypoint` | `daemon/go.mod` (`go 1.26.1`) + `daemon/cmd/meowthd/main.go` 占位 + 根 `.gitignore` |
+| Phase 3.1 | `03dc1f7 feat(daemon): vendor multica pkg/agent verbatim` | upstream SHA `4bbaf5363c5ddf1e3087b50f587dfae06f113b34`；63 files (61 上游 + LICENSE + UPSTREAM.md)；**第一道闸门**用 `go test -count=1 -parallel=1`（上游测试有 timing-sensitive `t.Parallel()` 段；非 SDK bug） |
+| Phase 3.2 | `db9578f feat(daemon): trim agent SDK to 5 whitelisted backends` | 7 处同步裁剪 + 24 个被裁 provider 源/测删 + openclaw fixture 删；额外删 4 个 windows shim（copilot/pi `_windows{,_test}.go`，因为它们依赖被裁的 cursor `rewriteCmdToPS1` helper）；加 `TestSupportedTypesMatchesMeowthWhitelist` / `TestNewFactoryWhitelist` 防回归 |
+| P5 / P5 amend | `0ca5cc9 test(daemon): cli-smoke harness with 4 real backends (env opt-in)` | `daemon/test/cli-smoke/`；`MEOWTH_CLI_SMOKE=1` 触发；硬约束 = 缺 CLI fail + completed AND user-visible content；本机验证 4/4（claude/codex/hermes/pi）真实跑通 |
+| P6 | `a487f67 fix(agent): surface pi message_end errors` | **本地补丁**：`pi.go` 处理 Pi `message_end`/`turn_end` 的 `stopReason="error"`/`errorMessage`，避免上游 SDK 把 Pi 4xx 错误误报为 completed；4 个 L1 测试；`UPSTREAM.md` 新增 "Local fixes on top of upstream" 段记录 |
+| P7 | `a1c7019 test(daemon): lock cli-smoke negative gates` | 把 P5 的负向行为（缺 CLI / silent zero-exit / drain tail 真总数）固化为默认 L1；12 个新 unit test |
+| P8 | `f6dcee1 test(agent): add stability regression coverage` | 9 个新测试覆盖 Session 生命周期（buffered Result、drain-then-read、exactly-one）+ trySend 非阻塞 + Pi 稳定性（exit 1 / garbage stdout / ctx cancel / 高吞吐）；对齐 `agent.Session` godoc |
+
+### 10.2 上游本地补丁清单（与 `daemon/pkg/agent/UPSTREAM.md` 同步）
+
+- `pi.go` 的 `message_end` / `turn_end` 错误映射（P6）。pump 时若上游已合入等价修复 → 删本地补丁；若仍存在 → 保留并复测。
+
 ---
 
 ## 11. 未决问题
 
 | # | 问题 | 决策方 | 状态 |
 |---|------|-------|------|
-| 1 | daemon `go.mod` 是否需要严格等于上游 `1.26.1`？ | 实施 Phase 3.1 时由 SDE 按 §7.2 规则判定（若上游 `pkg/agent/` 语法允许下调到 `1.22`，则下调；否则与上游对齐） | 待 Phase 3.1 落地 |
+| 1 | daemon `go.mod` 是否需要严格等于上游 `1.26.1`？ | 实施 Phase 3.1 时由 SDE 按 §7.2 规则判定（若上游 `pkg/agent/` 语法允许下调到 `1.22`，则下调；否则与上游对齐） | **已决（Phase 3.1 / commit `61aa47b`）**：daemon `go.mod` 锁 `go 1.26.1`，与上游一致；@zheng-li 同时给出"长线选主流较新版本"长期方向 |
 | 2 | 是否需要在 meowth 增加"上游 backend 增删审计"自动化（CI 跑 `git ls-remote` + diff）？ | @zheng-li | 暂记此处，不影响 1.2 文档收口 |
 
 ---

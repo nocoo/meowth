@@ -16,3 +16,7 @@
 | 08 | [`08-6dq-hooks-wiring.md`](08-6dq-hooks-wiring.md) | `docs/01-project-overview.md` §8、§9.2 Phase 2.1–2.12 / 3.25 |
 
 Phase 1 文档全部就位。后续 architecture 文档（如 v2 设计）按需新增。
+
+## 实施状态
+
+主要已落地的是 01 对应的 agent SDK 底座（Phase 2.1 + Phase 3.1 / 3.2 + 后续 P5–P8 hardening；详 01 §10.1）；08 §10 的真实 CLI smoke / 负向 gate L1 已随 SDK 底座部分落地（commit `0ca5cc9` / `a1c7019`，详 08 §10.1）。02–07 以及 08 其余 hooks / CI 接线 / OpenAPI drift / coverage gates 等仍是文档定义，代码尚未实施。
