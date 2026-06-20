@@ -131,3 +131,53 @@ func TestInitRejectsPositionalArgs(t *testing.T) {
 		t.Fatalf("stderr lacks positional message: %q", stderr)
 	}
 }
+
+func TestBootstrapTokenSucceedsOnInitializedHome(t *testing.T) {
+	testHome := t.TempDir()
+	root := filepath.Join(testHome, ".meowth-test")
+	env := []string{
+		"MEOWTH_TEST=1",
+		"MEOWTH_TEST_HOME=" + root,
+	}
+	if _, _, code := runMeowthd(t, env, "init"); code != 0 {
+		t.Fatalf("seed init exit = %d", code)
+	}
+	stdout, stderr, code := runMeowthd(t, env, "bootstrap-token")
+	if code != 0 {
+		t.Fatalf("bootstrap-token exit = %d, stderr=%s", code, stderr)
+	}
+	if !strings.Contains(stdout, "mwt_") {
+		t.Fatalf("stdout missing mwt_ token: %q", stdout)
+	}
+	if !strings.Contains(stdout, "Emergency bootstrap") {
+		t.Fatalf("stdout missing banner: %q", stdout)
+	}
+	if !strings.Contains(stdout, "http://127.0.0.1:7777") {
+		t.Fatalf("stdout missing Dashboard URL: %q", stdout)
+	}
+}
+
+func TestBootstrapTokenRefusesOnMissingHome(t *testing.T) {
+	testHome := t.TempDir()
+	root := filepath.Join(testHome, ".meowth-test")
+	_, stderr, code := runMeowthd(t, []string{
+		"MEOWTH_TEST=1",
+		"MEOWTH_TEST_HOME=" + root,
+	}, "bootstrap-token")
+	if code == 0 {
+		t.Fatal("bootstrap-token on missing home: want failure, got exit 0")
+	}
+	if !strings.Contains(stderr, "does not exist") {
+		t.Fatalf("stderr lacks missing-home refusal: %q", stderr)
+	}
+}
+
+func TestBootstrapTokenRejectsPositionalArgs(t *testing.T) {
+	_, stderr, code := runMeowthd(t, []string{"MEOWTH_TEST=1"}, "bootstrap-token", "extra")
+	if code == 0 {
+		t.Fatal("positional arg should fail")
+	}
+	if !strings.Contains(stderr, "unexpected positional") {
+		t.Fatalf("stderr lacks positional message: %q", stderr)
+	}
+}

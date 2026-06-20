@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/nocoo/meowth/daemon/internal/bootstraptoken"
 	"github.com/nocoo/meowth/daemon/internal/home"
 	"github.com/nocoo/meowth/daemon/internal/initcmd"
 )
@@ -32,6 +33,8 @@ func run(args []string, stdout, stderr *os.File) error {
 	switch args[0] {
 	case "init":
 		return runInit(args[1:], stdout, stderr)
+	case "bootstrap-token":
+		return runBootstrapToken(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		_, _ = fmt.Fprintln(stdout, usage())
 		return nil
@@ -58,6 +61,22 @@ func runInit(args []string, _ *os.File, _ *os.File) error {
 	return initcmd.Run(context.Background(), h, initcmd.Options{SkipToken: *skipToken}, os.Stdout)
 }
 
+func runBootstrapToken(args []string, _ *os.File, _ *os.File) error {
+	fs := flag.NewFlagSet("bootstrap-token", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("meowthd bootstrap-token: unexpected positional arguments %v", fs.Args())
+	}
+	h, err := resolveHome()
+	if err != nil {
+		return err
+	}
+	return bootstraptoken.Run(context.Background(), h, bootstraptoken.Options{}, os.Stdout)
+}
+
 // resolveHome picks production or test mode based on the documented
 // MEOWTH_TEST=1 sentinel. The home package itself is responsible for
 // rejecting the wrong env combinations; main.go only routes. We use
@@ -79,9 +98,11 @@ usage:
   meowthd init --skip-token
                            create ~/.meowth without the root token; emit a setup-code
                            and persist setup_nonce.hash for the first-run mint (path B)
+  meowthd bootstrap-token  mint an emergency root token into an existing ~/.meowth
+                           (independent of mint window / remote_access / tokens-empty)
   meowthd help             print this message
 
 env:
-  MEOWTH_TEST=1            switch to the test home (~/.meowth-test); honoured by both subcommands.
+  MEOWTH_TEST=1            switch to the test home (~/.meowth-test); honoured by all subcommands.
   MEOWTH_TEST_HOME=<dir>   override the test home root (only honoured when MEOWTH_TEST=1).`
 }
