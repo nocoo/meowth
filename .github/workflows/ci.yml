@@ -61,7 +61,19 @@ jobs:
           node -v
           pnpm -v
           go version
-      - run: pnpm install --frozen-lockfile
+      - name: pnpm install
+        # `--ignore-scripts` skips per-dep lifecycle scripts. We need it
+        # because pnpm 11.6 hard-fails `--frozen-lockfile` with
+        # ERR_PNPM_IGNORED_BUILDS on @biomejs/biome's postinstall — even
+        # when biome is on the workspace `onlyBuiltDependencies`
+        # allowlist (the allow check only kicks in after a user-level
+        # `pnpm approve-builds`, which is not feasible in CI). The deps
+        # we use that ship a postinstall (biome, husky) work fine
+        # without it: biome's binary is prebuilt, and CI never commits
+        # so the husky hook install is moot. Phase 2.9's
+        # `pnpm e2e:install` runs Playwright's browser fetch as an
+        # explicit step, not via postinstall.
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm daemon:g1
       - run: pnpm dashboard:g1
 
@@ -106,7 +118,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm daemon:test:cover
       - run: pnpm daemon:cover:check
 
@@ -125,7 +137,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm dashboard:test:cover
 
   l2:
@@ -146,7 +158,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm test:l2
 
   l3:
@@ -167,7 +179,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
@@ -198,7 +210,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Install osv-scanner
         # We exercise the repo's own wrapper (scripts/run-osv-scan.sh
         # + pnpm scan:osv) instead of the official osv-scanner-action
@@ -230,5 +242,5 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm scan:gitleaks:detect
