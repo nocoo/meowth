@@ -9,6 +9,9 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "lint": "biome check --error-on-warnings src",
+    "fmt:check": "biome format src",
+    "fmt": "biome format --write src",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .turbo dist"
   },

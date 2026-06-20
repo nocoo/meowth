@@ -19,7 +19,11 @@
     "daemon:fmt:check": "cd daemon && test -z \"$(gofmt -l .)\" || (gofmt -l . && echo 'gofmt: files above are not formatted; run gofmt -w' >&2; exit 1)",
     "daemon:lint": "cd daemon && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run",
     "daemon:g1": "pnpm daemon:fmt:check && pnpm daemon:vet && pnpm daemon:lint",
-    "daemon:test": "cd daemon && go test ./... -count=1 -parallel=1"
+    "daemon:test": "cd daemon && go test ./... -count=1 -parallel=1",
+    "dashboard:fmt:check": "pnpm --filter @meowth/dashboard --filter @meowth/shared fmt:check",
+    "dashboard:lint": "pnpm --filter @meowth/dashboard --filter @meowth/shared lint",
+    "dashboard:typecheck": "pnpm --filter @meowth/dashboard --filter @meowth/shared typecheck",
+    "dashboard:g1": "pnpm dashboard:fmt:check && pnpm dashboard:lint && pnpm dashboard:typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
