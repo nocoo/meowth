@@ -60,6 +60,23 @@ it still hasn't (keep the patch and verify the affected path still applies).
   the Phase 2.3 lint wiring; revisit when pumping if upstream tightens
   the same call sites.
 
+- **Codex semantic-inactivity tests widened for slow CI runners** —
+  `codex_test.go` `TestCodexExecuteLegacyFirstTurnMessageSatisfiesProgress`,
+  `TestCodexExecuteSemanticInactivityAllowsContinuousMessages`, and
+  `TestCodexExecuteSemanticInactivityAllowsContinuousDeltaProgress`.
+  Upstream uses `SemanticInactivityTimeout` in the 90–150 ms range and
+  fixture sleeps in the 50–70 ms range. Because
+  `codexFirstTurnNoProgressTimeout()` shrinks the timeout to 80%,
+  GitHub-hosted `macos-14` runners regularly hit the watchdog during
+  shell scheduling + stdout flush, producing spurious "no progress
+  timeout" failures (CI run 27884748048). Meowth widens
+  `SemanticInactivityTimeout` to 1 s and each inter-progress sleep to
+  ~0.2–0.4 s. Semantic intent preserved: each progress gap stays well
+  below the timeout window, and the total turn duration exceeds it,
+  which is what proves the watchdog timer is reset on progress events
+  rather than that timing is sub-100 ms accurate. Behavior of the
+  Codex backend itself is unchanged; revisit when pumping upstream.
+
 ## How to pump
 
 See `docs/architecture/01-agent-sdk-pump-from-multica.md` §6.

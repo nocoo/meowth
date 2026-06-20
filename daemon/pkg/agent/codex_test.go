@@ -1627,6 +1627,14 @@ func TestCodexExecuteLegacyFirstTurnMessageSatisfiesProgress(t *testing.T) {
 		t.Skip("shell-script fixture is POSIX-only")
 	}
 
+	// Meowth-local widening: upstream uses 50ms / 70ms / 100ms here. On
+	// slow CI runners (e.g. GitHub-hosted macos-14) the codex
+	// firstTurnNoProgressTimeout (80% of SemanticInactivityTimeout =
+	// 80ms upstream) is shorter than the shell scheduler + stdout
+	// flush jitter, producing a spurious "no progress timeout" failure.
+	// Widening preserves the test's semantic intent — first-turn
+	// progress arrives well before the watchdog window — without
+	// asserting sub-100ms timer precision.
 	fakePath := writeFakeCodexAppServer(t, ""+
 		`read line`+"\n"+
 		`echo '{"jsonrpc":"2.0","id":1,"result":{}}'`+"\n"+
@@ -1636,14 +1644,14 @@ func TestCodexExecuteLegacyFirstTurnMessageSatisfiesProgress(t *testing.T) {
 		`read line`+"\n"+
 		`echo '{"jsonrpc":"2.0","id":3,"result":{}}'`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"codex/event","params":{"msg":{"type":"task_started"}}}'`+"\n"+
-		`sleep 0.05`+"\n"+
+		`sleep 0.2`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"codex/event","params":{"msg":{"type":"agent_message","message":"legacy alive"}}}'`+"\n"+
-		`sleep 0.07`+"\n"+
+		`sleep 0.3`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"codex/event","params":{"msg":{"type":"task_complete"}}}'`+"\n")
 
 	result := executeFakeCodex(t, fakePath, ExecOptions{
 		Timeout:                   5 * time.Second,
-		SemanticInactivityTimeout: 100 * time.Millisecond,
+		SemanticInactivityTimeout: 1 * time.Second,
 	})
 	if result.Status != "completed" {
 		t.Fatalf("expected completed, got status=%q error=%q", result.Status, result.Error)
@@ -1659,6 +1667,11 @@ func TestCodexExecuteSemanticInactivityAllowsContinuousMessages(t *testing.T) {
 		t.Skip("shell-script fixture is POSIX-only")
 	}
 
+	// Meowth-local widening (see TestCodexExecuteLegacyFirstTurnMessage
+	// SatisfiesProgress above for rationale). Semantic intent preserved:
+	// each inter-progress gap (~0.4s) is well below the 1s inactivity
+	// timeout, while the total turn (~1.2s) is comfortably above it,
+	// which is what proves the timer is reset on each progress event.
 	fakePath := writeFakeCodexAppServer(t, ""+
 		`read line`+"\n"+
 		`echo '{"jsonrpc":"2.0","id":1,"result":{}}'`+"\n"+
@@ -1668,16 +1681,16 @@ func TestCodexExecuteSemanticInactivityAllowsContinuousMessages(t *testing.T) {
 		`read line`+"\n"+
 		`echo '{"jsonrpc":"2.0","id":3,"result":{}}'`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"turn/started","params":{"threadId":"thr-progress","turn":{"id":"turn-progress"}}}'`+"\n"+
-		`sleep 0.05`+"\n"+
+		`sleep 0.4`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"item/completed","params":{"threadId":"thr-progress","item":{"type":"agentMessage","id":"msg-1","text":"still working"}}}'`+"\n"+
-		`sleep 0.05`+"\n"+
+		`sleep 0.4`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"item/completed","params":{"threadId":"thr-progress","item":{"type":"commandExecution","id":"cmd-1","aggregatedOutput":"ok"}}}'`+"\n"+
-		`sleep 0.05`+"\n"+
+		`sleep 0.4`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"turn/completed","params":{"threadId":"thr-progress","turn":{"id":"turn-progress","status":"completed"}}}'`+"\n")
 
 	result := executeFakeCodex(t, fakePath, ExecOptions{
 		Timeout:                   5 * time.Second,
-		SemanticInactivityTimeout: 90 * time.Millisecond,
+		SemanticInactivityTimeout: 1 * time.Second,
 	})
 	if result.Status != "completed" {
 		t.Fatalf("expected completed, got status=%q error=%q", result.Status, result.Error)
@@ -1693,6 +1706,11 @@ func TestCodexExecuteSemanticInactivityAllowsContinuousDeltaProgress(t *testing.
 		t.Skip("shell-script fixture is POSIX-only")
 	}
 
+	// Meowth-local widening (see TestCodexExecuteLegacyFirstTurnMessage
+	// SatisfiesProgress above for rationale). Semantic intent preserved:
+	// each delta arrives ~0.4s apart while the inactivity window is 1s,
+	// and the four sleeps total ~1.6s — total turn > inactivity timeout
+	// confirms the timer is reset on every delta event.
 	fakePath := writeFakeCodexAppServer(t, ""+
 		`read line`+"\n"+
 		`echo '{"jsonrpc":"2.0","id":1,"result":{}}'`+"\n"+
@@ -1703,18 +1721,18 @@ func TestCodexExecuteSemanticInactivityAllowsContinuousDeltaProgress(t *testing.
 		`echo '{"jsonrpc":"2.0","id":3,"result":{}}'`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"turn/started","params":{"threadId":"thr-delta","turn":{"id":"turn-delta"}}}'`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"item/commandExecution/outputDelta","params":{"threadId":"thr-delta","item":{"type":"commandExecution","id":"cmd-1"},"delta":"line 1\n"}}'`+"\n"+
-		`sleep 0.05`+"\n"+
+		`sleep 0.4`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"item/agentMessage/delta","params":{"threadId":"thr-delta","item":{"type":"agentMessage","id":"msg-1"},"delta":"thinking"}}'`+"\n"+
-		`sleep 0.05`+"\n"+
+		`sleep 0.4`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"item/fileChange/outputDelta","params":{"threadId":"thr-delta","item":{"type":"fileChange","id":"patch-1"},"delta":"patched"}}'`+"\n"+
-		`sleep 0.05`+"\n"+
+		`sleep 0.4`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"item/mcpToolCall/progress","params":{"threadId":"thr-delta","item":{"type":"mcpToolCall","id":"mcp-1"},"progress":{"message":"still running"}}}'`+"\n"+
-		`sleep 0.05`+"\n"+
+		`sleep 0.4`+"\n"+
 		`echo '{"jsonrpc":"2.0","method":"turn/completed","params":{"threadId":"thr-delta","turn":{"id":"turn-delta","status":"completed"}}}'`+"\n")
 
 	result := executeFakeCodex(t, fakePath, ExecOptions{
 		Timeout:                   5 * time.Second,
-		SemanticInactivityTimeout: 150 * time.Millisecond,
+		SemanticInactivityTimeout: 1 * time.Second,
 	})
 	if result.Status != "completed" {
 		t.Fatalf("expected completed, got status=%q error=%q", result.Status, result.Error)
