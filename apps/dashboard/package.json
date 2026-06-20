@@ -1,13 +1,13 @@
 {
-  "name": "@meowth/web",
+  "name": "@meowth/dashboard",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "echo 'TODO: setup web dev server'",
-    "build": "echo 'TODO: setup web build'",
+    "dev": "echo 'TODO: setup vite dev server'",
+    "build": "echo 'TODO: setup vite build'",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf .turbo dist .next"
+    "clean": "rm -rf .turbo dist"
   },
   "dependencies": {
     "@meowth/shared": "workspace:*"

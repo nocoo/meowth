@@ -9,8 +9,9 @@ pnpm + Turborepo + TypeScript + Biome。
 ```
 meowth/
 ├── apps/
-│   ├── web/                 @meowth/web   前端应用
-│   └── api/                 @meowth/api   后端服务
+│   └── dashboard/           @meowth/dashboard  Vite + basalt 前端（daemon 管理面板）
+├── daemon/                  Go module，独立于 pnpm workspace（顶层）
+│   └── cmd/meowthd          主二进制入口（详见 docs/01-project-overview.md §7.1）
 ├── packages/
 │   └── shared/              @meowth/shared  共享类型与工具
 ├── docs/                    编号文档（设计、架构、特性）
