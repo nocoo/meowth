@@ -1,0 +1,220 @@
+# Phase 2.12 — CI / 6DQ gates on GitHub-hosted macOS.
+#
+# Maps to docs/architecture/08-6dq-hooks-wiring.md §7.3. Several jobs
+# called out by §7.3 are NOT created here because their prerequisites
+# live in later phases — adding empty/no-op jobs would be a false
+# green. They will be appended by the commits below:
+#   - openapi-drift   → Phase 02 (docs/architecture/02 §11)
+#   - dist-scan       → Phase 06 (Vite build) + Phase 07
+#                       (scripts/check-dashboard-dist.sh)
+#   - l3 split into l3-dev / l3-embed with embed depending on
+#                       dist-scan: same Phase 06 / 07 follow-up
+#   - dep-cruiser / source-scan inside `lint`: Phase 06 / 07
+#
+# Real CLI smoke (§7.4) is intentionally NOT in default CI; runners
+# do not have claude/codex/hermes/pi binaries installed.
+
+name: CI
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    # G1 partial — runs the wiring that already exists today
+    # (daemon: gofmt + go vet + golangci-lint; dashboard: biome
+    # strict + tsc strict). The §7.3 lint job also wants
+    # dependency-cruiser and the 07 source/CSP scan; those land
+    # with their respective phases and are NOT executed here.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print runner identity (pre-setup)
+        # docs/architecture/08 §7.1 requires the first CI run to
+        # confirm runner architecture; print on every run so future
+        # drift is obvious.
+        run: |
+          uname -m
+          sw_vers
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: Print toolchain identity (post-setup)
+        # Versions here reflect what the workflow actually pinned
+        # (Node 22 from setup-node, pnpm 11 from action-setup, Go
+        # from daemon/go.mod), not whatever the runner image ships.
+        run: |
+          node -v
+          pnpm -v
+          go version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm daemon:g1
+      - run: pnpm dashboard:g1
+
+  build-darwin:
+    # docs/architecture/08 §7.1 darwin-amd64 cross-build assertion.
+    # arm64 is included so both build targets are gated; no tests
+    # run under the cross target — that is the documented trade-off.
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        goarch: [arm64, amd64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: go build darwin/${{ matrix.goarch }}
+        working-directory: daemon
+        env:
+          GOOS: darwin
+          GOARCH: ${{ matrix.goarch }}
+        run: go build ./...
+
+  l1-daemon:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm daemon:test:cover
+      - run: pnpm daemon:cover:check
+
+  l1-dashboard:
+    # Phase 3.25 raises the coverage gate (90%); for now this job
+    # only proves the harness runs and emits a profile.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm dashboard:test:cover
+
+  l2:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:l2
+
+  l3:
+    # Phase 2.9 placeholder — Playwright config + two test.skip
+    # specs (dev/embed). Real fixtures land with Phase 3.6 (daemon
+    # HTTP) + 3.13+ (Vite). Once those exist, split this job into
+    # l3-dev and l3-embed; the embed job should depend on dist-scan
+    # per 08 §7.3.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/dashboard/package.json') }}
+      - run: pnpm --filter @meowth/dashboard e2e:install
+      - run: pnpm dashboard:e2e
+
+  g2:
+    # docs/architecture/08 §7.3: supply-chain only. Secret scan is
+    # a separate job (`secret-scan`) so a CI failure points at one
+    # subsystem. pre-push aggregates them via `pnpm scan:g2`; that
+    # aggregate is intentionally NOT reused here.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Install osv-scanner
+        # We exercise the repo's own wrapper (scripts/run-osv-scan.sh
+        # + pnpm scan:osv) instead of the official osv-scanner-action
+        # so the CI path matches what developers run locally.
+        run: brew install osv-scanner
+      - run: pnpm scan:osv
+      - run: pnpm scan:govulncheck
+
+  secret-scan:
+    # gitleaks full current-worktree scan (08 §7.3). pre-commit only
+    # covers the staged diff; this job scans the entire checked-out
+    # tree. The root script uses `--no-git --source .`, so this is
+    # not a git-history scan; switching to history scanning requires
+    # changing both the script and adding `fetch-depth: 0` here.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm scan:gitleaks:detect
