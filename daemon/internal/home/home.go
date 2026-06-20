@@ -53,11 +53,7 @@ type Home struct {
 // ignored here; it is only honoured by Test() and only when
 // MEOWTH_TEST=1 is set.
 func Production() (*Home, error) {
-	root, err := userHomeJoin(".meowth")
-	if err != nil {
-		return nil, err
-	}
-	h, err := newHome(ModeProduction, root, "meowth.db")
+	h, err := ResolveProduction()
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +61,18 @@ func Production() (*Home, error) {
 		return nil, err
 	}
 	return h, nil
+}
+
+// ResolveProduction resolves the production Home without creating any
+// directories. Callers (e.g. `meowthd init`) that need to enforce
+// pre-existing-home invariants BEFORE provisioning use this; ordinary
+// daemon code should keep using Production().
+func ResolveProduction() (*Home, error) {
+	root, err := userHomeJoin(".meowth")
+	if err != nil {
+		return nil, err
+	}
+	return newHome(ModeProduction, root, "meowth.db")
 }
 
 // Test returns a test home rooted at MEOWTH_TEST_HOME (when MEOWTH_TEST=1)
@@ -76,14 +84,7 @@ func Production() (*Home, error) {
 // no legitimate reason to provision a test home in production-mode
 // processes, and refusing here closes that drift early.
 func Test() (*Home, error) {
-	if os.Getenv("MEOWTH_TEST") != "1" {
-		return nil, errors.New("home: Test() requires MEOWTH_TEST=1")
-	}
-	root, err := resolveTestRoot()
-	if err != nil {
-		return nil, err
-	}
-	h, err := newHome(ModeTest, root, "meowth-test.db")
+	h, err := ResolveTest()
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +92,19 @@ func Test() (*Home, error) {
 		return nil, err
 	}
 	return h, nil
+}
+
+// ResolveTest is the no-Ensure analogue of Test(); see ResolveProduction
+// for rationale.
+func ResolveTest() (*Home, error) {
+	if os.Getenv("MEOWTH_TEST") != "1" {
+		return nil, errors.New("home: Test() requires MEOWTH_TEST=1")
+	}
+	root, err := resolveTestRoot()
+	if err != nil {
+		return nil, err
+	}
+	return newHome(ModeTest, root, "meowth-test.db")
 }
 
 // Ensure provisions the root and runtime/logs subdirectories at 0700,
