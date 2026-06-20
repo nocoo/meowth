@@ -26,9 +26,13 @@ Removed at Phase 3.2 to keep V1 whitelist (claude, copilot, codex, hermes, pi):
 - openclaw
 - opencode
 
-(This file is created at vendor time; the trim list will be enforced by the
-follow-up Phase 3.2 commit `feat(daemon): trim agent SDK to 5 whitelisted backends`.
-At this commit (Phase 3.1), the 8 trimmed providers are still present.)
+(The trim was applied in `feat(daemon): trim agent SDK to 5 whitelisted backends`
+(Phase 3.2; see `git log -- daemon/pkg/agent` for the exact commit). The listed
+providers are removed from the current tree; the file map under §4.2 of
+`docs/architecture/01-agent-sdk-pump-from-multica.md` records the exact
+deletions, and `TestSupportedTypesMatchesMeowthWhitelist` /
+`TestNewFactoryWhitelist` guard against accidental reintroduction on future
+pumps.)
 
 ## How to pump
 

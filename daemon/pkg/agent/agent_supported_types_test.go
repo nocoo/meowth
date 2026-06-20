@@ -33,20 +33,48 @@ func TestSupportedTypesLockstepWithNew(t *testing.T) {
 	}
 }
 
-// TestSupportedTypesMatchesMigrationWhitelist pins the exact set so a drift
-// from the runtime_profile.protocol_family CHECK in migration 120 fails loudly.
-func TestSupportedTypesMatchesMigrationWhitelist(t *testing.T) {
+// TestSupportedTypesMatchesMeowthWhitelist pins the exact set so any drift from
+// the meowth V1 whitelist (see docs/architecture/01 §4) fails loudly. Adding or
+// removing a backend in agent.go without updating this test will turn the gate
+// red on the next `go test ./pkg/agent/...` run.
+func TestSupportedTypesMatchesMeowthWhitelist(t *testing.T) {
 	want := map[string]bool{
-		"claude": true, "codebuddy": true, "codex": true, "copilot": true,
-		"opencode": true, "openclaw": true, "hermes": true, "gemini": true,
-		"pi": true, "cursor": true, "kimi": true, "kiro": true, "antigravity": true,
+		"claude":  true,
+		"codex":   true,
+		"copilot": true,
+		"hermes":  true,
+		"pi":      true,
 	}
 	if len(SupportedTypes) != len(want) {
-		t.Fatalf("SupportedTypes has %d entries, migration whitelist has %d; keep them in lockstep", len(SupportedTypes), len(want))
+		t.Fatalf("SupportedTypes has %d entries, meowth whitelist has %d; keep them in lockstep", len(SupportedTypes), len(want))
 	}
 	for _, typ := range SupportedTypes {
 		if !want[typ] {
-			t.Errorf("SupportedTypes contains %q which is not in the migration 120 protocol_family CHECK", typ)
+			t.Errorf("SupportedTypes contains %q which is not in the meowth V1 whitelist", typ)
+		}
+	}
+}
+
+// TestNewFactoryWhitelist asserts that New() accepts exactly the 5 whitelisted
+// backends and rejects every previously-trimmed provider. Regression guard
+// against accidentally re-introducing a removed backend during a future pump.
+func TestNewFactoryWhitelist(t *testing.T) {
+	cfg := Config{Logger: slog.Default()}
+
+	allowed := []string{"claude", "codex", "copilot", "hermes", "pi"}
+	for _, typ := range allowed {
+		if _, err := New(typ, cfg); err != nil {
+			t.Errorf("New(%q) returned error for an allowed backend: %v", typ, err)
+		}
+	}
+
+	trimmed := []string{
+		"antigravity", "codebuddy", "cursor", "gemini",
+		"kimi", "kiro", "openclaw", "opencode",
+	}
+	for _, typ := range trimmed {
+		if _, err := New(typ, cfg); err == nil {
+			t.Errorf("New(%q) succeeded; trimmed backend must be rejected by the factory", typ)
 		}
 	}
 }

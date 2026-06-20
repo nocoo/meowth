@@ -5,13 +5,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"testing"
 )
 
 func TestListModelsStaticProviders(t *testing.T) {
 	ctx := context.Background()
-	for _, provider := range []string{"claude", "codex", "gemini", "cursor"} {
+	for _, provider := range []string{"claude", "codex"} {
 		got, err := ListModels(ctx, provider, "")
 		if err != nil {
 			t.Fatalf("ListModels(%q) error: %v", provider, err)
@@ -80,36 +79,6 @@ func TestClaudeStaticModelsExposesFable5(t *testing.T) {
 	}
 }
 
-func TestGeminiStaticModelsExposesAliasesAndGemini3(t *testing.T) {
-	// Gemini CLI has no `models list` subcommand, so we expose the
-	// CLI's own aliases (auto / pro / flash / flash-lite) plus
-	// explicit version pins including Gemini 3. Regression guard
-	// for multica-ai/multica#1503 — Gemini 3 must be selectable.
-	models := geminiStaticModels()
-	ids := map[string]Model{}
-	for _, m := range models {
-		ids[m.ID] = m
-	}
-	for _, want := range []string{
-		"auto", "auto-gemini-2.5",
-		"pro", "flash", "flash-lite",
-		"gemini-3-pro-preview", "gemini-3-flash-preview",
-		"gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite",
-	} {
-		if _, ok := ids[want]; !ok {
-			t.Errorf("missing expected Gemini model %q in: %+v", want, models)
-		}
-	}
-	auto, ok := ids["auto"]
-	if !ok || !auto.Default {
-		t.Errorf("expected `auto` to be the default Gemini entry, got %+v", auto)
-	}
-	for _, m := range models {
-		if m.Provider != "google" {
-			t.Errorf("all Gemini entries must carry Provider=google, got %+v", m)
-		}
-	}
-}
 
 func TestCodexStaticModelsExposesGPT55(t *testing.T) {
 	// Codex CLI has no `models list` subcommand so the catalog is
@@ -316,20 +285,6 @@ func TestListModelsHermesWithoutBinary(t *testing.T) {
 	}
 }
 
-func TestListModelsKiroWithoutBinary(t *testing.T) {
-	ctx := context.Background()
-	modelCacheMu.Lock()
-	delete(modelCache, "kiro")
-	modelCacheMu.Unlock()
-
-	got, err := ListModels(ctx, "kiro", "/nonexistent/kiro-cli")
-	if err != nil {
-		t.Fatalf("ListModels(kiro) error: %v", err)
-	}
-	if got == nil {
-		t.Error("expected non-nil slice even when binary is missing")
-	}
-}
 
 func TestListModelsUnknownProvider(t *testing.T) {
 	ctx := context.Background()
@@ -346,8 +301,6 @@ func TestStaticCatalogsHaveAtMostOneDefault(t *testing.T) {
 	catalogs := map[string][]Model{
 		"claude":  claudeStaticModels(),
 		"codex":   codexStaticModels(),
-		"gemini":  geminiStaticModels(),
-		"cursor":  cursorStaticModels(),
 		"copilot": copilotStaticModels(),
 	}
 	for provider, models := range catalogs {
@@ -363,144 +316,6 @@ func TestStaticCatalogsHaveAtMostOneDefault(t *testing.T) {
 	}
 }
 
-func TestParseOpenCodeModels(t *testing.T) {
-	input := `PROVIDER/MODEL                     CONTEXT  MAX_OUT
-openai/gpt-4o                      128000   16384
-anthropic/claude-sonnet-4-6        200000   8192
-openai/gpt-4o                      128000   16384
-nonprefixed-line
-`
-	models := parseOpenCodeModels(input)
-	if len(models) != 2 {
-		t.Fatalf("expected 2 models (header skipped, duplicate deduped, non-slash skipped), got %d: %+v", len(models), models)
-	}
-	if models[0].ID != "openai/gpt-4o" || models[0].Provider != "openai" {
-		t.Errorf("unexpected first model: %+v", models[0])
-	}
-	if models[1].ID != "anthropic/claude-sonnet-4-6" || models[1].Provider != "anthropic" {
-		t.Errorf("unexpected second model: %+v", models[1])
-	}
-}
-
-func TestParseOpenCodeModelsVerboseVariants(t *testing.T) {
-	input := `openai/gpt-5
-{
-  "id": "gpt-5",
-  "name": "GPT-5",
-  "reasoning": true,
-  "variants": {
-    "high": { "reasoningEffort": "high" },
-    "low": { "reasoningEffort": "low" },
-    "xhigh": { "reasoningEffort": "xhigh" },
-    "fast-mode": { "reasoningEffort": "low" },
-    "disabled": { "disabled": true }
-  }
-}
-anthropic/claude-sonnet-4-6
-{
-  "id": "claude-sonnet-4-6",
-  "reasoning": true,
-  "variants": {
-    "max": { "thinking": { "type": "enabled", "budgetTokens": 32000 } },
-    "high": { "thinking": { "type": "enabled", "budgetTokens": 16000 } }
-  }
-}
-`
-	models := parseOpenCodeModels(input)
-	if len(models) != 2 {
-		t.Fatalf("expected 2 models, got %d: %+v", len(models), models)
-	}
-	if models[0].Thinking == nil {
-		t.Fatalf("expected first model to expose thinking variants")
-	}
-	got := make([]string, 0, len(models[0].Thinking.SupportedLevels))
-	for _, lvl := range models[0].Thinking.SupportedLevels {
-		got = append(got, lvl.Value)
-		if lvl.Value == "xhigh" && lvl.Label != "Extra high" {
-			t.Errorf("xhigh label: got %q, want Extra high", lvl.Label)
-		}
-		if lvl.Value == "fast-mode" && lvl.Label != "Fast Mode" {
-			t.Errorf("custom variant label: got %q, want Fast Mode", lvl.Label)
-		}
-	}
-	want := []string{"low", "high", "xhigh", "fast-mode"}
-	if strings.Join(got, ",") != strings.Join(want, ",") {
-		t.Fatalf("variant order/values: got %v, want %v", got, want)
-	}
-	if models[1].Thinking == nil || len(models[1].Thinking.SupportedLevels) != 2 {
-		t.Fatalf("expected second model variants, got %+v", models[1].Thinking)
-	}
-}
-
-func TestParseOpenCodeModelsMalformedVerboseBlockKeepsFollowingModels(t *testing.T) {
-	input := `openai/gpt-5
-{
-  "id": "gpt-5",
-  "reasoning": true,
-  "variants": {
-    "high": {}
-  }
-anthropic/claude-sonnet-4-6
-{
-  "id": "claude-sonnet-4-6",
-  "reasoning": true,
-  "variants": {
-    "high": {},
-    "max": {}
-  }
-}
-`
-	models := parseOpenCodeModels(input)
-	if len(models) != 2 {
-		t.Fatalf("expected both model rows to survive malformed JSON, got %d: %+v", len(models), models)
-	}
-	if models[0].ID != "openai/gpt-5" {
-		t.Fatalf("unexpected first model: %+v", models[0])
-	}
-	if models[0].Thinking != nil {
-		t.Fatalf("malformed first JSON block should not annotate thinking: %+v", models[0].Thinking)
-	}
-	if models[1].ID != "anthropic/claude-sonnet-4-6" {
-		t.Fatalf("unexpected second model: %+v", models[1])
-	}
-	if models[1].Thinking == nil || len(models[1].Thinking.SupportedLevels) != 2 {
-		t.Fatalf("valid following JSON block should still annotate thinking: %+v", models[1].Thinking)
-	}
-}
-
-func TestDiscoverOpenCodeModelsFallsBackWhenVerboseFails(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("shell-script fake binary requires a POSIX shell")
-	}
-
-	dir := t.TempDir()
-	fake := filepath.Join(dir, "opencode")
-	script := `#!/bin/sh
-if [ "$1" = "models" ] && [ "$2" = "--verbose" ]; then
-  exit 2
-fi
-if [ "$1" = "models" ]; then
-  cat <<'EOF'
-PROVIDER/MODEL                     CONTEXT  MAX_OUT
-openai/gpt-4o                      128000   16384
-EOF
-  exit 0
-fi
-exit 1
-`
-	writeTestExecutable(t, fake, []byte(script))
-
-	models, err := discoverOpenCodeModels(context.Background(), fake)
-	if err != nil {
-		t.Fatalf("discoverOpenCodeModels: %v", err)
-	}
-	if len(models) != 1 {
-		t.Fatalf("expected fallback non-verbose model, got %d: %+v", len(models), models)
-	}
-	if models[0].ID != "openai/gpt-4o" || models[0].Thinking != nil {
-		t.Fatalf("unexpected fallback model: %+v", models[0])
-	}
-}
 
 // TestCachedDiscoveryDoesNotCacheEmpty verifies that an empty discovery result
 // is not cached, so a transient failure (e.g. a `pi --list-models` timeout)
@@ -666,188 +481,6 @@ func TestDiscoverPiModelsNonZeroExit(t *testing.T) {
 	}
 }
 
-// TestDiscoverOpenCodeModelsFallsBackOnVerboseNoise verifies that a non-zero
-// `opencode models --verbose` whose stdout is unparseable noise still falls
-// back to the plain `opencode models` command instead of returning empty. The
-// earlier fix skipped the fallback whenever verbose printed any bytes, which
-// regressed this case. Mirrors the pi hardening in #3729.
-func TestDiscoverOpenCodeModelsFallsBackOnVerboseNoise(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("fake opencode binary is a /bin/sh script")
-	}
-
-	// `opencode models --verbose` => $2 == "--verbose": emit noise + exit 1.
-	// `opencode models`           => no $2: print the plain catalog.
-	script := "#!/bin/sh\n" +
-		"if [ \"$2\" = \"--verbose\" ]; then\n" +
-		"  echo 'panic: catalog sync failed'\n" +
-		"  exit 1\n" +
-		"fi\n" +
-		"echo 'openai/gpt-4o'\n"
-
-	fakePath := filepath.Join(t.TempDir(), "opencode")
-	writeTestExecutable(t, fakePath, []byte(script))
-
-	models, err := discoverOpenCodeModels(context.Background(), fakePath)
-	if err != nil {
-		t.Fatalf("discoverOpenCodeModels: %v", err)
-	}
-	if len(models) != 1 || models[0].ID != "openai/gpt-4o" {
-		t.Fatalf("expected fallback to plain `opencode models` to yield [openai/gpt-4o], got %+v", models)
-	}
-}
-
-func TestParseOpenclawAgents(t *testing.T) {
-	input := `deepseek-v4   deepseek-v4
-claude-sonnet claude-sonnet-4-6
-deepseek-v4   deepseek-v4
-`
-	models := parseOpenclawAgents(input)
-	// duplicate deduped; label includes model name.
-	if len(models) != 2 {
-		t.Fatalf("expected 2 agents, got %d: %+v", len(models), models)
-	}
-	if models[0].ID != "deepseek-v4" {
-		t.Errorf("unexpected first agent: %+v", models[0])
-	}
-	if models[0].Label != "deepseek-v4 (deepseek-v4)" {
-		t.Errorf("unexpected label: %+v", models[0])
-	}
-	if models[0].Provider != "openclaw" {
-		t.Errorf("expected provider openclaw, got %q", models[0].Provider)
-	}
-}
-
-func TestParseOpenclawAgentsRejectsDecoratedTUI(t *testing.T) {
-	// Reproduces the shape of real `openclaw agents list` output
-	// that leaked header tokens like "Identity:" / "Workspace:"
-	// and single-character box-drawing icons into the dropdown.
-	input := `╭───────────────────────────────╮
-│                               │
-│  ◇  Agents:                   │
-│  │                            │
-│  │    Identity:               │
-│  │    Workspace:              │
-│  │    Agent                   │
-│  │                            │
-╰───────────────────────────────╯
-deepseek-v4   deepseek-v4
-claude-sonnet claude-sonnet-4-6
-`
-	models := parseOpenclawAgents(input)
-	if len(models) != 2 {
-		t.Fatalf("expected 2 agents (decoration skipped), got %d: %+v", len(models), models)
-	}
-	for _, m := range models {
-		if strings.HasSuffix(m.ID, ":") {
-			t.Errorf("section header leaked into result: %+v", m)
-		}
-	}
-	if models[0].ID != "deepseek-v4" || models[1].ID != "claude-sonnet" {
-		t.Errorf("unexpected agents: %+v", models)
-	}
-}
-
-func TestParseOpenclawAgentsJSONArray(t *testing.T) {
-	input := []byte(`[
-    {"name": "deepseek-v4", "model": "deepseek-v4"},
-    {"name": "claude-sonnet", "model": "claude-sonnet-4-6"}
-]`)
-	models, ok := parseOpenclawAgentsJSON(input)
-	if !ok {
-		t.Fatal("expected parseOpenclawAgentsJSON to accept an array")
-	}
-	if len(models) != 2 {
-		t.Fatalf("got %d, want 2: %+v", len(models), models)
-	}
-	if models[0].ID != "deepseek-v4" || models[0].Label != "deepseek-v4 (deepseek-v4)" {
-		t.Errorf("unexpected first entry: %+v", models[0])
-	}
-}
-
-func TestParseOpenclawAgentsJSONWrapped(t *testing.T) {
-	input := []byte(`{"agents": [{"name": "foo", "model": "bar"}]}`)
-	models, ok := parseOpenclawAgentsJSON(input)
-	if !ok {
-		t.Fatal("expected parseOpenclawAgentsJSON to accept wrapped object")
-	}
-	if len(models) != 1 || models[0].ID != "foo" {
-		t.Errorf("unexpected: %+v", models)
-	}
-}
-
-func TestOpenclawEntriesToModelsUsesIDOverName(t *testing.T) {
-	// When both id and name are present, Model.ID should use the id field
-	// because openclaw resolves --agent by id. Names with spaces (e.g.
-	// "Sub2API OPS") would be mangled by openclaw's normalizeAgentId.
-	input := []byte(`[{"id": "sub2api", "name": "Sub2API OPS", "model": "gpt-4o"}]`)
-	models, ok := parseOpenclawAgentsJSON(input)
-	if !ok {
-		t.Fatal("expected parseOpenclawAgentsJSON to accept array")
-	}
-	if len(models) != 1 {
-		t.Fatalf("got %d models, want 1", len(models))
-	}
-	if models[0].ID != "sub2api" {
-		t.Errorf("Model.ID = %q, want %q (should use id, not name)", models[0].ID, "sub2api")
-	}
-	if models[0].Label != "Sub2API OPS (gpt-4o)" {
-		t.Errorf("Model.Label = %q, want %q (should use name for display)", models[0].Label, "Sub2API OPS (gpt-4o)")
-	}
-}
-
-func TestParseOpenclawAgentsJSONRejectsGarbage(t *testing.T) {
-	if _, ok := parseOpenclawAgentsJSON([]byte("not json")); ok {
-		t.Error("expected ok=false for non-JSON")
-	}
-}
-
-func TestParseCursorModels(t *testing.T) {
-	input := `Available models
-
-auto - Auto
-composer-2-fast - Composer 2 Fast (current, default)
-composer-2 - Composer 2
-claude-4.6-sonnet-medium - Sonnet 4.6 1M
-claude-opus-4-7-high - Opus 4.7 1M
-gemini-3.1-pro - Gemini 3.1 Pro
-`
-	models := parseCursorModels(input)
-	if len(models) != 6 {
-		t.Fatalf("expected 6 models, got %d: %+v", len(models), models)
-	}
-	ids := map[string]Model{}
-	for _, m := range models {
-		ids[m.ID] = m
-	}
-	for _, want := range []string{"auto", "composer-2-fast", "composer-2", "claude-4.6-sonnet-medium", "claude-opus-4-7-high", "gemini-3.1-pro"} {
-		if _, ok := ids[want]; !ok {
-			t.Errorf("missing expected model %q in: %+v", want, models)
-		}
-	}
-	if def := ids["composer-2-fast"]; !def.Default {
-		t.Errorf("composer-2-fast should be marked default, got %+v", def)
-	}
-	if def := ids["composer-2-fast"]; def.Label != "Composer 2 Fast" {
-		t.Errorf("default label should be stripped of parenthetical, got %q", def.Label)
-	}
-	// Non-default entry should not carry Default=true.
-	if auto := ids["auto"]; auto.Default {
-		t.Errorf("non-default entry should not be flagged default: %+v", auto)
-	}
-}
-
-func TestParseCursorModelsSkipsHeaderAndBlankLines(t *testing.T) {
-	input := `Available models
-
-composer-2 - Composer 2
-`
-	models := parseCursorModels(input)
-	if len(models) != 1 || models[0].ID != "composer-2" {
-		t.Fatalf("unexpected: %+v", models)
-	}
-}
-
 func TestParseHermesSessionNewModels(t *testing.T) {
 	// Mirrors the real shape emitted by hermes'
 	// acp_adapter/server.py _build_model_state -> SessionModelState.
@@ -956,56 +589,8 @@ func TestHermesModelSelectionSupported(t *testing.T) {
 	}
 }
 
-// TestAntigravityModelSelectionSupported pins that the antigravity provider
-// now reports model selection as supported: agy 1.0.6 added a `--model` flag
-// (MUL-3125) and buildAntigravityArgs wires opts.Model through, so the UI
-// must render the live picker rather than a disabled "Managed by runtime"
-// label.
-func TestAntigravityModelSelectionSupported(t *testing.T) {
-	if !ModelSelectionSupported("antigravity") {
-		t.Error("antigravity should be model-selection-supported now that agy 1.0.6 has --model")
-	}
-}
 
-// TestParseAntigravityModels covers the `agy models` line-per-name format:
-// each non-blank line becomes a Model whose ID and Label are the verbatim
-// display string `--model` expects, duplicates collapse, and blanks drop.
-func TestParseAntigravityModels(t *testing.T) {
-	t.Parallel()
 
-	out := strings.Join([]string{
-		"Gemini 3.5 Flash (Medium)",
-		"Claude Opus 4.6 (Thinking)",
-		"", // blank line — skipped
-		"GPT-OSS 120B (Medium)",
-		"Claude Opus 4.6 (Thinking)", // duplicate — collapsed
-	}, "\n")
-
-	got := parseAntigravityModels(out)
-	want := []Model{
-		{ID: "Gemini 3.5 Flash (Medium)", Label: "Gemini 3.5 Flash (Medium)", Provider: "antigravity"},
-		{ID: "Claude Opus 4.6 (Thinking)", Label: "Claude Opus 4.6 (Thinking)", Provider: "antigravity"},
-		{ID: "GPT-OSS 120B (Medium)", Label: "GPT-OSS 120B (Medium)", Provider: "antigravity"},
-	}
-	if len(got) != len(want) {
-		t.Fatalf("parseAntigravityModels len = %d, want %d (%+v)", len(got), len(want), got)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("model[%d] = %+v, want %+v", i, got[i], want[i])
-		}
-	}
-}
-
-// TestParseAntigravityModelsEmpty pins that empty / whitespace-only output
-// yields no models (so cachedDiscovery treats it as a transient miss and
-// retries rather than caching a blank catalog).
-func TestParseAntigravityModelsEmpty(t *testing.T) {
-	t.Parallel()
-	if got := parseAntigravityModels("   \n\t\n"); len(got) != 0 {
-		t.Errorf("expected no models for blank output, got %+v", got)
-	}
-}
 
 func TestCachedDiscovery(t *testing.T) {
 	calls := 0

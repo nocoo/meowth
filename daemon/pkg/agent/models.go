@@ -2,15 +2,12 @@ package agent
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"regexp"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -80,11 +77,10 @@ const modelCacheTTL = 60 * time.Second
 
 // ListModels returns the models supported by the given agent provider.
 // For providers with a known static catalog it returns the baked-in
-// list; for providers with a CLI discovery mechanism (opencode, pi,
-// openclaw) it shells out with caching and falls back to the static
-// list on failure.
+// list; for providers with a CLI discovery mechanism (pi) it shells
+// out with caching and falls back to the static list on failure.
 //
-// For claude, codex, and opencode, the catalog is augmented with per-model
+// For claude and codex, the catalog is augmented with per-model
 // thinking-level options discovered from the local CLI. Discovery failures
 // silently leave Thinking == nil on each entry, which the UI treats as
 // "no picker for this model" rather than blocking model selection.
@@ -101,19 +97,6 @@ func ListModels(ctx context.Context, providerType, executablePath string) ([]Mod
 		models := codexStaticModels()
 		annotateCodexThinking(ctx, models, executablePath)
 		return models, nil
-	case "gemini":
-		return geminiStaticModels(), nil
-	case "antigravity":
-		// agy 1.0.6 added a `--model` flag plus an `agy models` catalog
-		// command (MUL-3125). Enumerate it on demand like the other
-		// dynamic-discovery backends.
-		return cachedDiscovery(providerType, func() ([]Model, error) {
-			return discoverAntigravityModels(ctx, executablePath)
-		})
-	case "cursor":
-		return cachedDiscovery(providerType, func() ([]Model, error) {
-			return discoverCursorModels(ctx, executablePath)
-		})
 	case "copilot":
 		return cachedDiscovery(providerType, func() ([]Model, error) {
 			return discoverCopilotModels(ctx, executablePath)
@@ -122,34 +105,9 @@ func ListModels(ctx context.Context, providerType, executablePath string) ([]Mod
 		return cachedDiscovery(providerType, func() ([]Model, error) {
 			return discoverHermesModels(ctx, executablePath)
 		})
-	case "kimi":
-		return cachedDiscovery(providerType, func() ([]Model, error) {
-			return discoverKimiModels(ctx, executablePath)
-		})
-	case "kiro":
-		return cachedDiscovery(providerType, func() ([]Model, error) {
-			return discoverKiroModels(ctx, executablePath)
-		})
-	case "opencode":
-		return cachedDiscovery(discoveryCacheKey(providerType, executablePath), func() ([]Model, error) {
-			return discoverOpenCodeModels(ctx, executablePath)
-		})
 	case "pi":
 		return cachedDiscovery(providerType, func() ([]Model, error) {
 			return discoverPiModels(ctx, executablePath)
-		})
-	case "openclaw":
-		return cachedDiscovery(providerType, func() ([]Model, error) {
-			return discoverOpenclawAgents(ctx, executablePath)
-		})
-	case "codebuddy":
-		return cachedDiscovery(providerType, func() ([]Model, error) {
-			models, err := discoverCodebuddyModels(ctx, executablePath)
-			if err != nil {
-				return nil, err
-			}
-			annotateCodebuddyThinking(ctx, models, executablePath)
-			return models, nil
 		})
 	default:
 		return nil, fmt.Errorf("unknown agent type: %q", providerType)
@@ -159,10 +117,8 @@ func ListModels(ctx context.Context, providerType, executablePath string) ([]Mod
 // ModelSelectionSupported reports whether setting `agent.model` has
 // any effect for the given provider. Every built-in provider now honours
 // `opts.Model` end-to-end — Hermes routes it through the ACP
-// `session/set_model` RPC before each prompt; Claude / Codex / Cursor /
-// Gemini / Copilot / Kimi / Kiro / OpenCode / OpenClaw / Pi / Antigravity
-// pass it via flag or session config (Antigravity gained `--model` in agy
-// 1.0.6 — MUL-3125).
+// `session/set_model` RPC before each prompt; Claude / Codex / Copilot / Pi
+// pass it via flag or session config.
 //
 // The hook is retained — rather than inlining `true` at the call sites — so
 // a future model-less runtime can opt out in one place, which makes the UI
@@ -200,8 +156,6 @@ func acceptedModelIDsForProvider(providerType string) (map[string]bool, bool) {
 		return modelIDSet(claudeStaticModels()), true
 	case providerType == "codex":
 		return modelIDSet(codexStaticModels()), true
-	case providerType == "gemini":
-		return modelIDSet(geminiStaticModels()), true
 	default:
 		return nil, false
 	}
@@ -221,15 +175,12 @@ func isRuntimeSpecificModelID(model string) bool {
 	}
 	return modelHasKnownPrefix(model) ||
 		modelIDSet(claudeStaticModels())[model] ||
-		modelIDSet(codexStaticModels())[model] ||
-		modelIDSet(geminiStaticModels())[model]
+		modelIDSet(codexStaticModels())[model]
 }
 
 func modelHasKnownPrefix(model string) bool {
 	return strings.HasPrefix(model, "claude-") ||
 		strings.HasPrefix(model, "gpt-") ||
-		strings.HasPrefix(model, "gemini-") ||
-		strings.HasPrefix(model, "auto-gemini-") ||
 		isOpenAIReasoningSeriesID(model)
 }
 
@@ -301,43 +252,6 @@ func codexStaticModels() []Model {
 		{ID: "gpt-5", Label: "GPT-5", Provider: "openai"},
 		{ID: "o3", Label: "o3", Provider: "openai"},
 		{ID: "o3-mini", Label: "o3-mini", Provider: "openai"},
-	}
-}
-
-// geminiStaticModels lists the values we pass via `gemini -m`. Gemini
-// CLI has no `models list` subcommand, so dynamic discovery isn't
-// possible; the next best thing is to expose the CLI's own aliases
-// (auto / pro / flash / flash-lite and the `auto-gemini-*` family)
-// alongside a few explicit version pins. Aliases track whatever the
-// installed CLI considers current (see `resolveModel` in the CLI's
-// packages/core/src/config/models.ts), so new Gemini releases light
-// up without a Multica redeploy. Default is `auto` to match Google's
-// recommendation — the CLI picks Pro vs Flash per task and falls back
-// when quota is exhausted.
-func geminiStaticModels() []Model {
-	return []Model{
-		{ID: "auto", Label: "Auto (Gemini 3)", Provider: "google", Default: true},
-		{ID: "auto-gemini-2.5", Label: "Auto (Gemini 2.5)", Provider: "google"},
-		{ID: "pro", Label: "Pro", Provider: "google"},
-		{ID: "flash", Label: "Flash", Provider: "google"},
-		{ID: "flash-lite", Label: "Flash Lite", Provider: "google"},
-		{ID: "gemini-3-pro-preview", Label: "Gemini 3 Pro (preview)", Provider: "google"},
-		{ID: "gemini-3-flash-preview", Label: "Gemini 3 Flash (preview)", Provider: "google"},
-		{ID: "gemini-2.5-pro", Label: "Gemini 2.5 Pro", Provider: "google"},
-		{ID: "gemini-2.5-flash", Label: "Gemini 2.5 Flash", Provider: "google"},
-		{ID: "gemini-2.5-flash-lite", Label: "Gemini 2.5 Flash Lite", Provider: "google"},
-	}
-}
-
-// cursorStaticModels is a minimal fallback used when
-// `cursor-agent --list-models` isn't available (binary missing,
-// offline, etc). The real catalog is fetched dynamically because
-// Cursor's model IDs shift (e.g. `composer-2-fast`,
-// `claude-4.6-sonnet-medium`, `gemini-3.1-pro`) and any static
-// list we ship goes stale fast.
-func cursorStaticModels() []Model {
-	return []Model{
-		{ID: "auto", Label: "Auto", Provider: "cursor", Default: true},
 	}
 }
 
@@ -415,222 +329,6 @@ func isOpenAIReasoningSeriesID(id string) bool {
 }
 
 // ── Dynamic discovery ──
-
-// discoverOpenCodeModels runs `opencode models --verbose` and parses its
-// output. The CLI prints `provider/model` rows, followed by JSON metadata
-// when verbose mode is enabled; we emit IDs verbatim so what the user sees
-// matches what `--model` accepts, and project any model `variants` into the
-// thinking-level picker because OpenCode's `run --variant` flag is its
-// provider-specific reasoning-effort surface.
-// On any failure (CLI missing, parse error, timeout) we fall back to
-// an empty list so the creatable UI still works.
-func discoverOpenCodeModels(ctx context.Context, executablePath string) ([]Model, error) {
-	if executablePath == "" {
-		executablePath = "opencode"
-	}
-	if _, err := exec.LookPath(executablePath); err != nil {
-		return []Model{}, nil
-	}
-	// Newer opencode (1.15+) syncs its hosted free-model catalog over the
-	// network on `opencode models`, which can take ~6s; the previous 5s cap
-	// timed out and returned an empty list, so the runtime showed online but
-	// the model picker was empty. See multica-ai/multica#3627.
-	runCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(runCtx, executablePath, "models", "--verbose")
-	hideAgentWindow(cmd)
-	// Parse whatever the verbose command printed, even on a non-zero exit — a
-	// stale config entry can make `opencode models` exit non-zero while still
-	// listing the resolvable catalog (mirrors the pi path; see #3729/#3627).
-	out, _ := cmd.Output()
-	models := parseOpenCodeModels(string(out))
-	if len(models) == 0 {
-		// Verbose yielded nothing usable (unsupported flag, error text, or an
-		// empty list). Retry the plain command, which omits the per-model JSON
-		// but still prints the IDs.
-		cmd = exec.CommandContext(runCtx, executablePath, "models")
-		hideAgentWindow(cmd)
-		out, _ = cmd.Output()
-		models = parseOpenCodeModels(string(out))
-	}
-	if len(models) == 0 {
-		return []Model{}, nil
-	}
-	return models, nil
-}
-
-// parseOpenCodeModels accepts the `opencode models` text output and
-// extracts IDs. Non-verbose output is one `provider/model` row per line.
-// Verbose output appends a pretty-printed JSON object after each ID; when
-// that object contains `variants`, each enabled variant becomes a thinking
-// level that the backend later passes through `opencode run --variant`.
-func parseOpenCodeModels(output string) []Model {
-	lines := strings.Split(output, "\n")
-	var models []Model
-	indexByID := map[string]int{}
-	for i := 0; i < len(lines); i++ {
-		line := strings.TrimSpace(lines[i])
-		if line == "" {
-			continue
-		}
-		id := parseOpenCodeModelIDLine(line)
-		if id == "" {
-			continue
-		}
-		idx, seen := indexByID[id]
-		if !seen {
-			provider := ""
-			if slash := strings.Index(id, "/"); slash > 0 {
-				provider = id[:slash]
-			}
-			idx = len(models)
-			indexByID[id] = idx
-			models = append(models, Model{ID: id, Label: id, Provider: provider})
-		}
-
-		next := i + 1
-		for next < len(lines) && strings.TrimSpace(lines[next]) == "" {
-			next++
-		}
-		if next >= len(lines) || !strings.HasPrefix(strings.TrimSpace(lines[next]), "{") {
-			continue
-		}
-		raw, resumeAt := collectOpenCodeModelJSON(lines, next)
-		if json.Valid(raw) {
-			annotateOpenCodeModelMetadata(&models[idx], raw)
-		}
-		i = resumeAt - 1
-	}
-	return models
-}
-
-func parseOpenCodeModelIDLine(line string) string {
-	fields := strings.Fields(line)
-	if len(fields) == 0 {
-		return ""
-	}
-	id := fields[0]
-	if strings.HasPrefix(id, `"`) || strings.HasPrefix(id, "{") || strings.HasPrefix(id, "[") {
-		return ""
-	}
-	if !strings.Contains(id, "/") {
-		return ""
-	}
-	// Skip header rows such as PROVIDER/MODEL.
-	if id == strings.ToUpper(id) {
-		return ""
-	}
-	return id
-}
-
-func collectOpenCodeModelJSON(lines []string, start int) ([]byte, int) {
-	var b strings.Builder
-	for i := start; i < len(lines); i++ {
-		line := strings.TrimSpace(lines[i])
-		if i > start && parseOpenCodeModelIDLine(line) != "" {
-			return []byte(b.String()), i
-		}
-		if b.Len() > 0 {
-			b.WriteByte('\n')
-		}
-		b.WriteString(lines[i])
-		if json.Valid([]byte(b.String())) {
-			return []byte(b.String()), i + 1
-		}
-	}
-	return []byte(b.String()), len(lines)
-}
-
-type opencodeModelMetadata struct {
-	Reasoning bool                            `json:"reasoning"`
-	Variants  map[string]opencodeModelVariant `json:"variants"`
-}
-
-type opencodeModelVariant struct {
-	Disabled        bool            `json:"disabled"`
-	ReasoningEffort string          `json:"reasoningEffort"`
-	Thinking        json.RawMessage `json:"thinking"`
-}
-
-var opencodeVariantLabel = map[string]string{
-	"none":    "None",
-	"minimal": "Minimal",
-	"low":     "Low",
-	"medium":  "Medium",
-	"high":    "High",
-	"xhigh":   "Extra high",
-	"max":     "Max",
-}
-
-var opencodeVariantOrder = map[string]int{
-	"none":    0,
-	"minimal": 1,
-	"low":     2,
-	"medium":  3,
-	"high":    4,
-	"xhigh":   5,
-	"max":     6,
-}
-
-func annotateOpenCodeModelMetadata(model *Model, raw []byte) {
-	var meta opencodeModelMetadata
-	if err := json.Unmarshal(raw, &meta); err != nil {
-		return
-	}
-	if !meta.Reasoning && !openCodeVariantsLookReasoning(meta.Variants) {
-		return
-	}
-	levels := openCodeThinkingLevelsFromVariants(meta.Variants)
-	if len(levels) == 0 {
-		return
-	}
-	model.Thinking = &ModelThinking{SupportedLevels: levels}
-}
-
-func openCodeVariantsLookReasoning(variants map[string]opencodeModelVariant) bool {
-	for name, variant := range variants {
-		if _, known := opencodeVariantOrder[name]; known {
-			return true
-		}
-		if variant.ReasoningEffort != "" || len(variant.Thinking) > 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func openCodeThinkingLevelsFromVariants(variants map[string]opencodeModelVariant) []ThinkingLevel {
-	if len(variants) == 0 {
-		return nil
-	}
-	values := make([]string, 0, len(variants))
-	for value, variant := range variants {
-		if value == "" || variant.Disabled {
-			continue
-		}
-		values = append(values, value)
-	}
-	sort.Slice(values, func(i, j int) bool {
-		left, leftKnown := opencodeVariantOrder[values[i]]
-		right, rightKnown := opencodeVariantOrder[values[j]]
-		if leftKnown && rightKnown {
-			return left < right
-		}
-		if leftKnown != rightKnown {
-			return leftKnown
-		}
-		return values[i] < values[j]
-	})
-	levels := make([]ThinkingLevel, 0, len(values))
-	for _, value := range values {
-		label, ok := opencodeVariantLabel[value]
-		if !ok {
-			label = strings.Title(strings.ReplaceAll(value, "-", " ")) //nolint:staticcheck
-		}
-		levels = append(levels, ThinkingLevel{Value: value, Label: label})
-	}
-	return levels
-}
 
 // discoverPiModels runs `pi --list-models` and parses its output.
 // Older pi versions print the list to stderr; newer versions use
@@ -762,32 +460,6 @@ func discoverHermesModels(ctx context.Context, executablePath string) ([]Model, 
 		clientName:   "multica-model-discovery",
 		extraEnv:     []string{"HERMES_YOLO_MODE=1"},
 		tmpdirPrefix: "multica-hermes-discovery-",
-	})
-}
-
-// discoverKimiModels spins up a throwaway `kimi acp` process and
-// drives the same minimal ACP handshake as Hermes to surface the
-// model catalog advertised by Kimi's `session/new` response. Kimi's
-// ACPServer.new_session returns a `models` block of the same shape
-// (`availableModels`/`currentModelId`) so the parsing path is shared.
-//
-// Failure modes (kimi missing, not logged in, config error) all
-// return an empty list so the UI falls back to manual entry.
-func discoverKimiModels(ctx context.Context, executablePath string) ([]Model, error) {
-	return discoverACPModels(ctx, executablePath, acpDiscoveryProvider{
-		defaultBin:   "kimi",
-		clientName:   "multica-model-discovery",
-		tmpdirPrefix: "multica-kimi-discovery-",
-	})
-}
-
-// discoverKiroModels spins up a throwaway `kiro-cli acp` process and parses
-// the models block Kiro returns from session/new.
-func discoverKiroModels(ctx context.Context, executablePath string) ([]Model, error) {
-	return discoverACPModels(ctx, executablePath, acpDiscoveryProvider{
-		defaultBin:   "kiro-cli",
-		clientName:   "multica-model-discovery",
-		tmpdirPrefix: "multica-kiro-discovery-",
 	})
 }
 
@@ -1049,440 +721,4 @@ func acpModelLabel(name, modelID string) string {
 		return modelID
 	}
 	return label
-}
-
-// discoverAntigravityModels runs `agy models` and returns the catalog the
-// installed Antigravity CLI advertises (one display name per line).
-//
-// Unlike cursor / pi / opencode there is deliberately NO static fallback.
-// agy's `--model` takes the exact human display string (e.g.
-// "Claude Opus 4.6 (Thinking)") and silently no-ops on any value it doesn't
-// recognise — empty output, exit 0 — so a guessed static list would risk
-// offering a model the installed CLI can't honour, turning a typo into a
-// "successful" empty run. On any discovery failure we return an empty
-// catalog instead; agent.model stays unset and agy resolves its own
-// default. cachedDiscovery never caches empty results, so this retries on
-// the next request once the cause clears.
-func discoverAntigravityModels(ctx context.Context, executablePath string) ([]Model, error) {
-	if executablePath == "" {
-		executablePath = "agy"
-	}
-	if _, err := exec.LookPath(executablePath); err != nil {
-		return nil, nil
-	}
-	// `agy models` is a local enumeration (no network round-trip), so a
-	// short cap is plenty; keep it generous enough to absorb cold starts.
-	runCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(runCtx, executablePath, "models")
-	hideAgentWindow(cmd)
-	out, err := cmd.Output()
-	if err != nil && len(out) == 0 {
-		return nil, nil
-	}
-	return parseAntigravityModels(string(out)), nil
-}
-
-// parseAntigravityModels turns `agy models` output — one model display name
-// per line — into Model entries. The display string IS the value `--model`
-// expects, so ID and Label are identical and the daemon ships opts.Model
-// verbatim. Blank and duplicate lines are skipped.
-func parseAntigravityModels(output string) []Model {
-	scanner := bufio.NewScanner(strings.NewReader(output))
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	var models []Model
-	seen := map[string]bool{}
-	for scanner.Scan() {
-		name := strings.TrimSpace(scanner.Text())
-		if name == "" || seen[name] {
-			continue
-		}
-		seen[name] = true
-		models = append(models, Model{
-			ID:       name,
-			Label:    name,
-			Provider: "antigravity",
-		})
-	}
-	return models
-}
-
-// discoverCursorModels runs `cursor-agent --list-models` and parses
-// the `id - Label` rows. Cursor's catalog changes often and ships
-// many variants of the same base model (thinking / fast / max
-// suffixes) — static baking would be obsolete within weeks. On any
-// failure we fall back to the minimal static catalog so the UI
-// stays usable when cursor-agent isn't installed on the daemon host.
-func discoverCursorModels(ctx context.Context, executablePath string) ([]Model, error) {
-	if executablePath == "" {
-		executablePath = "cursor-agent"
-	}
-	if _, err := exec.LookPath(executablePath); err != nil {
-		return cursorStaticModels(), nil
-	}
-	// 15s to match the other network-backed discovery paths (pi/opencode/ACP);
-	// cursor-agent fetches its frequently-changing catalog, so a tight cap can
-	// time out and fall back to the minimal static list. See #3729.
-	runCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(runCtx, executablePath, "--list-models")
-	hideAgentWindow(cmd)
-	out, err := cmd.Output()
-	if err != nil && len(out) == 0 {
-		return cursorStaticModels(), nil
-	}
-	models := parseCursorModels(string(out))
-	if len(models) == 0 {
-		return cursorStaticModels(), nil
-	}
-	return models, nil
-}
-
-// parseCursorModels extracts model IDs from `cursor-agent --list-models`.
-// Output format (as of cursor-agent 2026.04):
-//
-//	Available models
-//	<blank>
-//	auto - Auto
-//	composer-2-fast - Composer 2 Fast (current, default)
-//	composer-2 - Composer 2
-//	…
-//
-// The model tagged `(default)` is surfaced as Default=true so the
-// UI badge points at cursor's own recommendation rather than a
-// hard-coded guess from our catalog.
-func parseCursorModels(output string) []Model {
-	scanner := bufio.NewScanner(strings.NewReader(output))
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	var models []Model
-	seen := map[string]bool{}
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		// Row format: "<id> - <label>". Skip the "Available models" header.
-		idx := strings.Index(line, " - ")
-		if idx <= 0 {
-			continue
-		}
-		id := strings.TrimSpace(line[:idx])
-		label := strings.TrimSpace(line[idx+3:])
-		if !isOpenclawIdentifier(id) {
-			// Reuse the identifier guard — cursor IDs are in the
-			// same character set (alnum + `-./_`), so anything
-			// that fails it is either malformed or a header line.
-			continue
-		}
-		if seen[id] {
-			continue
-		}
-		seen[id] = true
-		isDefault := strings.Contains(label, "default")
-		// Strip the "(current, default)" suffix from the display
-		// label since we surface that through the Default flag.
-		if paren := strings.Index(label, "("); paren > 0 {
-			label = strings.TrimSpace(label[:paren])
-		}
-		if label == "" {
-			label = id
-		}
-		models = append(models, Model{
-			ID:       id,
-			Label:    label,
-			Provider: "cursor",
-			Default:  isDefault,
-		})
-	}
-	return models
-}
-
-// discoverOpenclawAgents enumerates the pre-registered OpenClaw
-// agents (which is where model selection actually lives in the
-// OpenClaw world — each agent is bound to a model at `agents add`
-// time). It tries structured JSON output first, falling back to a
-// conservative text parser that rejects TUI decoration and section
-// headers. On any ambiguity we return an empty list and let the
-// creatable dropdown handle manual entry — a silently-wrong
-// enumeration would be worse than none.
-func discoverOpenclawAgents(ctx context.Context, executablePath string) ([]Model, error) {
-	if executablePath == "" {
-		executablePath = "openclaw"
-	}
-	if _, err := exec.LookPath(executablePath); err != nil {
-		return []Model{}, nil
-	}
-	runCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	// Try JSON modes first. Different openclaw builds expose the
-	// flag under different names; trying a couple is cheap.
-	for _, jsonArgs := range [][]string{
-		{"agents", "list", "--json"},
-		{"agents", "list", "--output", "json"},
-		{"agents", "list", "-o", "json"},
-	} {
-		cmd := exec.CommandContext(runCtx, executablePath, jsonArgs...)
-		hideAgentWindow(cmd)
-		out, err := cmd.Output()
-		if err != nil && len(out) == 0 {
-			continue
-		}
-		if models, ok := parseOpenclawAgentsJSON(out); ok {
-			return models, nil
-		}
-	}
-
-	// Text fallback. Be strict — the default output is a decorated
-	// banner with box-drawing and section headers, and picking up
-	// the wrong tokens produces nonsense entries like "Identity:".
-	cmd := exec.CommandContext(runCtx, executablePath, "agents", "list")
-	hideAgentWindow(cmd)
-	out, err := cmd.Output()
-	if err != nil && len(out) == 0 {
-		return []Model{}, nil
-	}
-	return parseOpenclawAgents(string(out)), nil
-}
-
-// openclawAgentEntry is the shape parseOpenclawAgentsJSON expects
-// from `openclaw agents list --json`. `id` is the routing key
-// passed to `openclaw agent --agent <id>`; `name` is the human
-// display label set via `openclaw agents set-identity --name` and
-// is only used to enrich the dropdown label. The two are not
-// interchangeable — see openclawEntriesToModels for the mapping.
-// Older openclaw versions may emit only `name`; in that case we
-// fall back to using it as the id for backward compatibility.
-// `model` is optional and only used to enrich the dropdown label.
-type openclawAgentEntry struct {
-	Name  string `json:"name"`
-	ID    string `json:"id"`
-	Model string `json:"model"`
-}
-
-// parseOpenclawAgentsJSON accepts `openclaw agents list --json`-style
-// output. It handles two common shapes: a top-level array, or an
-// object with an `agents` key whose value is an array. Returns
-// ok=false if the input isn't valid JSON in either shape.
-func parseOpenclawAgentsJSON(raw []byte) ([]Model, bool) {
-	raw = bytes.TrimSpace(raw)
-	if len(raw) == 0 {
-		return nil, false
-	}
-
-	var flat []openclawAgentEntry
-	if err := json.Unmarshal(raw, &flat); err == nil {
-		return openclawEntriesToModels(flat), true
-	}
-
-	var wrapped struct {
-		Agents []openclawAgentEntry `json:"agents"`
-	}
-	if err := json.Unmarshal(raw, &wrapped); err == nil && wrapped.Agents != nil {
-		return openclawEntriesToModels(wrapped.Agents), true
-	}
-
-	return nil, false
-}
-
-func openclawEntriesToModels(entries []openclawAgentEntry) []Model {
-	models := make([]Model, 0, len(entries))
-	seen := map[string]bool{}
-	for _, e := range entries {
-		// Use ID as the model identifier because openclaw resolves
-		// --agent by id, not by display name. Names may contain spaces
-		// (e.g. "Sub2API OPS") which openclaw's normalizeAgentId would
-		// mangle into a different string ("sub2api-ops"), causing a
-		// lookup miss and "no parseable output" errors.
-		id := e.ID
-		if id == "" {
-			id = e.Name
-		}
-		if id == "" || seen[id] {
-			continue
-		}
-		seen[id] = true
-		displayName := e.Name
-		if displayName == "" {
-			displayName = id
-		}
-		label := displayName
-		if e.Model != "" {
-			label = displayName + " (" + e.Model + ")"
-		}
-		models = append(models, Model{ID: id, Label: label, Provider: "openclaw"})
-	}
-	return models
-}
-
-// parseOpenclawAgents extracts agent names from the text output of
-// `openclaw agents list`. The default CLI output is a decorated
-// banner — section headers ending in `:`, box-drawing characters,
-// and single-character icons — so we only accept lines that look
-// like a proper `<name> <model>` row: at least two whitespace-
-// separated tokens, both made of safe identifier characters, and
-// neither ending in `:`. Anything else is discarded to avoid
-// surfacing "Identity:" or `◇` as selectable models.
-func parseOpenclawAgents(output string) []Model {
-	scanner := bufio.NewScanner(strings.NewReader(output))
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	var models []Model
-	seen := map[string]bool{}
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
-			continue
-		}
-		name, model := fields[0], fields[1]
-		if !isOpenclawIdentifier(name) || !isOpenclawIdentifier(model) {
-			continue
-		}
-		if seen[name] {
-			continue
-		}
-		seen[name] = true
-		models = append(models, Model{
-			ID:       name,
-			Label:    name + " (" + model + ")",
-			Provider: "openclaw",
-		})
-	}
-	return models
-}
-
-// isOpenclawIdentifier reports whether s looks like a valid
-// agent-name or model-id token: starts with a letter, contains only
-// identifier-safe characters, and isn't a section header
-// (trailing colon). Rejects TUI decoration like `│`, `╭`, `◇`, `|`.
-func isOpenclawIdentifier(s string) bool {
-	if s == "" || strings.HasSuffix(s, ":") {
-		return false
-	}
-	first := s[0]
-	if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z')) {
-		return false
-	}
-	for _, r := range s {
-		switch {
-		case r >= 'a' && r <= 'z':
-		case r >= 'A' && r <= 'Z':
-		case r >= '0' && r <= '9':
-		case r == '-' || r == '_' || r == '.' || r == '/':
-		default:
-			return false
-		}
-	}
-	return true
-}
-
-// ── CodeBuddy model discovery ──
-
-// codebuddyModelRe matches the `--model <model> ... Currently supported: (m1, m2, ...)`
-// line in `codebuddy --help` output.
-var codebuddyModelRe = regexp.MustCompile(`--model\s*<[^>]+>\s*.*?Currently supported:\s*\(([^)]+)\)`)
-
-// discoverCodebuddyModels runs `codebuddy --help` and extracts the
-// supported model list from its output. Falls back to a static list
-// when the binary is missing or the output cannot be parsed.
-func discoverCodebuddyModels(ctx context.Context, executablePath string) ([]Model, error) {
-	if executablePath == "" {
-		executablePath = "codebuddy"
-	}
-	if _, err := exec.LookPath(executablePath); err != nil {
-		return codebuddyStaticModels(), nil
-	}
-	helpOut := codebuddyHelpOutput(ctx, executablePath)
-	if helpOut == "" {
-		return codebuddyStaticModels(), nil
-	}
-	models := parseCodebuddyModels(helpOut)
-	if len(models) == 0 {
-		return codebuddyStaticModels(), nil
-	}
-	return models, nil
-}
-
-// parseCodebuddyModels extracts model IDs from codebuddy --help output.
-// The help text contains a line like:
-//
-//	--model <model>  ... Currently supported: (model1, model2, ...)
-//
-// The first model in the list is marked as default.
-func parseCodebuddyModels(helpOutput string) []Model {
-	match := codebuddyModelRe.FindStringSubmatch(helpOutput)
-	if len(match) < 2 {
-		return nil
-	}
-	raw := strings.Split(match[1], ",")
-	var models []Model
-	for _, s := range raw {
-		id := strings.TrimSpace(s)
-		if id == "" {
-			continue
-		}
-		models = append(models, Model{
-			ID:       id,
-			Label:    codebuddyModelLabel(id),
-			Provider: codebuddyModelProvider(id),
-			Default:  len(models) == 0,
-		})
-	}
-	return models
-}
-
-// codebuddyModelProvider infers a provider name from a model ID prefix.
-func codebuddyModelProvider(id string) string {
-	switch {
-	case strings.HasPrefix(id, "claude-"):
-		return "anthropic"
-	case strings.HasPrefix(id, "gemini-"):
-		return "google"
-	case strings.HasPrefix(id, "gpt-"):
-		return "openai"
-	case strings.HasPrefix(id, "glm-"):
-		return "zhipu"
-	case strings.HasPrefix(id, "minimax-"):
-		return "minimax"
-	case strings.HasPrefix(id, "kimi-"):
-		return "kimi"
-	case len(id) >= 3 && id[0] == 'h' && id[1] == 'y' && id[2] >= '0' && id[2] <= '9':
-		return "hunyuan"
-	case strings.HasPrefix(id, "deepseek-"):
-		return "deepseek"
-	default:
-		return ""
-	}
-}
-
-// codebuddyModelLabel generates a human-readable label from a model ID.
-// Capitalizes each dash-separated part; special-cases GPT/GLM to uppercase
-// and rewrites the "-ioa" suffix as "IOA".
-func codebuddyModelLabel(id string) string {
-	parts := strings.Split(id, "-")
-	for i, p := range parts {
-		if strings.EqualFold(p, "gpt") || strings.EqualFold(p, "glm") {
-			parts[i] = strings.ToUpper(p)
-		} else if strings.EqualFold(p, "ioa") {
-			parts[i] = "IOA"
-		} else if len(p) > 0 {
-			parts[i] = strings.ToUpper(p[:1]) + p[1:]
-		}
-	}
-	return strings.Join(parts, " ")
-}
-
-// codebuddyStaticModels is the fallback catalog when dynamic discovery
-// fails (binary missing, parse error, timeout).
-func codebuddyStaticModels() []Model {
-	return []Model{
-		{ID: "claude-sonnet-4.6", Label: "Claude Sonnet 4.6", Provider: "anthropic", Default: true},
-		{ID: "claude-opus-4.7", Label: "Claude Opus 4.7", Provider: "anthropic"},
-		{ID: "gemini-3.1-pro", Label: "Gemini 3.1 Pro", Provider: "google"},
-		{ID: "gpt-5.5", Label: "GPT 5.5", Provider: "openai"},
-		{ID: "deepseek-v3-2-volc-ioa", Label: "Deepseek V3 2 Volc IOA", Provider: "deepseek"},
-	}
 }
