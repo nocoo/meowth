@@ -168,10 +168,11 @@ type Backend interface {
 ├── logs/
 │   └── meowthd.log      # 滚动日志
 └── runtime/
-    └── meowthd.pid      # daemon pid，用于 stop/restart
+    ├── meowthd.pid           # daemon pid，用于 stop/restart
+    └── setup_nonce.hash      # 仅在路径 B (init --skip-token) 后存在，one-shot；详见 §7.8
 ```
 
-**权限**：`~/.meowth` = 0700；`meowth.db` / `*.pid` = 0600（参考 raven [`app-dirs.ts`](/Users/nocoo/workspace/personal/raven/packages/proxy/src/lib/app-dirs.ts) 的 `DIR_MODE`/`FILE_MODE` 常量）。
+**权限**：`~/.meowth` = 0700；`meowth.db` / `*.pid` / `setup_nonce.hash` = 0600（参考 raven [`app-dirs.ts`](/Users/nocoo/workspace/personal/raven/packages/proxy/src/lib/app-dirs.ts) 的 `DIR_MODE`/`FILE_MODE` 常量）。
 
 **SQLite 选型**：标准库 `database/sql` + `modernc.org/sqlite`（纯 Go，无 CGO，交叉编译友好）；schema 用 `sqlc` 生成 typed query（与 multica 一致）。
 
@@ -289,22 +290,28 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 
 适用：脚本化部署、headless 安装、无终端输出可看。
 
-1. `meowthd init --skip-token` 只初始化目录与 schema，**不生成 token**（token 表为空）
-2. daemon 启动时检测到 token 表为空 → 开启 first-run mint 窗口
-3. 用户访问 dashboard 见 `/setup` 页面，**模式 B：Mint 按钮**
-4. 点击后请求 `POST /bootstrap/mint`，daemon 响应一次明文 root token 后**立即在内存关闭窗口**（必须重启 daemon 才能再开）
-5. dashboard 自动把 token 存进 `localStorage` 并跳转 `/overview`
+1. `meowthd init --skip-token`：
+   - 初始化目录与 schema（**不生成 token**，token 表为空）
+   - **在进程内生成一段 32 byte 随机 setup-code**（用户感知为一段 6 位数字 + 校验码的字符串，如 `setup-code: 482917-XK`）
+   - 把 setup-code 的 argon2id hash 写入 `~/.meowth/runtime/setup_nonce.hash`（权限 0600；文件内含 hash + 创建时间 + 「one-shot」标记）
+   - 在 stdout 打印明文 setup-code 一次（脚本化部署可重定向到密钥库）
+   - 明文 setup-code 自此**不再存在于任何进程或磁盘**
+2. daemon 启动时检测到 token 表为空 + `setup_nonce.hash` 存在 → 加载 hash 到内存、开启 first-run mint 窗口（**daemon 不持有也无法获知明文 nonce**）
+3. 用户访问 dashboard 见 `/setup` 页面，**模式 B：Mint 表单**，要求填入 setup-code
+4. dashboard 携带 setup-code 请求 `POST /bootstrap/mint`，daemon 用内存中的 hash 常数时间校验
+5. 校验通过 → 响应明文 root token 一次 → 删除 `setup_nonce.hash` 文件 + 关闭内存窗口（**一次性，无法重放**）
+6. dashboard 把 token 存进 `localStorage` 并跳转 `/overview`
 
-→ **此路径下 `meowthd init --skip-token` 之后第一次 mint 之前的窗口期是 root token 的源头**，必须由 §7.7 远程访问校验 + 下方 mint 端点的强约束共同保护。
+→ **此路径下 setup-code 是 root token 的源头**，必须由 §7.7 远程访问校验 + 下方 mint 端点的强约束共同保护。
 
 #### 端点 `POST /bootstrap/mint` 的硬约束（防误开公网）
 
 - **`remote_access.mode` 不是默认（本机）时一律拒绝** —— 即使 token 表为空也 404。也就是：tailscale / ssh_tunnel / https_proxy 模式下 daemon 启动期就拒绝挂载此 endpoint；用户必须先在本机走完 bootstrap，再开远程访问
 - **仅 loopback 接收** —— 远程方向（含 Tailscale 接口、反代上游）一律 404，daemon 检查 `c.RemoteAddr()` 是否在 `127.0.0.1/8` 或 `::1`
-- **One-shot** —— 成功 mint 一次后内存开关关闭；要再次 mint 必须 daemon 停机 + 清空 token 表 + 重启
-- **额外终端 nonce（路径 B 必须）**：`meowthd init --skip-token` 在 stdout **打印一段一次性 6 位数字 nonce**（如 `setup-code: 482917`），dashboard `/setup` 页要求用户输入 nonce 后才会请求 mint；nonce 内存保留至首次 mint 完成或 daemon 重启
-- 失败时统一 404，**不区分「mode 不允许」「表非空」「nonce 错误」**，避免用尝试探测 daemon 状态
-- daemon 启动日志明确打印「first-run mint window: OPEN(nonce=482917) / CLOSED(reason=token_exists|remote_access_mode|consumed)」
+- **必须有 `setup_nonce.hash`** —— 文件不存在则 404；存在但请求 body 校验失败也 404
+- **One-shot** —— 成功 mint 一次后立即删 `setup_nonce.hash` + 关闭内存开关；要再次 mint 必须重新 `meowthd init --skip-token` 生成新 nonce
+- 失败时统一 404，**不区分「mode 不允许」「表非空」「nonce 文件不存在」「nonce 错误」**，避免用尝试探测 daemon 状态
+- daemon 启动日志只打印窗口状态与原因，**绝不打印明文或 hash**：`first-run mint window: OPEN / CLOSED(reason=token_exists|remote_access_mode|no_nonce_file|consumed)`
 
 #### 应急通路 · `meowthd bootstrap-token`
 
@@ -322,21 +329,20 @@ token 存 `localStorage`，**XSS 即等价 root token 泄露**。必须把所有
 
 **强制约束**（违反任一项 = 不许 release）：
 
-1. **CSP 由 daemon 在 `GET /` 与 `index.html` 响应里强制注入**（不依赖 meta），固定值：
+1. **CSP 由 daemon 在 `GET /` 与 `index.html` 响应里强制注入**（不依赖 `<meta>`）。直接以下面的 header 值原样输出，**不要加注释、不要换行**：
+
    ```
-   default-src 'self';
-   script-src 'self';
-   style-src 'self' 'unsafe-inline';     // Tailwind 注入 inline style 必需，但脚本严禁 inline
-   img-src 'self' data:;
-   connect-src 'self';                   // 锁死同源，禁止打到外部
-   font-src 'self' data:;
-   object-src 'none';
-   base-uri 'none';
-   frame-ancestors 'none';
-   form-action 'self';
+   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
    ```
+
+   指令选择的理由（在代码里不要写成注释，在测试里断言每条都在）：
+   - `style-src 'self' 'unsafe-inline'`：Tailwind v4 运行时会注入 inline `<style>`，必需；脚本仍走 `'self'` 不放 inline
+   - `connect-src 'self'`：锁死 fetch/XHR/WebSocket 目标，禁止打外部
+   - `img-src 'self' data:` / `font-src 'self' data:`：允许内联 `data:` 用于小图标/字体子集；不放 `https:`
+   - `object-src 'none'` / `base-uri 'none'` / `frame-ancestors 'none'`：禁 Flash/插件、禁 `<base>` 改基址、禁被任何站点嵌入
+   - `form-action 'self'`：表单提交目标只能是同源
 2. **禁止远程脚本** —— Vite 构建产物所有 JS/CSS/字体必须 `'self'`；任何 `<script src="https://...">` / `<link rel="stylesheet" href="https://...">` 都禁止
-3. **React 端禁用 `dangerouslySetInnerHTML`** —— Biome / ESLint 规则 `react/no-danger` 设 error，G1 阻断
+3. **React 端禁用 `dangerouslySetInnerHTML`** —— **Biome 规则 `noDangerouslySetInnerHtml` 设 `error`**（G1 阻断）；若额外接入 ESLint，则同步开启 `react/no-danger`
 4. **Markdown / 日志输出强 sanitize** —— agent stdout、stderr、消息流任何展示前都过 `DOMPurify` 等成熟库；禁止直接 `innerHTML`；ANSI 着色用结构化转 React 节点而非 HTML 字符串
 5. **HTTP header 由 daemon 同步设**：`X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer`、`Cross-Origin-Opener-Policy: same-origin`、`Cross-Origin-Resource-Policy: same-origin`、`Permissions-Policy: ...` 关闭所有非必需能力
 6. **第三方依赖审查**：dashboard 不引入会动态求值用户输入的库（禁 `eval` / `new Function`）；CI 用 osv-scanner 跑过 G2
@@ -421,7 +427,7 @@ token 存 `localStorage`，**XSS 即等价 root token 泄露**。必须把所有
 | 1.5 | `docs(arch): 04-bootstrap-and-first-run-mint` | init / first-run mint endpoint / bootstrap-token CLI 三轨详细流程、文件权限、错误恢复 |
 | 1.6 | `docs(arch): 05-remote-access-modes` | Tailscale/SSH/HTTPS-proxy 三模式配置范式、启动期校验逻辑 |
 | 1.7 | `docs(arch): 06-dashboard-mvvm-and-basalt` | 5 个页面的 model/viewmodel/page 分层映射、basalt token 接入清单 |
-| 1.8 | `docs(arch): 07-dashboard-security-csp-and-xss` | §7.9 落地细节：CSP header 由 daemon 注入的代码点、sanitizer 库选型、Biome `react/no-danger` 规则配置、osv-scanner 例外清单 |
+| 1.8 | `docs(arch): 07-dashboard-security-csp-and-xss` | §7.9 落地细节：CSP header 由 daemon 注入的代码点、sanitizer 库选型、Biome `noDangerouslySetInnerHtml` 规则配置（若引入 ESLint 则同步 `react/no-danger`）、osv-scanner 例外清单 |
 | 1.9 | `docs(arch): 08-6dq-hooks-wiring` | 每层测试的具体工具、阈值、husky 脚本、CI matrix |
 
 **Phase 1 出口条件**：作者逐篇 review 通过 + Phase 2 的 harness commit 计划在每篇文档里写死。
@@ -453,17 +459,17 @@ token 存 `localStorage`，**XSS 即等价 root token 泄露**。必须把所有
 | 3.2 | `feat(daemon): trim agent SDK to 5 whitelisted backends` | 7 处同步裁；测试仍全绿 |
 | 3.3 | `feat(daemon): ~/.meowth path resolver` | 红：写 home_test.go；绿：实现；重构 |
 | 3.4 | `feat(daemon): sqlite store with tokens schema (hash only)` | 红：schema/CRUD 单测；绿：sqlc 代码 + argon2id |
-| 3.5 | `feat(daemon): meowthd init command (+ --skip-token)` | 红：CLI e2e 两条分支 (默认 = 出 token；--skip-token = 不出 token 仅打印 setup-code nonce)；绿：实现 |
+| 3.5 | `feat(daemon): meowthd init command (+ --skip-token)` | 红：CLI e2e 两条分支：默认 → 出 root token；`--skip-token` → 生成 setup-code、stdout 明文打印一次、`setup_nonce.hash` (0600) 落盘；绿：实现 |
 | 3.6 | `feat(daemon): bearer auth middleware (constant-time compare)` | TDD |
 | 3.7 | `feat(daemon): chi router + healthz + token CRUD` | TDD + L2 端点覆盖 |
-| 3.8 | `feat(daemon): first-run mint endpoint (loopback + nonce + mode-gated + one-shot)` | TDD：表空 + remote_access.mode 默认 + loopback + nonce 正确才 200；其他一律 404；one-shot 后内存开关关 |
+| 3.8 | `feat(daemon): first-run mint endpoint (mode-gated + loopback + nonce-hash + one-shot)` | TDD：启动期读 `setup_nonce.hash` 到内存；表空 + mode 默认 + loopback + 提交 setup-code argon2id 校验过才 200；命中后立即删 hash 文件 + 关内存开关；其他一律 404；日志只打窗口状态不打 hash |
 | 3.9 | `feat(daemon): remote_access config + bind validation` | TDD（含 mint 端点在非默认 mode 下启动期被禁用的断言） |
 | 3.10 | `feat(daemon): security headers middleware (CSP + nosniff + Referrer-Policy ...)` | TDD：在 `GET /` 与 `index.html` 设置 §7.9 固定 CSP；L2 检测 header 出现 |
 | 3.11 | `feat(daemon): agent exec endpoint streaming NDJSON` | TDD + 一个 backend e2e（claude） |
 | 3.12 | `feat(daemon): wire all 5 backends with smoke tests` | 每个 backend 一个 L2 happy-path |
 | 3.13 | `feat(dashboard): vite + basalt token system` | basalt CSS/lib 抄过来，对应 vitest snapshot |
 | 3.14 | `feat(dashboard): app shell + theme init` | TDD（vitest + RTL） |
-| 3.15 | `chore(dashboard): biome rule react/no-danger=error + osv-scanner baseline` | G1/G2 在源头禁用 dangerouslySetInnerHTML |
+| 3.15 | `chore(dashboard): biome rule noDangerouslySetInnerHtml=error + osv-scanner baseline` | G1/G2 在源头禁用 `dangerouslySetInnerHTML`（若引入 ESLint 同步开 `react/no-danger`） |
 | 3.16 | `feat(dashboard): sanitizer wrapper for agent stdout / messages` | TDD：DOMPurify 包装 + ANSI → React nodes 结构化转换 |
 | 3.17 | `feat(dashboard): 5 page skeletons (MVVM 三段式)` | 每页 model/viewmodel 测试先行 |
 | 3.18 | `feat(dashboard): daemon http client + bearer storage` | TDD |
