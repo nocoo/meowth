@@ -13,7 +13,6 @@
 | 05 | [`05-remote-access-modes.md`](05-remote-access-modes.md) | `docs/01-project-overview.md` §7.7、§9.2 Phase 3.9 |
 | 06 | [`06-dashboard-mvvm-and-basalt.md`](06-dashboard-mvvm-and-basalt.md) | `docs/01-project-overview.md` §7.5、§9.2 Phase 3.13–3.20 |
 | 07 | [`07-dashboard-security-csp-and-xss.md`](07-dashboard-security-csp-and-xss.md) | `docs/01-project-overview.md` §7.9、§9.2 Phase 3.10 / 3.15 / 3.16 / 3.24 |
+| 08 | [`08-6dq-hooks-wiring.md`](08-6dq-hooks-wiring.md) | `docs/01-project-overview.md` §8、§9.2 Phase 2.1–2.12 / 3.25 |
 
-后续待建（见 [`docs/01-project-overview.md`](../01-project-overview.md) §9.2 Phase 1）：
-
-- `08-6dq-hooks-wiring.md`
+Phase 1 文档全部就位。后续 architecture 文档（如 v2 设计）按需新增。
