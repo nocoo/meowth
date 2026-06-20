@@ -101,10 +101,10 @@ meowth/
 └── biome.json
 ```
 
-**当前与目标态的差异**（待后续 commit 调整）：
-- `apps/api`（占位 TS）→ **删除**，daemon 改用 Go 顶层 `daemon/`
-- `apps/web` → **重命名**为 `apps/dashboard`
-- 根 `package.json` / `pnpm-workspace.yaml` / `turbo.json` 加 `daemon` shell task（`go build` / `go test`）
+**当前与目标态的差异**：
+- ✅ `apps/api` 已删（commit `b44b1f8`），daemon 改用 Go 顶层 `daemon/`
+- ✅ `apps/web` 已重命名 `apps/dashboard`（commit `933de25`），包名 `@meowth/dashboard`
+- ⏳ 根 `package.json` / `pnpm-workspace.yaml` / `turbo.json` 待加 `daemon` shell task（`go build` / `go test`）—— 由 §9 commit #3 完成
 
 ### 7.2 Agent SDK（继承 multica）
 
@@ -284,36 +284,113 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 
 ---
 
-## 9. 原子化提交计划（落地顺序）
+## 9. 工作规程与原子化提交计划
 
-01 文档定稿后，按以下顺序推进，每步一个 commit、每步可独立 review/回滚：
+### 9.1 三段式工作规程（硬约束）
+
+**任何写代码的冲动，先回到这里。** 顺序违反 = 工作作废。
+
+**Stage 1 · 文档先行（Doc-First）**
+- 任何架构/特性动手前，先在 `docs/architecture/` 或 `docs/features/` 写编号文档
+- 文档必含：设计细节 + 代码引用（文件路径） + 原子化提交计划 + 6DQ 落点（哪一层测试覆盖哪一块）
+- 文档不含：工作量评估
+- **完全 review 无误才进 Stage 2**——这里的「review」由作者读 + 必要时 spawn subagent 唱反调
+- 文档自己也走原子化提交：「新增文档」「修订文档」分开 commit
+
+**Stage 2 · 测试 Harness 先行（Harness-First）**
+- 先把该模块所属的 L1/L2/L3/G1/G2/D1 测试脚手架搭起来，**先让测试运行框架就位**，再写功能
+- L1：vitest / `go test` 目录与 fixture 准备好；空 testfile + skipped placeholder 也算搭好
+- L2：`scripts/run-l2.ts` 能拉起 daemon、调 healthz、退出 0
+- L3：playwright config + 一个 `expect(true).toBe(true)` 空 spec 能跑
+- G1：tsc/biome/golangci-lint/gofmt/go vet 在 pre-commit 通
+- G2：osv-scanner/gitleaks/govulncheck 在 pre-push 通
+- D1：测试用 `~/.meowth-test/` 路径与 `_test_marker` 表 schema 就位
+- harness 提交独立成 commit，绿了才进 Stage 3
+
+**Stage 3 · TDD 实现**
+- 严格红绿重构：先写失败测试，再写最少代码让测试绿，再重构
+- 每个原子 commit 自带它需要的新测试，整套测试在 commit 落地时必须**全绿**
+- 覆盖率目标：daemon 95%、dashboard 90%（页面薄壳豁免）
+- 任何 commit 不允许带 TODO / FIXME / skip-without-issue
+
+**红线**：任何 commit 不能跨越 Stage 边界。例如「实现 X + 给 X 写文档」是非法 commit；必须先文档 commit，再 harness commit（若需要），最后实现 commit。
+
+### 9.2 原子化提交计划（落地顺序）
+
+按以下顺序推进，每步一个 commit、每步独立 review/回滚。已完成的标 ✅。
+
+#### Phase 0 — 项目初始化（已完成）
 
 | # | Commit | 内容 |
 |---|--------|------|
-| 1 | `docs: write 01 project overview` | 本文档（本次提交） |
-| 2 | `chore: rewire monorepo for daemon/dashboard split` | 删 `apps/api`，重命名 `apps/web` → `apps/dashboard`，更新 workspace/turbo |
-| 3 | `chore(daemon): scaffold go module with meowthd entrypoint` | `daemon/go.mod`、`daemon/cmd/meowthd/main.go` hello-world，`go build ./...` 绿 |
-| 4 | `chore(daemon): vendor multica pkg/agent verbatim` | **整目录拷贝**（所有 `*.go` + `testdata/` + 平台分桶文件）+ LICENSE + NOTICE，改 package path；`go vet ./...` + `go test ./pkg/agent/...` 全绿 |
-| 5 | `chore(daemon): trim agent SDK to 5 whitelisted backends` | 同步动 7 处（`SupportedTypes` / `New` / `launchHeaders` / `ListModels` / `version` / `thinking` / 删 8 个 backend 文件与测试），裁完跑测试仍全绿 |
-| 6 | `feat(daemon): wire ~/.meowth path resolver` | `internal/home`，darwin 路径 + 权限校验（0700/0600）+ 单测 |
-| 7 | `feat(daemon): sqlite store with tokens schema (hash only)` | `internal/store` + `sqlc.yaml`；token 表只存 hash + prefix + salt |
-| 8 | `feat(daemon): meowthd init command (bootstrap root token)` | 一次性 CLI，幂等，明文 token 仅打印一次 |
-| 9 | `feat(daemon): bearer auth middleware (constant-time hash compare)` | 共享给 HTTP 与 socket |
-| 10 | `feat(daemon): chi router + healthz + token CRUD endpoints` | secret 仅创建时返回；schema 测试覆盖 |
-| 11 | `feat(daemon): unix socket bootstrap endpoint (zero-token only)` | `runtime/meowthd.sock` + `/v1/bootstrap/token`，token 表非空时返 404 |
-| 12 | `feat(daemon): remote_access config + bind validation` | 非 loopback / 非 Tailscale CGNAT 绑定强制要求 `remote_access.mode` |
-| 13 | `feat(daemon): agent exec endpoint streaming NDJSON` | 接通 5 个 backend，session/messages/cancel 三件套 |
-| 14 | `feat(dashboard): bootstrap vite + basalt token system` | 抄 basalt `index.css` + lib + theme init + Tailwind v4 vite 插件 |
-| 15 | `feat(dashboard): app shell + 5 page skeletons` | Overview/Agents/Sessions/Tokens/Settings |
-| 16 | `feat(dashboard): daemon http client + token storage` | bearer 注入、`FetchResult` 判别联合、错误边界 |
-| 17 | `feat(dashboard): first-run bootstrap via unix socket` | 检测 token 表空时自动 socket 取 root token，缓存本地 |
-| 18 | `chore: husky + pre-commit (L1+G1) + pre-push (L2+G2)` | hooks 落地 |
-| 19 | `test(daemon): L1 unit tests ≥ 95% coverage` | 重点：auth、store、home、bootstrap |
-| 20 | `test(daemon): L2 http integration via run-l2 script` | 真启 daemon、覆盖全部 v1 端点 + bootstrap socket |
-| 21 | `test(e2e): playwright happy path` | init → dashboard 拉 token → 调 claude → 看消息 |
-| 22 | `ci: github actions matrix darwin + 6DQ all-green gate` | |
+| 0.1 | ✅ `chore: bootstrap pnpm + turbo monorepo skeleton` | `0fefb71` |
+| 0.2 | ✅ `docs: add CLAUDE.md and numbered-docs scaffold` | `ba97460` |
+| 0.3 | ✅ `docs(01): write project overview v0.1` | `3e110f3` |
+| 0.4 | ✅ `docs(01): harden agent SDK / remote auth / token bootstrap (v0.2)` | `64646b6` |
+| 0.5 | ✅ `chore: drop apps/api placeholder` | `b44b1f8` |
+| 0.6 | ✅ `chore: rename apps/web → apps/dashboard` | `933de25` |
 
-每个 commit 都满足：**自带必要测试 + hooks 通过 + 不留 TODO**。
+#### Phase 1 — 文档定稿（Doc-First，全部 review 通过才进 Phase 2）
+
+| # | Commit | 内容 |
+|---|--------|------|
+| 1.1 | `docs(01): incorporate phase plan and workflow regimen (v0.3)` | 本次 commit |
+| 1.2 | `docs(arch): 01-agent-sdk-pump-from-multica` | vendor 范围、裁剪 7 处、pump 命令、上游变更应对 |
+| 1.3 | `docs(arch): 02-daemon-http-protocol` | NDJSON event schema、v1 端点契约、错误码、流式 cancel 协议 |
+| 1.4 | `docs(arch): 03-sqlite-schema-and-tokens` | 完整 schema、argon2id 参数、migration 策略、D1 隔离表 |
+| 1.5 | `docs(arch): 04-bootstrap-and-unix-socket` | init/socket/CLI 三轨详细流程、文件权限、错误恢复 |
+| 1.6 | `docs(arch): 05-remote-access-modes` | Tailscale/SSH/HTTPS-proxy 三模式配置范式、启动期校验逻辑 |
+| 1.7 | `docs(arch): 06-dashboard-mvvm-and-basalt` | 5 个页面的 model/viewmodel/page 分层映射、basalt token 接入清单 |
+| 1.8 | `docs(arch): 07-6dq-hooks-wiring` | 每层测试的具体工具、阈值、husky 脚本、CI matrix |
+
+**Phase 1 出口条件**：作者逐篇 review 通过 + Phase 2 的 harness commit 计划在每篇文档里写死。
+
+#### Phase 2 — Harness 先行（Harness-First，**全部绿了才进 Phase 3**）
+
+| # | Commit | 内容 |
+|---|--------|------|
+| 2.1 | `chore(daemon): scaffold go module with meowthd entrypoint` | `daemon/go.mod` + `daemon/cmd/meowthd/main.go` 仅打印版本号，`go build` / `go vet` 绿 |
+| 2.2 | `chore: add daemon shell tasks to turbo + root scripts` | 根 `package.json` 增加 `daemon:build` / `daemon:test`，turbo 接入 |
+| 2.3 | `chore(daemon): G1 wiring (gofmt + go vet + golangci-lint)` | config + 一个故意 fail 的样本测试 vet 出来，证明 G1 真有效 |
+| 2.4 | `chore(dashboard): G1 wiring (biome strict + tsc strict)` | 已就位，加一个故意 fail 样本证明强度 |
+| 2.5 | `chore: husky + pre-commit (G1 placeholder)` | hook 安装，pre-commit 跑 G1，<5s |
+| 2.6 | `test(daemon): L1 harness (go test + go-cover) with placeholder` | `daemon/pkg/.../foo_test.go` skipped；`go test ./...` 退 0 |
+| 2.7 | `test(dashboard): L1 harness (vitest) with placeholder` | empty `*.test.ts`；`pnpm test` 退 0 |
+| 2.8 | `test(daemon): L2 harness (scripts/run-l2.ts)` | 能拉起 hello-world daemon、ping `/healthz`、退 0；D1 测试路径 `~/.meowth-test/` 就位 |
+| 2.9 | `test(e2e): L3 harness (playwright config + empty spec)` | playwright `pnpm test:e2e` 绿 |
+| 2.10 | `chore: G2 wiring (osv-scanner + gitleaks + govulncheck)` | pre-push 跑 G2 placeholder，全绿 |
+| 2.11 | `chore: husky pre-push (L2 + G2)` | hook 接通，<3min |
+| 2.12 | `ci: github actions darwin matrix + 6DQ gates` | CI 跑全套 + L3，全绿 |
+
+**Phase 2 出口条件**：六维 harness 全就位，pre-commit / pre-push / CI 全绿；任何后续功能 commit 失败时，确定是「功能不对」而不是「harness 没搭好」。
+
+#### Phase 3 — TDD 实现（每步先写测试再写代码，commit 时全绿）
+
+| # | Commit | 内容 |
+|---|--------|------|
+| 3.1 | `feat(daemon): vendor multica pkg/agent verbatim` | 整目录拷贝 + LICENSE/NOTICE + package path 改名；上游测试套全绿 |
+| 3.2 | `feat(daemon): trim agent SDK to 5 whitelisted backends` | 7 处同步裁；测试仍全绿 |
+| 3.3 | `feat(daemon): ~/.meowth path resolver` | 红：写 home_test.go；绿：实现；重构 |
+| 3.4 | `feat(daemon): sqlite store with tokens schema (hash only)` | 红：schema/CRUD 单测；绿：sqlc 代码 + argon2id |
+| 3.5 | `feat(daemon): meowthd init command` | 红：CLI e2e 测试；绿：实现 |
+| 3.6 | `feat(daemon): bearer auth middleware (constant-time compare)` | TDD |
+| 3.7 | `feat(daemon): chi router + healthz + token CRUD` | TDD + L2 端点覆盖 |
+| 3.8 | `feat(daemon): unix socket bootstrap endpoint` | TDD + L2 socket 测试 |
+| 3.9 | `feat(daemon): remote_access config + bind validation` | TDD |
+| 3.10 | `feat(daemon): agent exec endpoint streaming NDJSON` | TDD + 一个 backend e2e（claude） |
+| 3.11 | `feat(daemon): wire all 5 backends with smoke tests` | 每个 backend 一个 L2 happy-path |
+| 3.12 | `feat(dashboard): vite + basalt token system` | basalt CSS/lib 抄过来，对应 vitest snapshot |
+| 3.13 | `feat(dashboard): app shell + theme init` | TDD（vitest + RTL） |
+| 3.14 | `feat(dashboard): 5 page skeletons (MVVM 三段式)` | 每页 model/viewmodel 测试先行 |
+| 3.15 | `feat(dashboard): daemon http client + bearer storage` | TDD |
+| 3.16 | `feat(dashboard): first-run bootstrap via unix socket` | TDD（mock socket） |
+| 3.17 | `feat(dashboard): wire 5 pages to live daemon` | L3 playwright happy path 跑通 |
+| 3.18 | `test(e2e): full happy path (init → token → claude exec → view messages)` | L3 完整 |
+| 3.19 | `chore: bump coverage thresholds to S-tier (daemon 95% / dashboard 90%)` | 强制 gate |
+
+**每个 commit 都满足**：自带必要测试 + 六维 hooks 通过 + 不留 TODO。
+
+**Phase 3 出口条件**：§5 成功标准全部勾选，Tier 判定 S。
 
 ---
 
@@ -321,7 +398,7 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 
 - [`/README.md`](../README.md) — 仓库入口
 - [`/CLAUDE.md`](../CLAUDE.md) — 工作约束
-- 待建：
+- 待建（**Phase 1 计划**，见 §9.2）：
   - `docs/architecture/01-agent-sdk-pump-from-multica.md`
   - `docs/architecture/02-daemon-http-protocol.md`
   - `docs/architecture/03-sqlite-schema-and-tokens.md`
