@@ -455,11 +455,11 @@ func TestBuildClaudeArgsFiltersBlockedCustomArgs(t *testing.T) {
 		CustomArgs: []string{"--output-format", "text", "--model", "o3"},
 	}, slog.Default())
 
-	// --output-format text should be stripped
-	for _, a := range args[len(args)-2:] {
-		if a == "text" {
-			// "text" should not be in the last args since --output-format was blocked
-			// The actual --output-format stream-json is earlier in the list
+	// --output-format text should be stripped — args must not contain a bare "text"
+	// token following --output-format (the legitimate stream-json arg appears earlier).
+	for i, a := range args {
+		if a == "--output-format" && i+1 < len(args) && args[i+1] == "text" {
+			t.Fatalf("--output-format text should be filtered, but found at index %d in %v", i, args)
 		}
 	}
 	// --model o3 should pass through
@@ -643,7 +643,7 @@ func TestWriteMcpConfigToTemp(t *testing.T) {
 	}
 
 	// File should exist and contain exactly the raw JSON.
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // test reads a file it created under t.TempDir()
 	if err != nil {
 		t.Fatalf("read temp file %s: %v", path, err)
 	}

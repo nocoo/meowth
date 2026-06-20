@@ -513,7 +513,7 @@ echo "D1 static check: OK"
 | 2 | dashboard 覆盖率最终阈值 90%（已在 §6.1 采用）vs overview §8 表 95%：本文档采用 90%；overview §8 表与 Phase 3.25 commit 的 90% 不一致由 §14 #1 独立勘误 commit 处理 | @zheng-li 若希望 95%，需独立 commit 改 Phase 3.25 commit 名 + 本文档 §6.1 | 已采用 90%，待 overview §8 勘误 |
 | 3 | GitHub-hosted darwin-arm64 runner 不可用时的 fallback：自托管 MBP runner（label `self-hosted, darwin, arm64`）？需要本机长期挂着 | @zheng-li 在 Phase 2.12 时决定 | 待 Phase 2.12 |
 | 4 | osv-scanner medium/low 阈值：v1 是否容忍 medium 不容忍 high？或全部 0？倾向 critical/high=0、medium/low 允许但 PR 描述列出 | @zheng-li | 待 |
-| 5 | `golangci-lint` 启用哪些 linter？v1 倾向：`errcheck`、`govet`、`ineffassign`、`staticcheck`、`unused`、`gosec`；不强求 `gocyclo` / `funlen` 等风格 linter | SDE 实施 Phase 2.3 时确定 | 待 Phase 2.3 |
+| 5 | `golangci-lint` 启用哪些 linter？v1 倾向：`errcheck`、`govet`、`ineffassign`、`staticcheck`、`unused`、`gosec`；不强求 `gocyclo` / `funlen` 等风格 linter | SDE 实施 Phase 2.3 时确定 | 已决：Phase 2.3 落为 6 linter（`errcheck` / `govet` / `ineffassign` / `staticcheck` / `unused` / `gosec`），版本钉 v2.12.2，通过 `pnpm daemon:lint`（内部 `go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run`），配置见 `daemon/.golangci.yml`，豁免 path-specific 最小化 |
 | 6 | OpenAPI 工具链：`openapi-typescript` vs `openapi-zod`？[`02`](02-daemon-http-protocol.md) §15 #2 留给 @zheng-li | @zheng-li | 待 |
 
 ---

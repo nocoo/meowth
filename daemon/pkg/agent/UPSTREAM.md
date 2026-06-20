@@ -52,6 +52,14 @@ it still hasn't (keep the patch and verify the affected path still applies).
   smoke pass. See `fix(agent): surface pi message_end errors` and its
   three `TestPi…` cases in `pi_test.go`.
 
+- **pi session dir/file mode hardening** — `pi.go` `ensurePiSessionFile`.
+  Upstream creates the Pi session directory with `0o755` and the session
+  file with `0o644` (world-readable). Meowth tightens these to `0o700` /
+  `0o600` so the per-user Pi session content is not world-readable on
+  a shared `$HOME`. Behavior is otherwise unchanged. Applied alongside
+  the Phase 2.3 lint wiring; revisit when pumping if upstream tightens
+  the same call sites.
+
 ## How to pump
 
 See `docs/architecture/01-agent-sdk-pump-from-multica.md` §6.

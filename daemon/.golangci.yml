@@ -1,0 +1,82 @@
+version: "2"
+
+# meowth daemon — pinned linter set per docs/architecture/08-6dq-hooks-wiring.md §13 #5.
+# Run via `pnpm daemon:lint` (which invokes `go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run`).
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gosec
+  exclusions:
+    rules:
+      # G204 — Agent SDK core capability: each backend exec's the user's local CLI
+      # (claude/codex/copilot/hermes/pi); models.go does CLI-backed model discovery.
+      # Path is resolved via exec.LookPath against a fixed backend whitelist before
+      # this call. Not a vulnerability; SDK design.
+      - path: pkg/agent/(claude|codex|copilot|hermes|pi)\.go
+        linters:
+          - gosec
+        text: "G204"
+      - path: pkg/agent/models\.go
+        linters:
+          - gosec
+        text: "G204"
+
+      # codex.go reads/writes paths derived from CODEX_HOME or the Codex session
+      # root (daemon-managed config path). Behavior is preserved from upstream
+      # multica SDK; HTTP daemon's path policy is defined separately in
+      # docs/architecture/03-sqlite-schema-and-tokens.md and 05-remote-access-modes.md.
+      - path: pkg/agent/codex\.go
+        linters:
+          - gosec
+        text: "G304|G703"
+
+      # pi.go session file path is produced by newPiSessionPath / ensurePiSessionFile
+      # under the Pi session directory. This commit also tightens the created
+      # dir/file mode to 0700/0600.
+      - path: pkg/agent/pi\.go
+        linters:
+          - gosec
+        text: "G304"
+
+      # codex.go:659 G118 — Codex session lifecycle goroutine. It owns the codex
+      # subprocess via runCtx / cancel / drainAndWait; using a request-scoped ctx
+      # here would race the shutdown path that flushes telemetry. False positive.
+      - path: pkg/agent/codex\.go
+        linters:
+          - gosec
+        text: "G118"
+
+      # exec_fixture_unix_test.go writes a shell script the test then exec's;
+      # the executable bit (0o755) is intentional for that fixture only.
+      - path: pkg/agent/exec_fixture_unix_test\.go
+        linters:
+          - gosec
+        text: "G302"
+
+      # staticcheck QF* / S1009 are quickfix style suggestions on vendored upstream
+      # code; the file-local form keeps these from leaking to new code we author.
+      - path: pkg/agent/codex\.go
+        linters:
+          - staticcheck
+        text: "QF1012"
+      - path: pkg/agent/hermes\.go
+        linters:
+          - staticcheck
+        text: "QF1001"
+      - path: pkg/agent/models\.go
+        linters:
+          - staticcheck
+        text: "QF1002"
+      - path: pkg/agent/models_test\.go
+        linters:
+          - staticcheck
+        text: "S1009"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

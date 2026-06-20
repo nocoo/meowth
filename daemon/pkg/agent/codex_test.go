@@ -2055,7 +2055,7 @@ func TestEnsureCodexMcpConfigEmptyClearsBlock(t *testing.T) {
 	if err := ensureCodexMcpConfig(tmp, nil, slog.Default()); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
-	data, err := os.ReadFile(tmp)
+	data, err := os.ReadFile(tmp) //nolint:gosec // test reads a file it created under t.TempDir()
 	if err != nil {
 		t.Fatalf("read after: %v", err)
 	}
@@ -2086,7 +2086,7 @@ func TestEnsureCodexMcpConfigWritesManagedBlock(t *testing.T) {
 	if err := ensureCodexMcpConfig(tmp, raw, slog.Default()); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
-	data, err := os.ReadFile(tmp)
+	data, err := os.ReadFile(tmp) //nolint:gosec // test reads a file it created under t.TempDir()
 	if err != nil {
 		t.Fatalf("read after: %v", err)
 	}
@@ -2134,7 +2134,7 @@ func TestEnsureCodexMcpConfigForces0600OnPreexistingFile(t *testing.T) {
 	// 0o600 — `os.WriteFile` alone keeps the existing mode, so the chmod
 	// is the part we need to pin.
 	tmp := filepath.Join(t.TempDir(), "config.toml")
-	if err := os.WriteFile(tmp, []byte("sandbox_mode = \"workspace-write\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(tmp, []byte("sandbox_mode = \"workspace-write\"\n"), 0o644); err != nil { //nolint:gosec // test intentionally seeds a too-wide pre-existing config to verify ensureCodexMcpConfig chmods it to 0600.
 		t.Fatalf("seed: %v", err)
 	}
 
@@ -2173,7 +2173,7 @@ func TestEnsureCodexMcpConfigStripsUserMcpServersWhenManaged(t *testing.T) {
 	if err := ensureCodexMcpConfig(tmp, raw, slog.Default()); err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
-	data, _ := os.ReadFile(tmp)
+	data, _ := os.ReadFile(tmp) //nolint:gosec // test reads a file it created under t.TempDir()
 	got := string(data)
 
 	if strings.Contains(got, "global_fetch") {
@@ -2202,12 +2202,12 @@ func TestEnsureCodexMcpConfigIdempotent(t *testing.T) {
 	if err := ensureCodexMcpConfig(tmp, raw, slog.Default()); err != nil {
 		t.Fatalf("first ensure: %v", err)
 	}
-	first, _ := os.ReadFile(tmp)
+	first, _ := os.ReadFile(tmp) //nolint:gosec // test reads a file it created under t.TempDir()
 
 	if err := ensureCodexMcpConfig(tmp, raw, slog.Default()); err != nil {
 		t.Fatalf("second ensure: %v", err)
 	}
-	second, _ := os.ReadFile(tmp)
+	second, _ := os.ReadFile(tmp) //nolint:gosec // test reads a file it created under t.TempDir()
 
 	if string(first) != string(second) {
 		t.Fatalf("non-idempotent write:\nfirst:\n%s\nsecond:\n%s", first, second)
@@ -2256,7 +2256,7 @@ func TestEnsureCodexMcpConfigAbsentLeavesUserTablesAlone(t *testing.T) {
 		if err := ensureCodexMcpConfig(tmp, raw, slog.Default()); err != nil {
 			t.Fatalf("ensure (%q): %v", string(raw), err)
 		}
-		data, _ := os.ReadFile(tmp)
+		data, _ := os.ReadFile(tmp) //nolint:gosec // test reads a file it created under t.TempDir()
 		got := string(data)
 		if !strings.Contains(got, "[mcp_servers.user_global]") {
 			t.Fatalf("absent mcp_config (%q) must leave user MCP tables alone, got:\n%s", string(raw), got)
@@ -2289,7 +2289,7 @@ func TestEnsureCodexMcpConfigEmptyManagedSetStripsUserMcp(t *testing.T) {
 		if err := ensureCodexMcpConfig(tmp, raw, slog.Default()); err != nil {
 			t.Fatalf("ensure (%q): %v", string(raw), err)
 		}
-		data, _ := os.ReadFile(tmp)
+		data, _ := os.ReadFile(tmp) //nolint:gosec // test reads a file it created under t.TempDir()
 		got := string(data)
 		if strings.Contains(got, "user_global") {
 			t.Fatalf("managed empty set (%q) must strip user MCP tables, got:\n%s", string(raw), got)
@@ -2317,11 +2317,11 @@ func TestEnsureCodexMcpConfigEmptyManagedSetIdempotent(t *testing.T) {
 	if err := ensureCodexMcpConfig(tmp, raw, slog.Default()); err != nil {
 		t.Fatalf("first ensure: %v", err)
 	}
-	first, _ := os.ReadFile(tmp)
+	first, _ := os.ReadFile(tmp) //nolint:gosec // test reads a file it created under t.TempDir()
 	if err := ensureCodexMcpConfig(tmp, raw, slog.Default()); err != nil {
 		t.Fatalf("second ensure: %v", err)
 	}
-	second, _ := os.ReadFile(tmp)
+	second, _ := os.ReadFile(tmp) //nolint:gosec // test reads a file it created under t.TempDir()
 	if string(first) != string(second) {
 		t.Fatalf("non-idempotent write:\nfirst:\n%s\nsecond:\n%s", first, second)
 	}

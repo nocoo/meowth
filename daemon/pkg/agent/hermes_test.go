@@ -1270,8 +1270,8 @@ func TestHermesProviderErrorSnifferIgnoresInfoLines(t *testing.T) {
 	t.Parallel()
 
 	s := newACPProviderErrorSniffer("hermes")
-	s.Write([]byte("2026-04-20 23:41:45 [INFO] acp_adapter.entry: Loaded env\n"))
-	s.Write([]byte("2026-04-20 23:41:47 [INFO] agent.auxiliary_client: Vision auto-detect...\n"))
+	_, _ = s.Write([]byte("2026-04-20 23:41:45 [INFO] acp_adapter.entry: Loaded env\n"))
+	_, _ = s.Write([]byte("2026-04-20 23:41:47 [INFO] agent.auxiliary_client: Vision auto-detect...\n"))
 	if msg := s.message(); msg != "" {
 		t.Errorf("info lines should produce no error, got %q", msg)
 	}
@@ -1283,9 +1283,9 @@ func TestHermesProviderErrorSnifferHandlesPartialLines(t *testing.T) {
 	// Writer may be called mid-line; the sniffer must buffer until
 	// it sees a newline so the regex doesn't miss the header.
 	s := newACPProviderErrorSniffer("hermes")
-	s.Write([]byte(`⚠️  API call failed (attempt 1/3):`))
-	s.Write([]byte(` BadRequestError [HTTP 400]` + "\n"))
-	s.Write([]byte(`   📝 Error: something went wrong` + "\n"))
+	_, _ = s.Write([]byte(`⚠️  API call failed (attempt 1/3):`))
+	_, _ = s.Write([]byte(` BadRequestError [HTTP 400]` + "\n"))
+	_, _ = s.Write([]byte(`   📝 Error: something went wrong` + "\n"))
 	msg := s.message()
 	if !strings.Contains(msg, "something went wrong") {
 		t.Errorf("expected buffered line to be captured, got %q", msg)
@@ -1298,7 +1298,7 @@ func TestHermesProviderErrorSnifferBoundedBuffer(t *testing.T) {
 	s := newACPProviderErrorSniffer("hermes")
 	for i := 0; i < 20; i++ {
 		// Each line differs so dedup doesn't merge them.
-		s.Write([]byte(`⚠️  API call failed (HTTP 400) attempt ` + string(rune('a'+i%26)) + `: Non-retryable error` + "\n"))
+		_, _ = s.Write([]byte(`⚠️  API call failed (HTTP 400) attempt ` + string(rune('a'+i%26)) + `: Non-retryable error` + "\n"))
 	}
 	if len(s.lines) > acpMaxErrorLines {
 		t.Errorf("sniffer kept %d lines, limit is %d", len(s.lines), acpMaxErrorLines)
@@ -1424,7 +1424,7 @@ func TestHermesProviderErrorSnifferTerminalVsTransient(t *testing.T) {
 	// signal is just "attempt 1/3 against a retryable rate limit" — no
 	// terminal markers at all.
 	s := newACPProviderErrorSniffer("hermes")
-	s.Write([]byte("⚠️  API call failed (attempt 1/3): retryable upstream blip\n"))
+	_, _ = s.Write([]byte("⚠️  API call failed (attempt 1/3): retryable upstream blip\n"))
 	if msg := s.message(); msg == "" {
 		t.Fatalf("sniffer should still capture transient warnings for diagnostics")
 	}
@@ -1433,7 +1433,7 @@ func TestHermesProviderErrorSnifferTerminalVsTransient(t *testing.T) {
 	}
 
 	// Now feed a follow-on terminal marker. terminalMessage must turn on.
-	s.Write([]byte("❌  API call failed after 3 retries: usage limit reached\n"))
+	_, _ = s.Write([]byte("❌  API call failed after 3 retries: usage limit reached\n"))
 	if msg := s.terminalMessage(); msg == "" {
 		t.Fatalf("after-N-retries / ❌ should switch terminalMessage on")
 	}
@@ -1456,7 +1456,7 @@ func TestHermesProviderErrorSnifferTerminalNonRetryable(t *testing.T) {
 		`[ERROR] API call failed: upstream returned HTTP 500`,
 	} {
 		s := newACPProviderErrorSniffer("hermes")
-		s.Write([]byte(line + "\n"))
+		_, _ = s.Write([]byte(line + "\n"))
 		if msg := s.terminalMessage(); msg == "" {
 			t.Errorf("expected %q to be classified as terminal", line)
 		}
@@ -2015,7 +2015,7 @@ done
 // tests below to inspect what we actually sent on the wire.
 func findRecordedFrame(t *testing.T, recordPath, method string) map[string]any {
 	t.Helper()
-	data, err := os.ReadFile(recordPath)
+	data, err := os.ReadFile(recordPath) //nolint:gosec // test reads a file it created under t.TempDir()
 	if err != nil {
 		t.Fatalf("read record file: %v", err)
 	}

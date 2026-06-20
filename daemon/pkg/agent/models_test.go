@@ -79,7 +79,6 @@ func TestClaudeStaticModelsExposesFable5(t *testing.T) {
 	}
 }
 
-
 func TestCodexStaticModelsExposesGPT55(t *testing.T) {
 	// Codex CLI has no `models list` subcommand so the catalog is
 	// hand-maintained. Regression guard for multica-ai/multica#2009 —
@@ -285,7 +284,6 @@ func TestListModelsHermesWithoutBinary(t *testing.T) {
 	}
 }
 
-
 func TestListModelsUnknownProvider(t *testing.T) {
 	ctx := context.Background()
 	_, err := ListModels(ctx, "nonexistent", "")
@@ -315,7 +313,6 @@ func TestStaticCatalogsHaveAtMostOneDefault(t *testing.T) {
 		}
 	}
 }
-
 
 // TestCachedDiscoveryDoesNotCacheEmpty verifies that an empty discovery result
 // is not cached, so a transient failure (e.g. a `pi --list-models` timeout)
@@ -588,9 +585,6 @@ func TestHermesModelSelectionSupported(t *testing.T) {
 		t.Error("hermes should be model-selection-supported now that set_session_model is wired")
 	}
 }
-
-
-
 
 func TestCachedDiscovery(t *testing.T) {
 	calls := 0

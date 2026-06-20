@@ -138,7 +138,7 @@ func TestRunCodexDebugModels_ArgvSeenByBinary(t *testing.T) {
 		t.Fatalf("runCodexDebugModels: %v (output=%q)", err, raw)
 	}
 
-	data, err := os.ReadFile(argvFile)
+	data, err := os.ReadFile(argvFile) //nolint:gosec // test reads a file it created under t.TempDir()
 	if err != nil {
 		t.Fatalf("read argv file: %v", err)
 	}

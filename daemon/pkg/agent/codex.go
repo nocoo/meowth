@@ -647,7 +647,7 @@ func (b *codexBackend) Execute(ctx context.Context, prompt string, opts ExecOpti
 	var waitOnce sync.Once
 	drainAndWait := func() {
 		waitOnce.Do(func() {
-			stdin.Close()
+			_ = stdin.Close()
 			_ = cmd.Wait()
 		})
 	}
@@ -859,7 +859,7 @@ func (b *codexBackend) Execute(ctx context.Context, prompt string, opts ExecOpti
 		// cancel → SIGKILL) drops the task's buffered telemetry. Give it a
 		// bounded grace period; only force-cancel if it doesn't exit, so the
 		// reader goroutine can never block forever on scanner.Scan().
-		stdin.Close()
+		_ = stdin.Close()
 		select {
 		case <-readerDone:
 			// codex closed stdout on its own — clean shutdown, telemetry flushed.
@@ -1942,7 +1942,7 @@ func parseCodexSessionFile(path string) *codexSessionUsage {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var result codexSessionUsage
 	found := false

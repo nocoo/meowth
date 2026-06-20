@@ -193,7 +193,7 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 		defer close(msgCh)
 		defer close(resCh)
 		defer func() {
-			stdin.Close()
+			_ = stdin.Close()
 			_ = cmd.Wait()
 		}()
 
@@ -391,7 +391,7 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 		b.cfg.Logger.Info("hermes finished", "pid", cmd.Process.Pid, "status", finalStatus, "duration", duration.Round(time.Millisecond).String())
 
 		// Close stdin and cancel context to signal hermes acp to exit.
-		stdin.Close()
+		_ = stdin.Close()
 		cancel()
 
 		// Wait for the reader goroutine to finish so all output is accumulated.

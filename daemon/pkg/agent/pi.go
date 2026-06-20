@@ -618,10 +618,10 @@ func newPiSessionPath() (string, error) {
 // exist at path. Pi refuses to start when --session points at a missing
 // file; paths that already exist (a resumed session) are left untouched.
 func ensurePiSessionFile(path string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0o644)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0o600)
 	if err != nil {
 		return err
 	}

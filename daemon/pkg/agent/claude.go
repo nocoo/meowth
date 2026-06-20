@@ -46,7 +46,7 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 			return nil, err
 		}
 		mcpConfigPath = path
-		mcpFileCleanup = func() { os.Remove(mcpConfigPath) }
+		mcpFileCleanup = func() { _ = os.Remove(mcpConfigPath) }
 		args = append(args, "--mcp-config", mcpConfigPath)
 	}
 	// Clean up the temp file if we return before the goroutine takes ownership.
@@ -127,7 +127,7 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 		defer close(msgCh)
 		defer close(resCh)
 		if mcpConfigPath != "" {
-			defer os.Remove(mcpConfigPath)
+			defer func() { _ = os.Remove(mcpConfigPath) }()
 		}
 
 		startTime := time.Now()
@@ -793,12 +793,12 @@ func writeMcpConfigToTemp(raw json.RawMessage) (string, error) {
 		return "", fmt.Errorf("create mcp config temp file: %w", err)
 	}
 	if _, err := f.Write(raw); err != nil {
-		f.Close()
-		os.Remove(f.Name())
+		_ = f.Close()
+		_ = os.Remove(f.Name())
 		return "", fmt.Errorf("write mcp config temp file: %w", err)
 	}
 	if err := f.Close(); err != nil {
-		os.Remove(f.Name())
+		_ = os.Remove(f.Name())
 		return "", fmt.Errorf("close mcp config temp file: %w", err)
 	}
 	return f.Name(), nil

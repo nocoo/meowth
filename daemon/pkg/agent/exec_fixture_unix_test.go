@@ -18,7 +18,7 @@ func writeTestExecutable(tb testing.TB, path string, content []byte) {
 	tb.Helper()
 	syscall.ForkLock.RLock()
 	defer syscall.ForkLock.RUnlock()
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o755) //nolint:gosec // test fixture: shell script written into t.TempDir() needs exec bit
 	if err != nil {
 		tb.Fatalf("write test executable %s: open: %v", path, err)
 	}
