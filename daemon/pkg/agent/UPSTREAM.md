@@ -34,6 +34,24 @@ deletions, and `TestSupportedTypesMatchesMeowthWhitelist` /
 `TestNewFactoryWhitelist` guard against accidental reintroduction on future
 pumps.)
 
+## Local fixes on top of upstream
+
+These are meowth-local divergences from the vendored upstream beyond the
+trim. Each one needs to be revisited when pumping to a newer multica SHA:
+either the upstream has merged an equivalent fix (drop the local patch) or
+it still hasn't (keep the patch and verify the affected path still applies).
+
+- **pi `message_end` / `turn_end` error mapping** — `pi.go`. Upstream
+  treats Pi runs as `Status="completed"` whenever the child exits 0,
+  including when the upstream provider returned an API error mid-turn
+  (Pi emits `message_end` with `stopReason="error"` + `errorMessage` and
+  still exits 0). Meowth surfaces these as `Status="failed"` with the
+  upstream error text in `Result.Error`, because otherwise the daemon
+  reports a successful agent run that produced no assistant output —
+  which the multi-agent review of P5 confirmed was a real false-positive
+  smoke pass. See `fix(agent): surface pi message_end errors` and its
+  three `TestPi…` cases in `pi_test.go`.
+
 ## How to pump
 
 See `docs/architecture/01-agent-sdk-pump-from-multica.md` §6.

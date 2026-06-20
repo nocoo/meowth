@@ -318,20 +318,50 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 				})
 
 			case "turn_end":
-				if msg := decodePiMessage(evt.Message); msg != nil && msg.Usage != nil {
-					model := msg.Model
-					if model == "" {
-						model = opts.Model
+				msg := decodePiMessage(evt.Message)
+				if msg != nil {
+					if msg.Usage != nil {
+						model := msg.Model
+						if model == "" {
+							model = opts.Model
+						}
+						if model == "" {
+							model = "unknown"
+						}
+						u := usage[model]
+						u.InputTokens += msg.Usage.Input
+						u.OutputTokens += msg.Usage.Output
+						u.CacheReadTokens += msg.Usage.CacheRead
+						u.CacheWriteTokens += msg.Usage.CacheWrite
+						usage[model] = u
 					}
-					if model == "" {
-						model = "unknown"
+					if errText := piMessageErrorText(msg); errText != "" {
+						trySend(msgCh, Message{Type: MessageError, Content: errText})
+						if finalStatus == "completed" {
+							finalStatus = "failed"
+							finalError = errText
+						}
 					}
-					u := usage[model]
-					u.InputTokens += msg.Usage.Input
-					u.OutputTokens += msg.Usage.Output
-					u.CacheReadTokens += msg.Usage.CacheRead
-					u.CacheWriteTokens += msg.Usage.CacheWrite
-					usage[model] = u
+				}
+
+			case "message_end":
+				// Pi surfaces assistant turn failures (provider 4xx/5xx,
+				// auth, model-not-available) through `message_end` with
+				// `stopReason: "error"` and a populated `errorMessage`,
+				// then still emits `agent_end` with exit code 0. Without
+				// this case the backend would report Status=completed
+				// with empty output — see docs/architecture/01 §4 trim
+				// follow-up and the multi-agent review that surfaced
+				// this gap on a 400 `model_not_available_for_integrator`
+				// response from Pi's raven provider.
+				if msg := decodePiMessage(evt.Message); msg != nil {
+					if errText := piMessageErrorText(msg); errText != "" {
+						trySend(msgCh, Message{Type: MessageError, Content: errText})
+						if finalStatus == "completed" {
+							finalStatus = "failed"
+							finalError = errText
+						}
+					}
 				}
 
 			case "error":
@@ -423,6 +453,18 @@ type piMessage struct {
 	Role  string   `json:"role,omitempty"`
 	Model string   `json:"model,omitempty"`
 	Usage *piUsage `json:"usage,omitempty"`
+	// StopReason is set on assistant `message_end` / `turn_end` events.
+	// When the upstream Pi run hits a provider/API error mid-turn the
+	// CLI emits the failure through this field (typical pattern:
+	// `stopReason: "error"` + a populated `errorMessage`) and then
+	// still emits `agent_end` with exit code 0. The Pi SDK therefore
+	// cannot rely on the exit code alone — see ErrorMessage below.
+	StopReason string `json:"stopReason,omitempty"`
+	// ErrorMessage is the upstream provider's error payload, surfaced
+	// through `message_end` / `turn_end`. Non-empty means the run did
+	// not produce an assistant response and the backend must report
+	// Status=failed.
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
 type piUsage struct {
@@ -442,6 +484,25 @@ func decodePiMessage(raw json.RawMessage) *piMessage {
 		return nil
 	}
 	return &m
+}
+
+// piMessageErrorText returns the human-readable error text carried on a
+// Pi assistant message when the upstream provider failed mid-turn. It
+// triggers on either a populated `errorMessage` or `stopReason == "error"`
+// (Pi has been observed to set the latter even when errorMessage is empty
+// because the embedded provider response could not be decoded). Empty
+// return means "no error here, continue with the completed path."
+func piMessageErrorText(m *piMessage) string {
+	if m == nil {
+		return ""
+	}
+	if msg := strings.TrimSpace(m.ErrorMessage); msg != "" {
+		return msg
+	}
+	if strings.EqualFold(strings.TrimSpace(m.StopReason), "error") {
+		return "pi reported stopReason=error with no errorMessage payload"
+	}
+	return ""
 }
 
 func decodePiString(raw json.RawMessage) string {
