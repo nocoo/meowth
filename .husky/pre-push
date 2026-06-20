@@ -1,0 +1,36 @@
+#!/usr/bin/env sh
+# Phase 2.11 — pre-push hook.
+#
+# Implements steps 1–4 of docs/architecture/08-6dq-hooks-wiring.md §5.2.
+# Step 5 (dashboard dist build + scripts/check-dashboard-dist.sh) is
+# intentionally deferred:
+#   - apps/dashboard's `build` script is still a placeholder; the real
+#     Vite build lands with Phase 3.13 (docs/architecture/06).
+#   - scripts/check-dashboard-dist.sh lives in Phase 07's CSP/XSS scan
+#     work and does not exist yet.
+# A follow-up commit (paired with 06 / 07) will append step 5 here.
+#
+# Out of scope for this hook:
+#   - L3 Playwright (CI-only per §5.3; Phase 2.12).
+#   - Real CLI smoke (opt-in MEOWTH_CLI_SMOKE=1; not for pre-push).
+#   - CI workflow (Phase 2.12).
+#
+# Target wall-clock: < 3 min.
+
+set -e
+
+echo "pre-push: project-level type-check + vet"
+pnpm daemon:vet
+pnpm dashboard:typecheck
+
+echo "pre-push: L1 (daemon + dashboard)"
+pnpm daemon:test
+pnpm dashboard:test
+
+echo "pre-push: L2"
+pnpm test:l2
+
+echo "pre-push: G2 (osv + gitleaks + govulncheck)"
+pnpm scan:g2
+
+echo "pre-push: OK"
