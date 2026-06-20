@@ -61,11 +61,31 @@ func runContext(ctx context.Context, timeout time.Duration) (context.Context, co
 }
 
 // Session represents a running agent execution.
+//
+// Lifecycle contract (also covered by L1 tests in
+// `daemon/pkg/agent/session_contract_test.go`):
+//   - Result is buffered with capacity at least 1, so the backend
+//     goroutine can always deliver the final outcome without waiting
+//     for a reader. Callers may safely drain Messages first and read
+//     Result afterwards without risk of deadlock.
+//   - Result delivers exactly one value, then is closed by the
+//     backend goroutine. A second receive returns the zero Result
+//     with ok=false.
+//   - Messages is closed by the same backend goroutine when the run
+//     ends. Both channels are closed before the goroutine exits, but
+//     the relative order of the Messages-close and the Result-send
+//     is an implementation detail and not part of the contract; the
+//     buffered Result is what makes the drain-then-read pattern safe.
 type Session struct {
-	// Messages streams events as the agent works. The channel is closed
-	// when the agent finishes (before Result is sent).
+	// Messages streams events as the agent works. The channel is
+	// closed when the agent finishes. The send side is non-blocking
+	// (see trySend in claude.go) — when Messages is full, individual
+	// events are dropped to keep the backend from stalling on a slow
+	// consumer; the final state always lands via Result.
 	Messages <-chan Message
-	// Result receives exactly one value — the final outcome — then closes.
+	// Result delivers exactly one value — the final outcome — and is
+	// then closed. Buffered (cap 1) so the backend can publish the
+	// result and exit even if no reader is parked yet.
 	Result <-chan Result
 }
 
