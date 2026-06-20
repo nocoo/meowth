@@ -614,7 +614,7 @@ Content-Type: application/problem+json; charset=utf-8
 
 每层职责：
 
-- **bearer_auth**：从 `Authorization: Bearer ...` 取 token，按 prefix 查 SQLite，argon2id 验证（实现细节 → 03 / Phase 3.6）；非 `/v1/*` 路径直通；`OPTIONS` preflight 直通（避免 CORS preflight 因缺 bearer 被 401，使 CORS middleware 失效）；失败 → 401 problem+json `type=unauthorized`，**不**记录失败 token 字面值，access_log 只记 prefix（前 8 字符）；常量时间比对（详 → 03）
+- **bearer_auth**：从 `Authorization: Bearer ...` 取 token，按 prefix 查 SQLite，argon2id 验证（实现细节 → 03 / Phase 3.6）；非 `/v1/*` 路径直通；`OPTIONS` preflight 直通（避免 CORS preflight 因缺 bearer 被 401，使 CORS middleware 失效）；失败 → 401 problem+json `type=unauthorized`，**不**记录失败 token 字面值，access_log 只记 prefix（前 9 字符，`mwt_` + 5 base32）；常量时间比对（详 → 03）
 - **cors (dev only)**：默认**不挂载**；`--dev` 下放行 `Origin: http://localhost:5173`，无白名单则拒；**必须位于 bearer_auth 之前**，以便浏览器 `OPTIONS /v1/...` preflight（不带 bearer）能拿到正确 CORS header；不写入响应 cache。**若 dev CORS 在工程层被认为多余**（实操中 dashboard dev 走 Vite proxy 同源转发已足够），可在 Phase 3.7 实施时直接不实现该 middleware，daemon 只依赖 Vite proxy；该决策记入 §15 未决问题。
 - **security_headers**：仅在 `GET /` / `GET /index.html` / 静态资源上挂；详 07
 

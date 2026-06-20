@@ -182,7 +182,7 @@ type Backend interface {
 CREATE TABLE tokens (
   id          TEXT PRIMARY KEY,          -- uuid v7
   name        TEXT NOT NULL,             -- 用户自定的可读标签
-  prefix      TEXT NOT NULL,             -- 形如 "mwt_abc12"，前 8 字符，仅用于识别
+  prefix      TEXT NOT NULL,             -- 形如 "mwt_abc12"，前 9 字符（`mwt_` + 5 base32），仅用于行筛选；非唯一
   token_hash  BLOB NOT NULL,             -- argon2id(secret + salt)，BLOB 32B+
   salt        BLOB NOT NULL,             -- 每 token 独立随机 16B
   created_at  INTEGER NOT NULL,          -- unix epoch
