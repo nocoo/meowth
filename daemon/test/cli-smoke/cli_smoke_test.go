@@ -63,13 +63,18 @@ const (
 	tailMessages = 20
 )
 
+// smokeBackend names one of the four required real-smoke backends and
+// the default executable to probe on PATH. Exposed as a named type so
+// `missingRequiredCLIs` can be unit-tested with custom fixtures.
+type smokeBackend struct {
+	agentType string // value passed to agent.New
+	binary    string // default exec name; PATH-resolved per-run
+}
+
 // smokeBackends lists the four backends @zheng-li requires real e2e
 // proof for at Phase 3.1 kickoff. The order here is the run order. A
 // missing CLI for any entry fails the parent test (see TestCLISmoke).
-var smokeBackends = []struct {
-	agentType string // value passed to agent.New
-	binary    string // default exec name; PATH-resolved per-run
-}{
+var smokeBackends = []smokeBackend{
 	{agentType: "claude", binary: "claude"},
 	{agentType: "codex", binary: "codex"},
 	{agentType: "hermes", binary: "hermes"},
@@ -98,18 +103,8 @@ func TestCLISmoke(t *testing.T) {
 		t.Skipf("cli-smoke is opt-in: set %s=1 to run real-CLI smoke (4 backends)", smokeEnvVar)
 	}
 
-	// Precondition gate (#2): in opt-in mode every required CLI must be
-	// resolvable. We collect all misses so the operator sees the full
-	// install list in one failure rather than one CLI per re-run.
-	var missing []string
-	for _, tc := range smokeBackends {
-		if _, err := exec.LookPath(tc.binary); err != nil {
-			missing = append(missing, fmt.Sprintf("%s (binary %q: %v)", tc.agentType, tc.binary, err))
-		}
-	}
-	if len(missing) > 0 {
-		t.Fatalf("%s=1 but %d required CLI(s) missing on PATH:\n  %s\n\nInstall the listed CLIs or unset %s; partial-smoke is not a supported mode.",
-			smokeEnvVar, len(missing), strings.Join(missing, "\n  "), smokeEnvVar)
+	if missing := missingRequiredCLIs(smokeBackends, exec.LookPath); len(missing) > 0 {
+		t.Fatalf("%s", missingCLIsMessage(smokeEnvVar, missing))
 	}
 
 	for _, tc := range smokeBackends {
@@ -118,6 +113,37 @@ func TestCLISmoke(t *testing.T) {
 			runBackendSmoke(t, tc.agentType, tc.binary)
 		})
 	}
+}
+
+// lookPathFunc abstracts `exec.LookPath` so the precondition gate can
+// be unit-tested without mutating process PATH.
+type lookPathFunc func(file string) (string, error)
+
+// missingRequiredCLIs returns one entry per backend whose binary the
+// given lookup cannot resolve. An empty slice means every required CLI
+// is on PATH. The returned strings include the agent type, the binary
+// name probed, and the underlying lookup error so a hard-fail message
+// can list everything an operator needs to install in one round.
+func missingRequiredCLIs(backends []smokeBackend, lookup lookPathFunc) []string {
+	var missing []string
+	for _, tc := range backends {
+		if _, err := lookup(tc.binary); err != nil {
+			missing = append(missing, fmt.Sprintf("%s (binary %q: %v)", tc.agentType, tc.binary, err))
+		}
+	}
+	return missing
+}
+
+// missingCLIsMessage formats the operator-facing message for a
+// precondition failure. Extracted from TestCLISmoke so unit tests can
+// assert it stays informative (lists every miss, names the env var,
+// rejects the partial-smoke escape hatch) without invoking the test
+// runner indirectly.
+func missingCLIsMessage(envVar string, missing []string) string {
+	return fmt.Sprintf(
+		"%s=1 but %d required CLI(s) missing on PATH:\n  %s\n\nInstall the listed CLIs or unset %s; partial-smoke is not a supported mode.",
+		envVar, len(missing), strings.Join(missing, "\n  "), envVar,
+	)
 }
 
 // runBackendSmoke executes one prompt against the named backend's local
@@ -158,36 +184,15 @@ func runBackendSmoke(t *testing.T, agentType, binary string) {
 	drained := drainMessages(session)
 	res := waitResult(t, agentType, session)
 
-	// Composite acceptance (#1): the SDK said "completed" AND the run
-	// actually produced user-visible content. Each backend's internal
-	// state machine starts with `finalStatus := "completed"` and only
-	// demotes on error, so a CLI that exits 0 without emitting any
-	// answer (a fake `pi` of `exit 0`, or a real CLI that silently
-	// drifted in a protocol upgrade) would otherwise look indistinguishable
-	// from a real completed run. Require at least one non-empty signal:
-	//   - Result.Output (cumulative text, populated by every backend on
-	//     completed runs); OR
-	//   - at least one MessageText with non-whitespace content
-	//     (covers backends that stream content out via Messages without
-	//     filling Result.Output).
-	// Usage is intentionally NOT asserted: the four backends differ in
-	// when (or whether) they emit usage events, and conflating token
-	// accounting drift with e2e regression would be a false positive.
-	statusOK := res.Status == "completed"
-	outputOK := strings.TrimSpace(res.Output) != ""
-	contentOK := drained.sawTextWithContent
-	if statusOK && (outputOK || contentOK) {
+	verdict := evaluateAcceptance(res, drained)
+	if verdict.pass {
 		t.Logf("[%s] OK status=completed duration_ms=%d session_id=%q output_chars=%d message_count=%d text_with_content=%v",
-			agentType, res.DurationMs, res.SessionID, len(res.Output), drained.totalCount, contentOK)
+			agentType, res.DurationMs, res.SessionID, len(res.Output), drained.totalCount, drained.sawTextWithContent)
 		return
 	}
 
 	// Strict-assertion failure — emit everything an operator needs to triage.
-	if !statusOK {
-		t.Logf("[%s] FAIL: expected Status=\"completed\", got %q", agentType, res.Status)
-	} else {
-		t.Logf("[%s] FAIL: status=completed but the run produced no user-visible content (Result.Output empty AND no MessageText carried content)", agentType)
-	}
+	t.Logf("[%s] FAIL: %s", agentType, verdict.failReason)
 	t.Logf("[%s]   error=%q", agentType, res.Error)
 	t.Logf("[%s]   duration_ms=%d", agentType, res.DurationMs)
 	t.Logf("[%s]   session_id=%q", agentType, res.SessionID)
@@ -199,6 +204,41 @@ func runBackendSmoke(t *testing.T, agentType, binary string) {
 			agentType, i, m.Type, m.Tool, trim(m.Content, 200))
 	}
 	t.Fatalf("[%s] real-CLI smoke failed; see logs above", agentType)
+}
+
+// acceptanceVerdict is the decision evaluateAcceptance returns. A pass
+// run yields `{pass: true, failReason: ""}`; a fail yields
+// `{pass: false, failReason: <human-readable single line>}` for the
+// per-backend failure log header.
+type acceptanceVerdict struct {
+	pass       bool
+	failReason string
+}
+
+// evaluateAcceptance is the policy engine for "did this real-CLI run
+// actually prove the SDK drove the backend through to a useful end?".
+// Composite acceptance: Status must be "completed" AND the run must
+// have produced user-visible content via either Result.Output or at
+// least one MessageText with non-whitespace content. Usage is
+// deliberately not part of the rule — see the package comment and the
+// rationale in runBackendSmoke.
+//
+// Pure function with no side effects: keeps the policy unit-testable
+// without spinning up real binaries or fake processes.
+func evaluateAcceptance(res agent.Result, drained drainResult) acceptanceVerdict {
+	if res.Status != "completed" {
+		return acceptanceVerdict{
+			pass:       false,
+			failReason: fmt.Sprintf("expected Status=\"completed\", got %q", res.Status),
+		}
+	}
+	if strings.TrimSpace(res.Output) == "" && !drained.sawTextWithContent {
+		return acceptanceVerdict{
+			pass:       false,
+			failReason: "status=completed but the run produced no user-visible content (Result.Output empty AND no MessageText carried content)",
+		}
+	}
+	return acceptanceVerdict{pass: true}
 }
 
 // drainResult bundles the per-run signals the assertion needs from the
@@ -219,8 +259,15 @@ type drainResult struct {
 // exits, and ctx cancellation propagates into the backend so Execute
 // already bounds the work.
 func drainMessages(session *agent.Session) drainResult {
+	return drainMessagesFromChan(session.Messages)
+}
+
+// drainMessagesFromChan is drainMessages without the agent.Session
+// dependency, so unit tests can feed a synthetic channel and assert
+// the totalCount / tail / sawTextWithContent rules directly.
+func drainMessagesFromChan(messages <-chan agent.Message) drainResult {
 	out := drainResult{tail: make([]agent.Message, 0, tailMessages)}
-	for msg := range session.Messages {
+	for msg := range messages {
 		out.totalCount++
 		if len(out.tail) == tailMessages {
 			out.tail = out.tail[1:]
