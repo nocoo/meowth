@@ -26,6 +26,8 @@
     "dashboard:fmt:check": "pnpm --filter @meowth/dashboard --filter @meowth/shared fmt:check",
     "dashboard:lint": "pnpm --filter @meowth/dashboard --filter @meowth/shared lint",
     "dashboard:typecheck": "pnpm --filter @meowth/dashboard --filter @meowth/shared typecheck",
+    "dashboard:test": "pnpm --filter @meowth/dashboard --filter @meowth/shared test:run",
+    "dashboard:test:cover": "pnpm --filter @meowth/dashboard --filter @meowth/shared test:cover",
     "dashboard:g1": "pnpm dashboard:fmt:check && pnpm dashboard:lint && pnpm dashboard:typecheck",
     "prepare": "husky"
   },

@@ -10,12 +10,18 @@
     "fmt:check": "biome format src",
     "fmt": "biome format --write src",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:run": "vitest run",
+    "test:watch": "vitest",
+    "test:cover": "vitest run --coverage",
     "clean": "rm -rf .turbo dist"
   },
   "dependencies": {
     "@meowth/shared": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.7.2"
+    "@vitest/coverage-v8": "2.1.9",
+    "typescript": "^5.7.2",
+    "vitest": "2.1.9"
   }
 }
