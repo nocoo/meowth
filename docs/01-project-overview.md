@@ -293,10 +293,10 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 1. `meowthd init --skip-token`：
    - 初始化目录与 schema（**不生成 token**，token 表为空）
    - **生成高熵 setup-code**：`mws_` 前缀 + 24 byte (192 bit) `crypto/rand` 随机字节，base32 (RFC 4648, 无 padding) 编码 ≈ 39 字符，例：`mws_4Z3KH2QJWNRY7L8XSPVCT5MGABDE6F9U` —— **这是路径 B 下 mint root token 的唯一凭证，熵必须等同 root token**，禁止用「6 位数字 + 校验码」之类低熵形式
-   - 把 setup-code 的 argon2id hash 写入 `~/.meowth/runtime/setup_nonce.hash`（权限 0600；文件内含 hash + 创建时间 + 「one-shot」标记）
+   - 把 setup-code 的 argon2id hash 写入 `~/.meowth/runtime/setup_nonce.hash`（权限 0600，**JSON 单行**，字段必含 `algorithm` / `version` / `memory_kib` / `time_cost` / `parallelism` / `salt_b64` / `digest_b64` / `created_at` / `one_shot=true`）。基线参数：`algorithm=argon2id, version=0x13, memory_kib=65536, time_cost=3, parallelism=4, salt=16 byte crypto/rand, digest=32 byte`。文件内容必须能独立用于跨进程校验（daemon 启动后只读此文件就能验，**绝不允许实现退化为无 salt、固定 salt、内存中现算 salt 等任何方案**）
    - 在 stdout 打印明文 setup-code 一次（脚本化部署可重定向到密钥库）
    - 明文 setup-code 自此**不再存在于任何进程或磁盘**
-2. daemon 启动时检测到 token 表为空 + `setup_nonce.hash` 存在 → 加载 hash 到内存、开启 first-run mint 窗口（**daemon 不持有也无法获知明文 nonce**）
+2. daemon 启动时检测到 token 表为空 + `setup_nonce.hash` 存在 → 加载 JSON 中的 `salt + digest + 参数` 到内存、开启 first-run mint 窗口。**跨进程语义**：daemon 与 `meowthd init --skip-token` 是独立进程，daemon 可在 init 进程退出后、自身启动任意次后仍校验同一份 hash（直到 mint 成功 / lockout / 用户手工删 hash 文件）
 3. 用户访问 dashboard 见 `/setup` 页面，**模式 B：Mint 表单**，要求填入 setup-code
 4. dashboard 携带 setup-code 请求 `POST /bootstrap/mint`，daemon 用内存中的 hash 常数时间校验
 5. 校验通过 → 响应明文 root token 一次 → 删除 `setup_nonce.hash` 文件 + 关闭内存窗口（**一次性，无法重放**）
@@ -463,7 +463,7 @@ token 存 `localStorage`，**XSS 即等价 root token 泄露**。必须把所有
 | 3.5 | `feat(daemon): meowthd init command (+ --skip-token)` | 红：CLI e2e 两条分支：默认 → 出 root token；`--skip-token` → 生成 setup-code、stdout 明文打印一次、`setup_nonce.hash` (0600) 落盘；绿：实现 |
 | 3.6 | `feat(daemon): bearer auth middleware (constant-time compare)` | TDD |
 | 3.7 | `feat(daemon): chi router + healthz + token CRUD` | TDD + L2 端点覆盖 |
-| 3.8 | `feat(daemon): first-run mint endpoint (mode-gated + loopback + nonce-hash + one-shot + lockout)` | TDD：启动期读 `setup_nonce.hash` 到内存；表空 + mode 默认 + loopback + 提交 setup-code argon2id 校验过才 200；命中后立即删 hash 文件 + 关内存开关；失败累计 5 次锁死 + 删 hash；每次失败 200–500ms 抖动；其他一律 404；日志只打窗口状态不打 hash |
+| 3.8 | `feat(daemon): first-run mint endpoint (mode-gated + loopback + nonce-hash + one-shot + lockout)` | TDD：启动期读 `setup_nonce.hash` JSON (salt + digest + 参数) 到内存；表空 + mode 默认 + loopback + 提交 setup-code argon2id 校验过才 200；命中后立即删 hash 文件 + 关内存开关；失败累计 5 次锁死 + 删 hash；每次失败 200–500ms 抖动；**跨进程测试：init --skip-token 进程退出 → daemon 启动 → 重启 daemon N 次 → 仍可用同一 setup-code mint**；其他一律 404；日志只打窗口状态不打 hash |
 | 3.9 | `feat(daemon): remote_access config + bind validation` | TDD（含 mint 端点在非默认 mode 下启动期被禁用的断言） |
 | 3.10 | `feat(daemon): security headers middleware (CSP + nosniff + Referrer-Policy ...)` | TDD：在 `GET /` 与 `index.html` 设置 §7.9 固定 CSP；L2 检测 header 出现 |
 | 3.11 | `feat(daemon): agent exec endpoint streaming NDJSON` | TDD + 一个 backend e2e（claude） |
