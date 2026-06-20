@@ -17,6 +17,10 @@ build
 /apps/dashboard/coverage/
 /packages/shared/coverage/
 
+# L2 harness runtime output + D1 test home guard (Phase 2.8)
+/scripts/run-l2-output/
+/.meowth-test/
+
 # env
 .env
 .env.local
