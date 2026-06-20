@@ -11,9 +11,9 @@
 | 03 | [`03-sqlite-schema-and-tokens.md`](03-sqlite-schema-and-tokens.md) | `docs/01-project-overview.md` §7.4、§9.2 Phase 3.3–3.4 / 3.6 |
 | 04 | [`04-bootstrap-and-first-run-mint.md`](04-bootstrap-and-first-run-mint.md) | `docs/01-project-overview.md` §7.8、§9.2 Phase 3.5 / 3.8 |
 | 05 | [`05-remote-access-modes.md`](05-remote-access-modes.md) | `docs/01-project-overview.md` §7.7、§9.2 Phase 3.9 |
+| 06 | [`06-dashboard-mvvm-and-basalt.md`](06-dashboard-mvvm-and-basalt.md) | `docs/01-project-overview.md` §7.5、§9.2 Phase 3.13–3.20 |
 
 后续待建（见 [`docs/01-project-overview.md`](../01-project-overview.md) §9.2 Phase 1）：
 
-- `06-dashboard-mvvm-and-basalt.md`
 - `07-dashboard-security-csp-and-xss.md`
 - `08-6dq-hooks-wiring.md`
