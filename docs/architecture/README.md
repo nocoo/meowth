@@ -7,10 +7,10 @@
 | # | 文档 | 上层依据 |
 |---|------|---------|
 | 01 | [`01-agent-sdk-pump-from-multica.md`](01-agent-sdk-pump-from-multica.md) | `docs/01-project-overview.md` §7.2、§9.2 Phase 3.1–3.2 |
+| 02 | [`02-daemon-http-protocol.md`](02-daemon-http-protocol.md) | `docs/01-project-overview.md` §7.3、§9.2 Phase 3.6–3.12 |
 
 后续待建（见 [`docs/01-project-overview.md`](../01-project-overview.md) §9.2 Phase 1）：
 
-- `02-daemon-http-protocol.md`
 - `03-sqlite-schema-and-tokens.md`
 - `04-bootstrap-and-first-run-mint.md`
 - `05-remote-access-modes.md`
