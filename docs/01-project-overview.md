@@ -10,7 +10,7 @@
 
 Meowth 是**运行在 macOS 本机的 coding-agent 桥接层**。
 
-- 通过一层 **Agent SDK**（继承自 [multica](https://github.com/multica) 的 `Backend` 抽象，Go 实现）控制本机已安装的多家 coding CLI agent；
+- 通过一层 **Agent SDK**（继承自 [multica](https://github.com/multica-ai/multica) 的 `Backend` 抽象，Go 实现）控制本机已安装的多家 coding CLI agent；
 - 通过一个 **HTTP daemon**（bearer-token 认证）把本机能力暴露给网络，让外部服务能远程调度本机的 agent；
 - 通过一个 **Web dashboard**（Vite + basalt 设计语言）在本机管理 daemon、token、agent 运行情况。
 
