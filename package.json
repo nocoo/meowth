@@ -23,10 +23,17 @@
     "dashboard:fmt:check": "pnpm --filter @meowth/dashboard --filter @meowth/shared fmt:check",
     "dashboard:lint": "pnpm --filter @meowth/dashboard --filter @meowth/shared lint",
     "dashboard:typecheck": "pnpm --filter @meowth/dashboard --filter @meowth/shared typecheck",
-    "dashboard:g1": "pnpm dashboard:fmt:check && pnpm dashboard:lint && pnpm dashboard:typecheck"
+    "dashboard:g1": "pnpm dashboard:fmt:check && pnpm dashboard:lint && pnpm dashboard:typecheck",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "{apps,packages}/**/*.{ts,tsx}": ["biome check --write --error-on-warnings"],
+    "daemon/**/*.go": ["gofmt -w"]
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "husky": "9.1.7",
+    "lint-staged": "15.5.2",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
   }

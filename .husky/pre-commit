@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# Phase 2.5 — G1 fast path placeholder.
+# Future steps wired by later commits (see docs/architecture/08-6dq-hooks-wiring.md §5.1):
+#   - gitleaks (Phase 2.10)
+#   - dependency-cruiser (Phase 06 boundary rules)
+#   - dashboard source scan (Phase 07)
+#   - D1 static check (Phase 03)
+
+set -e
+
+pnpm exec lint-staged
+
+echo "pre-commit: OK"
