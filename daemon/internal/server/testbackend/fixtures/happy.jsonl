@@ -1,0 +1,6 @@
+{"message":{"type":"status","status":"started","session_id":"bsess-happy-001"}}
+{"message":{"type":"text","content":"Hello! I'll help you implement that feature.\n"}}
+{"message":{"type":"tool-use","tool":"Read","call_id":"call-1","input":{"path":"/tmp/file.txt"}}}
+{"message":{"type":"tool-result","tool":"Read","call_id":"call-1","output":"file contents"}}
+{"message":{"type":"text","content":"All done. Closing out."}}
+{"result":{"status":"completed","output":"Hello! I'll help you implement that feature.\nAll done. Closing out.","duration_ms":42,"session_id":"bsess-happy-001","usage":{"claude-3-5-sonnet":{"input_tokens":120,"output_tokens":48,"cache_read_tokens":0,"cache_write_tokens":0}}}}

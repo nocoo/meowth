@@ -6,16 +6,30 @@ package gen
 
 import (
 	"context"
+	"database/sql"
 )
 
 type Querier interface {
+	CountMessagesForSession(ctx context.Context, sessionID string) (int64, error)
+	CountSessions(ctx context.Context) (int64, error)
 	CountTokens(ctx context.Context) (int64, error)
+	GetSession(ctx context.Context, id string) (Session, error)
 	GetTokenByID(ctx context.Context, id string) (Token, error)
+	InsertMessage(ctx context.Context, arg InsertMessageParams) error
+	InsertSession(ctx context.Context, arg InsertSessionParams) error
 	InsertToken(ctx context.Context, arg InsertTokenParams) error
 	ListActiveTokensByPrefix(ctx context.Context, prefix string) ([]Token, error)
+	ListAllSessionsOrderedByStartedAt(ctx context.Context, limit int64) ([]Session, error)
 	ListAllTokensOrderedByCreatedAt(ctx context.Context) ([]Token, error)
+	ListMessagesAfterSeq(ctx context.Context, arg ListMessagesAfterSeqParams) ([]ListMessagesAfterSeqRow, error)
+	ListSessionsBeforeOrderedByStartedAt(ctx context.Context, arg ListSessionsBeforeOrderedByStartedAtParams) ([]Session, error)
+	ListSessionsByStatusBeforeOrderedByStartedAt(ctx context.Context, arg ListSessionsByStatusBeforeOrderedByStartedAtParams) ([]Session, error)
+	ListSessionsByStatusOrderedByStartedAt(ctx context.Context, arg ListSessionsByStatusOrderedByStartedAtParams) ([]Session, error)
+	MarkRunningSessionsAborted(ctx context.Context, endedAt sql.NullInt64) error
 	RevokeToken(ctx context.Context, arg RevokeTokenParams) (int64, error)
 	TouchTokenLastUsedAt(ctx context.Context, arg TouchTokenLastUsedAtParams) error
+	UpdateSessionBackendSessionID(ctx context.Context, arg UpdateSessionBackendSessionIDParams) error
+	UpdateSessionEnded(ctx context.Context, arg UpdateSessionEndedParams) error
 }
 
 var _ Querier = (*Queries)(nil)

@@ -8,6 +8,21 @@ import (
 	"database/sql"
 )
 
+type Session struct {
+	ID               string
+	BackendType      string
+	BackendSessionID string
+	Status           string
+	StartedAt        int64
+	EndedAt          sql.NullInt64
+	ThreadName       string
+	Model            string
+	DaemonPid        int64
+	Error            string
+	DurationMs       int64
+	UsageJson        []byte
+}
+
 type Token struct {
 	ID         string
 	Name       string

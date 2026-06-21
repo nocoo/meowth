@@ -1,0 +1,5 @@
+{"message":{"type":"status","status":"started","session_id":"bsess-cancelled-001"}}
+{"message":{"type":"text","content":"Working…"}}
+{"pause_ms":2000}
+{"message":{"type":"text","content":"Continuing…"}}
+{"result":{"status":"cancelled","error":"context canceled","duration_ms":1500,"session_id":"bsess-cancelled-001"}}

@@ -1,0 +1,3 @@
+{"message":{"type":"status","status":"started","session_id":"bsess-idle-001"}}
+{"pause_ms":2500}
+{"result":{"status":"completed","output":"","duration_ms":2500,"session_id":"bsess-idle-001"}}
