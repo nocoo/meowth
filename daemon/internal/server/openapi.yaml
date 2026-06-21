@@ -3,22 +3,28 @@ info:
   title: meowth daemon control plane
   version: "0.0.0"
   description: |
-    Initial machine-readable spec for the meowth daemon HTTP control
+    Machine-readable spec for the meowth daemon HTTP control
     plane. docs/architecture/02-daemon-http-protocol.md is the
-    human-readable source of truth; this file lags 02 and only covers
-    endpoints that are actually implemented today. Adding fields here
-    without backing implementation is a contract violation.
+    human-readable source of truth; this file lags 02 and only
+    covers endpoints that are actually implemented today. Adding
+    fields here without backing implementation is a contract
+    violation.
 
-    Coverage as of Phase 3.7 commit:
+    Coverage as of Phase 3.11b commit:
       - GET    /healthz
       - GET    /v1/tokens
       - POST   /v1/tokens
       - DELETE /v1/tokens/{id}
+      - GET    /v1/agents
+      - POST   /v1/agents/{type}/exec  (NDJSON stream response)
+      - GET    /v1/sessions
+      - GET    /v1/sessions/{id}
+      - GET    /v1/sessions/{id}/messages  (snapshot only;
+        follow=true returns 400 in 3.11b)
+      - POST   /v1/sessions/{id}/cancel
 
-    Not yet covered (lands with later phases):
-      - /v1/agents and /v1/sessions* — Phase 3.11+
-      - /bootstrap/mint — Phase 3.8 (intentionally NOT exposed in v1
-        OpenAPI per 02 §3 / docs/architecture/04 §1)
+    Intentionally NOT exposed in this OpenAPI (per 02 §3):
+      - /bootstrap/mint — docs/architecture/04 §1
 
 servers:
   - url: http://127.0.0.1:7777
@@ -109,14 +115,249 @@ paths:
         "404":
           $ref: "#/components/responses/TokenNotFound"
 
+  /v1/agents:
+    get:
+      operationId: listAgents
+      summary: List configured agent backends
+      description: |
+        Returns the 5 trimmed backends in canonical order
+        (claude, copilot, codex, hermes, pi). `installed` reflects
+        `exec.LookPath` success; `version` is the CLI version when
+        the probe succeeds, otherwise empty.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Agent list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/agents/{type}/exec:
+    post:
+      operationId: execAgent
+      summary: Start an agent run; stream NDJSON envelopes
+      description: |
+        Starts a single agent execution and streams docs/
+        architecture/02 §5 envelopes as NDJSON
+        (application/x-ndjson). One envelope per line, terminated
+        by `\n`; the final line is always session_ended.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [claude, copilot, codex, hermes, pi]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecRequest"
+      responses:
+        "200":
+          description: NDJSON stream of envelope events
+          content:
+            application/x-ndjson:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Unknown backend type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "500":
+          description: Internal failure before stream start
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "503":
+          description: Backend recognised but unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /v1/sessions:
+    get:
+      operationId: listSessions
+      summary: List sessions
+      description: |
+        Returns sessions ordered by started_at DESC. status/before
+        filter and limit are applied in SQL.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Single status or CSV of statuses. One of running,
+            completed, failed, aborted, timeout, cancelled.
+        - name: before
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Session list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionListResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/sessions/{id}:
+    get:
+      operationId: getSession
+      summary: Get a single session
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/SessionNotFound"
+
+  /v1/sessions/{id}/messages:
+    get:
+      operationId: getSessionMessages
+      summary: Snapshot session envelope events
+      description: |
+        Snapshot mode only in 3.11b. follow=true returns 400
+        problem+json; tail follow lands in a later phase (see
+        docs/architecture/02 §6.4).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: after_seq
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: -1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1000
+        - name: types
+          in: query
+          required: false
+          schema:
+            type: string
+          description: CSV filter, e.g. message,session_ended
+        - name: follow
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["false"]
+      responses:
+        "200":
+          description: Snapshot envelope page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagesSnapshotResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/SessionNotFound"
+
+  /v1/sessions/{id}/cancel:
+    post:
+      operationId: cancelSession
+      summary: Cancel a running session
+      description: |
+        202 with `{id, status: "cancelled"}` for a running session.
+        200 with `{id, status: "already_terminated"}` for a session
+        already in a terminal state (idempotent).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Already terminated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelResponse"
+        "202":
+          description: Cancel request accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/SessionNotFound"
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       description: |
-        meowth-issued bearer token (`mwt_<43 chars>`). Algorithm
-        details in docs/architecture/03 §5.
+        meowth-issued bearer token. Algorithm details in
+        docs/architecture/03 §5.
 
   schemas:
     HealthzResponse:
@@ -205,6 +446,158 @@ components:
           type: string
           format: date-time
 
+    Agent:
+      type: object
+      required: [type, installed, executable, version]
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum: [claude, copilot, codex, hermes, pi]
+        installed:
+          type: boolean
+        executable:
+          type: string
+        version:
+          type: string
+
+    AgentListResponse:
+      type: object
+      required: [agents]
+      additionalProperties: false
+      properties:
+        agents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Agent"
+
+    ExecRequest:
+      type: object
+      required: [prompt]
+      additionalProperties: false
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          maxLength: 16384
+        cwd:
+          type: string
+        model:
+          type: string
+        system_prompt:
+          type: string
+        thread_name:
+          type: string
+        max_turns:
+          type: integer
+        timeout_ms:
+          type: integer
+        semantic_inactivity_timeout_ms:
+          type: integer
+        resume_session_id:
+          type: string
+        custom_args:
+          type: array
+          items:
+            type: string
+        mcp_config:
+          type: object
+          additionalProperties: true
+        thinking_level:
+          type: string
+
+    Envelope:
+      type: object
+      required: [v, seq, ts, session_id, type, payload]
+      additionalProperties: false
+      properties:
+        v:
+          type: integer
+          enum: [1]
+        seq:
+          type: integer
+        ts:
+          type: string
+          format: date-time
+        session_id:
+          type: string
+        type:
+          type: string
+          enum:
+            - session_started
+            - message
+            - usage
+            - error
+            - session_ended
+            - heartbeat
+        payload:
+          type: object
+          additionalProperties: true
+
+    Session:
+      type: object
+      required: [id, backend_type, backend_session_id, status, started_at, ended_at, thread_name, model]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        backend_type:
+          type: string
+          enum: [claude, copilot, codex, hermes, pi]
+        backend_session_id:
+          type: string
+        status:
+          type: string
+          enum: [running, completed, failed, aborted, timeout, cancelled]
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        thread_name:
+          type: string
+        model:
+          type: string
+
+    SessionListResponse:
+      type: object
+      required: [sessions]
+      additionalProperties: false
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+
+    MessagesSnapshotResponse:
+      type: object
+      required: [session_id, events, next_after_seq, has_more]
+      additionalProperties: false
+      properties:
+        session_id:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/Envelope"
+        next_after_seq:
+          type: integer
+        has_more:
+          type: boolean
+
+    CancelResponse:
+      type: object
+      required: [id, status]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [cancelled, already_terminated]
+
     Problem:
       type: object
       required: [type, title, status]
@@ -243,6 +636,12 @@ components:
             $ref: "#/components/schemas/Problem"
     TokenNotFound:
       description: Token id does not exist or was already revoked.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    SessionNotFound:
+      description: Session id does not exist.
       content:
         application/problem+json:
           schema:

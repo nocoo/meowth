@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
+	"github.com/nocoo/meowth/daemon/internal/agentfactory"
 	"github.com/nocoo/meowth/daemon/internal/home"
 	"github.com/nocoo/meowth/daemon/internal/server/auth"
 	"github.com/nocoo/meowth/daemon/internal/server/mint"
@@ -58,8 +59,9 @@ func newTestServer(t *testing.T) (*Server, *sql.DB, chan struct{}) {
 
 	touched := make(chan struct{}, 16)
 	srv, err := New(Config{
-		DB:     db,
-		Logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
+		DB:           db,
+		Logger:       slog.New(slog.NewJSONHandler(io.Discard, nil)),
+		AgentFactory: agentfactory.NewFake(),
 		AuthConfig: auth.Config{
 			DB:        db,
 			TouchHook: func(string) { touched <- struct{}{} },
@@ -103,8 +105,39 @@ func insertToken(t *testing.T, db *sql.DB) (secret string, id string) {
 }
 
 func TestNewRejectsNilDB(t *testing.T) {
-	if _, err := New(Config{DB: nil}); err == nil {
+	if _, err := New(Config{DB: nil, AgentFactory: agentfactory.NewFake()}); err == nil {
 		t.Fatal("New accepted nil DB")
+	}
+}
+
+// TestNewRejectsNilAgentFactory enforces docs/architecture/02 §4 —
+// the exec routes must always be reachable in production wiring.
+// server.Config.AgentFactory is required so a missing wiring fails
+// at startup rather than silently dropping the v1 exec endpoint.
+func TestNewRejectsNilAgentFactory(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)
+	t.Setenv("MEOWTH_TEST", "1")
+	t.Setenv("MEOWTH_TEST_HOME", filepath.Join(tmp, ".meowth-test"))
+	h, err := home.Test()
+	if err != nil {
+		t.Fatalf("home.Test: %v", err)
+	}
+	bs, err := sql.Open(store.DriverName(), "file:"+h.DBPath)
+	if err != nil {
+		t.Fatalf("bootstrap open: %v", err)
+	}
+	if err := store.EnsureTestMarker(context.Background(), bs); err != nil {
+		t.Fatalf("EnsureTestMarker: %v", err)
+	}
+	_ = bs.Close()
+	db, err := store.Open(context.Background(), h)
+	if err != nil {
+		t.Fatalf("store.Open: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if _, err := New(Config{DB: db}); err == nil {
+		t.Fatal("New accepted nil AgentFactory")
 	}
 }
 
@@ -236,8 +269,9 @@ func TestAccessLogRedactsAuthorizationHeader(t *testing.T) {
 
 	touched := make(chan struct{}, 1)
 	srv, err := New(Config{
-		DB:     db,
-		Logger: logger,
+		DB:           db,
+		Logger:       logger,
+		AgentFactory: agentfactory.NewFake(),
 		AuthConfig: auth.Config{
 			DB:        db,
 			TouchHook: func(string) { touched <- struct{}{} },
@@ -300,7 +334,7 @@ func TestAccessLogRedactsInvalidAuthorizationHeader(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	srv, err := New(Config{DB: db, Logger: logger})
+	srv, err := New(Config{DB: db, Logger: logger, AgentFactory: agentfactory.NewFake()})
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -414,6 +448,44 @@ func TestUnmountedBootstrapMintRoutesToGenericNotFound(t *testing.T) {
 	}
 }
 
+func TestServeCancelsActiveExecOnShutdown(t *testing.T) {
+	// docs/architecture/02 §8.1: SIGTERM/ctx cancel must cancel
+	// ACTIVE exec contexts BEFORE waiting on httpServer.Shutdown,
+	// so backends learn to stop immediately and the grace window
+	// is not burned waiting for naturally-long pumps.
+	srv, _, _ := newTestServer(t)
+	// Register a long-running cancel in the registry directly —
+	// no need to drive a real handler.
+	var fired bool
+	srv.cancels.Register("synthetic-session", func() { fired = true })
+
+	listener, err := Listen("127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	serveCtx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- srv.Serve(serveCtx, listener, nil)
+	}()
+	// Give Serve a moment to enter its select.
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(15 * time.Second):
+		t.Fatal("Serve did not exit within 15s of ctx cancel")
+	}
+	if !fired {
+		t.Fatal("registered CancelFunc was not invoked on shutdown")
+	}
+	// Registry should also mark the session as shutdown (so a
+	// real pump would write aborted, not cancelled).
+	if !srv.cancels.IsShutdown("synthetic-session") {
+		t.Fatal("session not marked as shutdown by CancelAll")
+	}
+}
+
 func TestMountedMintEndpointReceivesPost(t *testing.T) {
 	// docs/architecture/04 §6.1: when Config.MintWindow != nil the
 	// server.New must mount POST /bootstrap/mint so requests reach
@@ -446,9 +518,10 @@ func TestMountedMintEndpointReceivesPost(t *testing.T) {
 		t.Fatalf("mint.Open: %v", err)
 	}
 	srv2, err := New(Config{
-		DB:         db,
-		Logger:     logger,
-		MintWindow: w,
+		DB:           db,
+		Logger:       logger,
+		MintWindow:   w,
+		AgentFactory: agentfactory.NewFake(),
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)

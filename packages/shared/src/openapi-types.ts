@@ -68,6 +68,134 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/agents': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List configured agent backends
+     * @description Returns the 5 trimmed backends in canonical order
+     *     (claude, copilot, codex, hermes, pi). `installed` reflects
+     *     `exec.LookPath` success; `version` is the CLI version when
+     *     the probe succeeds, otherwise empty.
+     */
+    get: operations['listAgents'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/agents/{type}/exec': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Start an agent run; stream NDJSON envelopes
+     * @description Starts a single agent execution and streams docs/
+     *     architecture/02 §5 envelopes as NDJSON
+     *     (application/x-ndjson). One envelope per line, terminated
+     *     by `\n`; the final line is always session_ended.
+     */
+    post: operations['execAgent'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/sessions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List sessions
+     * @description Returns sessions ordered by started_at DESC. status/before
+     *     filter and limit are applied in SQL.
+     */
+    get: operations['listSessions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/sessions/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get a single session */
+    get: operations['getSession'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/sessions/{id}/messages': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Snapshot session envelope events
+     * @description Snapshot mode only in 3.11b. follow=true returns 400
+     *     problem+json; tail follow lands in a later phase (see
+     *     docs/architecture/02 §6.4).
+     */
+    get: operations['getSessionMessages'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/sessions/{id}/cancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Cancel a running session
+     * @description 202 with `{id, status: "cancelled"}` for a running session.
+     *     200 with `{id, status: "already_terminated"}` for a session
+     *     already in a terminal state (idempotent).
+     */
+    post: operations['cancelSession'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -110,6 +238,73 @@ export interface components {
       /** Format: date-time */
       revoked_at: string;
     };
+    Agent: {
+      /** @enum {string} */
+      type: 'claude' | 'copilot' | 'codex' | 'hermes' | 'pi';
+      installed: boolean;
+      executable: string;
+      version: string;
+    };
+    AgentListResponse: {
+      agents: components['schemas']['Agent'][];
+    };
+    ExecRequest: {
+      prompt: string;
+      cwd?: string;
+      model?: string;
+      system_prompt?: string;
+      thread_name?: string;
+      max_turns?: number;
+      timeout_ms?: number;
+      semantic_inactivity_timeout_ms?: number;
+      resume_session_id?: string;
+      custom_args?: string[];
+      mcp_config?: {
+        [key: string]: unknown;
+      };
+      thinking_level?: string;
+    };
+    Envelope: {
+      /** @enum {integer} */
+      v: 1;
+      seq: number;
+      /** Format: date-time */
+      ts: string;
+      session_id: string;
+      /** @enum {string} */
+      type: 'session_started' | 'message' | 'usage' | 'error' | 'session_ended' | 'heartbeat';
+      payload: {
+        [key: string]: unknown;
+      };
+    };
+    Session: {
+      id: string;
+      /** @enum {string} */
+      backend_type: 'claude' | 'copilot' | 'codex' | 'hermes' | 'pi';
+      backend_session_id: string;
+      /** @enum {string} */
+      status: 'running' | 'completed' | 'failed' | 'aborted' | 'timeout' | 'cancelled';
+      /** Format: date-time */
+      started_at: string;
+      /** Format: date-time */
+      ended_at: string | null;
+      thread_name: string;
+      model: string;
+    };
+    SessionListResponse: {
+      sessions: components['schemas']['Session'][];
+    };
+    MessagesSnapshotResponse: {
+      session_id: string;
+      events: components['schemas']['Envelope'][];
+      next_after_seq: number;
+      has_more: boolean;
+    };
+    CancelResponse: {
+      id: string;
+      /** @enum {string} */
+      status: 'cancelled' | 'already_terminated';
+    };
     Problem: {
       /** @description Stable problem slug /problems/<name>. */
       type: string;
@@ -149,6 +344,15 @@ export interface components {
     };
     /** @description Token id does not exist or was already revoked. */
     TokenNotFound: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/problem+json': components['schemas']['Problem'];
+      };
+    };
+    /** @description Session id does not exist. */
+    SessionNotFound: {
       headers: {
         [name: string]: unknown;
       };
@@ -254,6 +458,201 @@ export interface operations {
       };
       401: components['responses']['Unauthorized'];
       404: components['responses']['TokenNotFound'];
+    };
+  };
+  listAgents: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Agent list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AgentListResponse'];
+        };
+      };
+      401: components['responses']['Unauthorized'];
+    };
+  };
+  execAgent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        type: 'claude' | 'copilot' | 'codex' | 'hermes' | 'pi';
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ExecRequest'];
+      };
+    };
+    responses: {
+      /** @description NDJSON stream of envelope events */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/x-ndjson': components['schemas']['Envelope'];
+        };
+      };
+      400: components['responses']['InvalidRequest'];
+      401: components['responses']['Unauthorized'];
+      /** @description Unknown backend type */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      413: components['responses']['PayloadTooLarge'];
+      /** @description Internal failure before stream start */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+      /** @description Backend recognised but unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['Problem'];
+        };
+      };
+    };
+  };
+  listSessions: {
+    parameters: {
+      query?: {
+        /**
+         * @description Single status or CSV of statuses. One of running,
+         *     completed, failed, aborted, timeout, cancelled.
+         */
+        status?: string;
+        before?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Session list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SessionListResponse'];
+        };
+      };
+      400: components['responses']['InvalidRequest'];
+      401: components['responses']['Unauthorized'];
+    };
+  };
+  getSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Session row */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['Session'];
+        };
+      };
+      401: components['responses']['Unauthorized'];
+      404: components['responses']['SessionNotFound'];
+    };
+  };
+  getSessionMessages: {
+    parameters: {
+      query?: {
+        after_seq?: number;
+        limit?: number;
+        /** @description CSV filter, e.g. message,session_ended */
+        types?: string;
+        follow?: 'false';
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Snapshot envelope page */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MessagesSnapshotResponse'];
+        };
+      };
+      400: components['responses']['InvalidRequest'];
+      401: components['responses']['Unauthorized'];
+      404: components['responses']['SessionNotFound'];
+    };
+  };
+  cancelSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Already terminated */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CancelResponse'];
+        };
+      };
+      /** @description Cancel request accepted */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CancelResponse'];
+        };
+      };
+      401: components['responses']['Unauthorized'];
+      404: components['responses']['SessionNotFound'];
     };
   };
 }

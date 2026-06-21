@@ -57,6 +57,16 @@ func (s *statusRecorder) Write(b []byte) (int, error) {
 	return s.ResponseWriter.Write(b)
 }
 
+// Flush forwards to the wrapped writer's Flush when supported so
+// chunked / NDJSON handlers (docs/architecture/02 §4.3 exec
+// stream) keep working through the access-log wrapper. Without
+// this passthrough the handler sees no Flusher and aborts.
+func (s *statusRecorder) Flush() {
+	if f, ok := s.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 // redactedAuthorization parses an Authorization header strictly:
 // only the bytes after "Bearer " (exactly one space) are passed to
 // auth.RedactedPrefix. Anything else — Basic, empty, malformed — is

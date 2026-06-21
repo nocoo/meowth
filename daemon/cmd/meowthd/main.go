@@ -11,7 +11,9 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/nocoo/meowth/daemon/internal/agentfactory"
 	"github.com/nocoo/meowth/daemon/internal/bootstraptoken"
 	"github.com/nocoo/meowth/daemon/internal/home"
 	"github.com/nocoo/meowth/daemon/internal/initcmd"
@@ -163,6 +165,19 @@ func runServe(args []string, stdout, stderr *os.File) error {
 	}
 	defer func() { _ = db.Close() }()
 
+	// docs/architecture/03 §6.3 — clear any `running` rows left by
+	// a crashed previous process before mounting the listener. Runs
+	// AFTER store.Open so migrations are applied.
+	now := time.Now().UTC()
+	if n, err := store.MarkRunningSessionsAborted(ctx, db, now); err != nil {
+		return fmt.Errorf("meowthd serve: mark running aborted: %w", err)
+	} else if n > 0 {
+		slog.New(slog.NewJSONHandler(stderr, nil)).Info(
+			"startup cleanup: marked stale running sessions as aborted",
+			"count", n,
+		)
+	}
+
 	listener, err := server.Listen(listenAddr)
 	if err != nil {
 		return err
@@ -191,16 +206,38 @@ func runServe(args []string, stdout, stderr *os.File) error {
 		return fmt.Errorf("meowthd serve: mint probe: %w", err)
 	}
 
+	// Resolve the backend factory from env. Production by default;
+	// MEOWTH_BACKEND_FACTORY=fake requires MEOWTH_TEST=1.
+	factory, err := agentfactory.FromEnv()
+	if err != nil {
+		return fmt.Errorf("meowthd serve: %w", err)
+	}
+	logger.Info("agent factory resolved", "mode", factory.Mode())
+
 	srv, err := server.New(server.Config{
-		DB:         db,
-		Logger:     logger,
-		MintWindow: mintWindow,
+		DB:           db,
+		Logger:       logger,
+		MintWindow:   mintWindow,
+		AgentFactory: factory,
 	})
 	if err != nil {
 		return err
 	}
 	signalCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	// docs/architecture/03 §6.3 + 02 §8.1: after Server.Serve
+	// returns (its ctx.Done branch already CancelAll'd every active
+	// pump and waited for httpServer.Shutdown), re-run
+	// MarkRunningSessionsAborted so any row whose pump did not
+	// manage a clean UpdateSessionEnded still flips to aborted on
+	// disk. CancelAll itself lives in Server.Serve's shutdown
+	// branch so backends learn to stop BEFORE we wait on the
+	// shutdown deadline.
+	defer func() {
+		if _, err := store.MarkRunningSessionsAborted(context.Background(), db, time.Now().UTC()); err != nil {
+			logger.Warn("shutdown cleanup MarkRunningSessionsAborted failed", "err", err)
+		}
+	}()
 	return srv.Serve(signalCtx, listener, func(a net.Addr) {
 		// L2 harness greps stdout for `^listening: ` to discover the
 		// actually-bound address when an OS-allocated port was used.

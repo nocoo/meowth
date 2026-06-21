@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/nocoo/meowth/daemon/internal/agentfactory"
 	"github.com/nocoo/meowth/daemon/internal/server/auth"
 	"github.com/nocoo/meowth/daemon/internal/server/handlers"
 	"github.com/nocoo/meowth/daemon/internal/server/mint"
@@ -47,6 +48,13 @@ type Config struct {
 	// docs/architecture/04 §5.1 / §6.1 — server.New does not gate
 	// on Closed() at mount time; that is a runtime handler concern.
 	MintWindow *mint.MintWindow
+
+	// AgentFactory resolves agent.Backend instances per /v1/agents/
+	// {type}/exec request. REQUIRED — server.New rejects a nil
+	// factory so production wiring cannot silently omit the v1
+	// exec routes. Use agentfactory.FromEnv at startup; tests pass
+	// fake / unavailable factories explicitly.
+	AgentFactory agentfactory.Factory
 }
 
 const defaultBodyLimit int64 = 1 << 20
@@ -56,13 +64,22 @@ const defaultBodyLimit int64 = 1 << 20
 type Server struct {
 	cfg     Config
 	handler http.Handler
+	cancels *cancelRegistry
 }
+
+// CancelRegistry exposes the process-local cancel registry so the
+// graceful-shutdown path in cmd/meowthd serve can fire every
+// running session's CancelFunc before the daemon exits.
+func (s *Server) CancelRegistry() *cancelRegistry { return s.cancels }
 
 // New builds the Server with the canonical middleware chain. Returns
 // an error when the config is missing required dependencies.
 func New(cfg Config) (*Server, error) {
 	if cfg.DB == nil {
 		return nil, errors.New("server: nil DB")
+	}
+	if cfg.AgentFactory == nil {
+		return nil, errors.New("server: nil AgentFactory; pass agentfactory.FromEnv result or a test fake")
 	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
@@ -105,6 +122,45 @@ func New(cfg Config) (*Server, error) {
 		r.Delete("/{id}", h.Delete)
 	})
 
+	// docs/architecture/02 §6 sessions + §4 exec endpoints. The
+	// cancel registry is process-local — see CancelRegistry().
+	cancels := newCancelRegistry()
+	sessionsH := &handlers.SessionsHandler{
+		DB:     cfg.DB,
+		Logger: cfg.Logger,
+		Cancel: func(sessionID string) handlers.CancelOutcome {
+			switch cancels.Cancel(sessionID) {
+			case CancelOutcomeFired:
+				return handlers.CancelOutcomeFired
+			case CancelOutcomeAlreadyRequested:
+				return handlers.CancelOutcomeAlreadyRequested
+			default:
+				return handlers.CancelOutcomeUnknown
+			}
+		},
+	}
+	agentsH := &handlers.AgentsHandler{
+		Factory: cfg.AgentFactory,
+		Logger:  cfg.Logger,
+	}
+	execH := &handlers.AgentExecHandler{
+		DB:      cfg.DB,
+		Factory: cfg.AgentFactory,
+		Logger:  cfg.Logger,
+		Runner:  newPumpRunner(cfg.DB, cancels),
+		RegisterCancel: func(sessionID string, cancel context.CancelFunc) func() {
+			return cancels.Register(sessionID, cancel)
+		},
+	}
+	r.Get("/v1/agents", agentsH.List)
+	r.Post("/v1/agents/{type}/exec", execH.Exec)
+	r.Route("/v1/sessions", func(r chi.Router) {
+		r.Get("/", sessionsH.List)
+		r.Get("/{id}", sessionsH.Get)
+		r.Get("/{id}/messages", sessionsH.Messages)
+		r.Post("/{id}/cancel", sessionsH.CancelHandler)
+	})
+
 	// docs/architecture/04 §6.1 — POST /bootstrap/mint is mounted
 	// only when the startup probe surfaced an open mint window.
 	// When nil, the router-level NotFound returns the standard
@@ -120,7 +176,7 @@ func New(cfg Config) (*Server, error) {
 	r.NotFound(handlers.NotFound)
 	r.MethodNotAllowed(handlers.MethodNotAllowed)
 
-	return &Server{cfg: cfg, handler: r}, nil
+	return &Server{cfg: cfg, handler: r, cancels: cancels}, nil
 }
 
 // Handler returns the assembled http.Handler. Tests use this directly
@@ -151,6 +207,21 @@ func (s *Server) Serve(ctx context.Context, listener net.Listener, listenerReady
 	}()
 	select {
 	case <-ctx.Done():
+		// docs/architecture/02 §8.1 shutdown ordering:
+		//   1. Close the listener so no new connections /
+		//      Register calls slip in between CancelAll and
+		//      Shutdown.
+		//   2. CancelAll active exec contexts so backends learn
+		//      to stop immediately (this also marks each
+		//      affected session as shutdown so the pump's
+		//      finalizeStream writes status=aborted).
+		//   3. Shutdown drains in-flight handlers with a grace
+		//      window. CancelAll'd pumps return promptly.
+		_ = listener.Close()
+		n := s.cancels.CancelAll()
+		if n > 0 {
+			s.cfg.Logger.Info("shutdown: cancelled active exec streams", "count", n)
+		}
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
