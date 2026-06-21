@@ -39,8 +39,8 @@ type Options struct {
 // §4.1 step 6; will move to config when 05 (remote_access) lands.
 const DashboardURL = "http://127.0.0.1:7777"
 
-// minimalConfigToml is the placeholder body for ~/.meowth/config.toml.
-// Phase 05 / 3.9 fills in real [remote_access] schema; until then the
+// minimalConfigToml is the placeholder body for the daemon config file
+// (config.toml under the home root). Phase 05 / 3.9 fills in real [remote_access] schema; until then the
 // file just exists at 0600 to anchor the contract that the init
 // process owns its presence.
 const minimalConfigToml = "# meowth daemon config (placeholder; populated by docs/architecture/05 in Phase 3.9)\n"

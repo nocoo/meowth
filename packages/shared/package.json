@@ -17,10 +17,12 @@
     "test:run": "vitest run",
     "test:watch": "vitest",
     "test:cover": "vitest run --coverage",
+    "generate-types": "openapi-typescript ../../daemon/internal/server/openapi.yaml --output src/openapi-types.ts && biome format --write src/openapi-types.ts",
     "clean": "rm -rf .turbo dist"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "3.2.6",
+    "openapi-typescript": "7.13.0",
     "typescript": "^5.7.2",
     "vitest": "3.2.6"
   }

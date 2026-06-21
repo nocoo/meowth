@@ -1,0 +1,249 @@
+openapi: "3.0.3"
+info:
+  title: meowth daemon control plane
+  version: "0.0.0"
+  description: |
+    Initial machine-readable spec for the meowth daemon HTTP control
+    plane. docs/architecture/02-daemon-http-protocol.md is the
+    human-readable source of truth; this file lags 02 and only covers
+    endpoints that are actually implemented today. Adding fields here
+    without backing implementation is a contract violation.
+
+    Coverage as of Phase 3.7 commit:
+      - GET    /healthz
+      - GET    /v1/tokens
+      - POST   /v1/tokens
+      - DELETE /v1/tokens/{id}
+
+    Not yet covered (lands with later phases):
+      - /v1/agents and /v1/sessions* — Phase 3.11+
+      - /bootstrap/mint — Phase 3.8 (intentionally NOT exposed in v1
+        OpenAPI per 02 §3 / docs/architecture/04 §1)
+
+servers:
+  - url: http://127.0.0.1:7777
+    description: default local bind
+
+paths:
+  /healthz:
+    get:
+      operationId: healthz
+      summary: Liveness probe
+      description: "Returns 200 with {ok: true}. No auth."
+      responses:
+        "200":
+          description: Daemon is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthzResponse"
+
+  /v1/tokens:
+    get:
+      operationId: listTokens
+      summary: List tokens (metadata only)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All tokens, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createToken
+      summary: Mint a new token
+      description: |
+        Returns the freshly-minted token including its plaintext
+        `secret`. The secret appears in this response once and is
+        never returned by any GET.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenCreateResponse"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+
+  /v1/tokens/{id}:
+    delete:
+      operationId: deleteToken
+      summary: Revoke a token
+      description: |
+        Sets `revoked_at` on the row; tokens are not physically
+        deleted. Returns the revoked id and the timestamp written.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenDeleteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/TokenNotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        meowth-issued bearer token (`mwt_<43 chars>`). Algorithm
+        details in docs/architecture/03 §5.
+
+  schemas:
+    HealthzResponse:
+      type: object
+      required: [ok]
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+
+    TokenCreateRequest:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+
+    TokenCreateResponse:
+      type: object
+      required: [id, name, prefix, secret, created_at, created_via]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        secret:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        created_via:
+          type: string
+          enum: [init, first_run_mint, dashboard, cli]
+
+    TokenView:
+      type: object
+      required: [id, name, prefix, created_at, created_via]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_via:
+          type: string
+          enum: [init, first_run_mint, dashboard, cli]
+
+    TokenListResponse:
+      type: object
+      required: [tokens]
+      additionalProperties: false
+      properties:
+        tokens:
+          type: array
+          items:
+            $ref: "#/components/schemas/TokenView"
+
+    TokenDeleteResponse:
+      type: object
+      required: [id, revoked_at]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        revoked_at:
+          type: string
+          format: date-time
+
+    Problem:
+      type: object
+      required: [type, title, status]
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          description: "Stable problem slug /problems/<name>."
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Bearer missing, malformed, unknown, or revoked.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    InvalidRequest:
+      description: Request body or query failed validation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    PayloadTooLarge:
+      description: Request body exceeded the per-request 1 MiB cap.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    TokenNotFound:
+      description: Token id does not exist or was already revoked.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"

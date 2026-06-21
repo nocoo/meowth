@@ -70,6 +70,7 @@ func TestKindConstantsMatchDocsSlugs(t *testing.T) {
 	want := map[Kind]string{
 		KindInvalidRequest:     "/problems/invalid_request",
 		KindUnauthorized:       "/problems/unauthorized",
+		KindNotFound:           "/problems/not_found",
 		KindUnknownBackend:     "/problems/unknown_backend",
 		KindSessionNotFound:    "/problems/session_not_found",
 		KindTokenNotFound:      "/problems/token_not_found",

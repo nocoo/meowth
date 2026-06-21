@@ -244,7 +244,7 @@ func TestMiddlewareRevokedTokenRejectedAsDummy(t *testing.T) {
 	mw := newMiddleware(t, db, h, nil)
 
 	secret, id := insertToken(t, db)
-	ok, err := store.RevokeToken(context.Background(), db, id)
+	ok, _, err := store.RevokeToken(context.Background(), db, id)
 	if err != nil || !ok {
 		t.Fatalf("RevokeToken: ok=%v err=%v", ok, err)
 	}

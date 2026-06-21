@@ -31,11 +31,13 @@
     "dashboard:g1": "pnpm dashboard:fmt:check && pnpm dashboard:lint && pnpm dashboard:typecheck",
     "test:l2": "tsx scripts/run-l2.ts",
     "dashboard:e2e": "pnpm --filter @meowth/dashboard e2e",
+    "sqlc:gen": "cd daemon/internal/store && go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1 generate",
     "scan:osv": "bash scripts/run-osv-scan.sh",
     "scan:gitleaks:staged": "go run github.com/zricethezav/gitleaks/v8@v8.30.1 protect --staged --redact --no-banner",
     "scan:gitleaks:detect": "go run github.com/zricethezav/gitleaks/v8@v8.30.1 detect --redact --no-banner --no-git --source .",
     "scan:govulncheck": "cd daemon && go run golang.org/x/vuln/cmd/govulncheck@v1.4.0 ./...",
     "scan:g2": "pnpm scan:osv && pnpm scan:gitleaks:detect && pnpm scan:govulncheck",
+    "scan:d1": "bash scripts/check-no-prod-test-mix.sh",
     "prepare": "husky"
   },
   "lint-staged": {

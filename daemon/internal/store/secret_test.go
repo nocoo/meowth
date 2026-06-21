@@ -233,7 +233,7 @@ func TestListActiveTokensByPrefixHandlesCollisionAndRevocation(t *testing.T) {
 	}
 
 	// Revoke b — list should drop to 1.
-	ok, err := RevokeToken(ctx, db, tokB.ID)
+	ok, _, err := RevokeToken(ctx, db, tokB.ID)
 	if err != nil || !ok {
 		t.Fatalf("RevokeToken: ok=%v err=%v", ok, err)
 	}
@@ -245,7 +245,7 @@ func TestListActiveTokensByPrefixHandlesCollisionAndRevocation(t *testing.T) {
 		t.Fatalf("active count after revoke = %d, want 1", len(got))
 	}
 	// A second revoke is a no-op.
-	ok, err = RevokeToken(ctx, db, tokB.ID)
+	ok, _, err = RevokeToken(ctx, db, tokB.ID)
 	if err != nil {
 		t.Fatalf("RevokeToken second: %v", err)
 	}
@@ -281,7 +281,7 @@ func TestCountTokensIncludesRevoked(t *testing.T) {
 			t.Fatalf("InsertToken %d: %v", i, err)
 		}
 		if i == 0 {
-			if _, err := RevokeToken(ctx, db, tok.ID); err != nil {
+			if _, _, err := RevokeToken(ctx, db, tok.ID); err != nil {
 				t.Fatalf("RevokeToken: %v", err)
 			}
 		}

@@ -25,6 +25,7 @@ type Kind string
 const (
 	KindInvalidRequest     Kind = "/problems/invalid_request"
 	KindUnauthorized       Kind = "/problems/unauthorized"
+	KindNotFound           Kind = "/problems/not_found"
 	KindUnknownBackend     Kind = "/problems/unknown_backend"
 	KindSessionNotFound    Kind = "/problems/session_not_found"
 	KindTokenNotFound      Kind = "/problems/token_not_found"
@@ -42,6 +43,7 @@ const ContentType = "application/problem+json; charset=utf-8"
 var titles = map[Kind]string{
 	KindInvalidRequest:     "Invalid request",
 	KindUnauthorized:       "Unauthorized",
+	KindNotFound:           "Not found",
 	KindUnknownBackend:     "Unknown backend",
 	KindSessionNotFound:    "Session not found",
 	KindTokenNotFound:      "Token not found",

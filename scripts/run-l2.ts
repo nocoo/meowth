@@ -135,6 +135,14 @@ step('run meowthd version probe', () => {
   }
 });
 
+// Phase 3.7 lands the `serve` subcommand + healthz / token CRUD HTTP
+// surface (commit feat(daemon): chi router + healthz + token CRUD).
+// The real-HTTP L2 harness (spawn serve, poll /healthz, exercise
+// token endpoints, SIGTERM) is wired in the immediate follow-up
+// commit so this commit's diff stays focused on the daemon-side
+// server package + sqlc + OpenAPI. Until then the version probe
+// above is the only daemon-side L2 step.
+
 step('cleanup per-run dir (preserve D1 test root)', () => {
   // Only remove the per-run directory we mkdtempSync'd. Never recursively
   // delete TEST_ROOT or anything above it.
