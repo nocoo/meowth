@@ -3,7 +3,6 @@ package initcmd
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"errors"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/nocoo/meowth/daemon/internal/home"
+	"github.com/nocoo/meowth/daemon/internal/setupnonce"
 )
 
 // scope sets a private test home for one test body. Returns the
@@ -106,29 +106,28 @@ func TestRunSkipTokenWritesValidJSONSchema(t *testing.T) {
 	if err := Run(context.Background(), h, Options{SkipToken: true}, &stdout); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	p, err := ParseSetupNonce(h.SetupNoncePath)
+	p, err := setupnonce.Parse(h.SetupNoncePath)
 	if err != nil {
-		t.Fatalf("ParseSetupNonce: %v", err)
+		t.Fatalf("setupnonce.Parse: %v", err)
 	}
-	if p.Algorithm != "argon2id" {
-		t.Fatalf("algorithm = %q, want argon2id", p.Algorithm)
+	pl := p.Payload
+	if pl.Algorithm != "argon2id" {
+		t.Fatalf("algorithm = %q, want argon2id", pl.Algorithm)
 	}
-	if p.Version != 19 || p.MemoryKiB != 65536 || p.TimeCost != 3 || p.Parallelism != 4 {
-		t.Fatalf("argon parameters drifted: %+v", p)
+	if pl.Version != 19 || pl.MemoryKiB != 65536 || pl.TimeCost != 3 || pl.Parallelism != 4 {
+		t.Fatalf("argon parameters drifted: %+v", pl)
 	}
-	if !p.OneShot {
+	if !pl.OneShot {
 		t.Fatal("one_shot must be true")
 	}
-	if p.CreatedAt == 0 {
+	if pl.CreatedAt == 0 {
 		t.Fatal("created_at not set")
 	}
-	salt, _ := base64.StdEncoding.DecodeString(p.SaltB64)
-	digest, _ := base64.StdEncoding.DecodeString(p.DigestB64)
-	if len(salt) != 16 {
-		t.Fatalf("salt length = %d, want 16", len(salt))
+	if len(p.Salt) != 16 {
+		t.Fatalf("salt length = %d, want 16", len(p.Salt))
 	}
-	if len(digest) != 32 {
-		t.Fatalf("digest length = %d, want 32", len(digest))
+	if len(p.Digest) != 32 {
+		t.Fatalf("digest length = %d, want 32", len(p.Digest))
 	}
 }
 
@@ -195,127 +194,11 @@ func TestRunRefusesNilWriter(t *testing.T) {
 func TestWriteSetupNonceRejectsBadInputs(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "nonce.hash")
-	if err := WriteSetupNonce(path, make([]byte, 8), make([]byte, 32)); err == nil {
+	if err := setupnonce.Write(path, make([]byte, 8), make([]byte, 32)); err == nil {
 		t.Fatal("short salt accepted")
 	}
-	if err := WriteSetupNonce(path, make([]byte, 16), make([]byte, 8)); err == nil {
+	if err := setupnonce.Write(path, make([]byte, 16), make([]byte, 8)); err == nil {
 		t.Fatal("short digest accepted")
-	}
-}
-
-func TestParseSetupNonceRejectsBadAlgorithm(t *testing.T) {
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "nonce.hash")
-	body := []byte(`{"algorithm":"sha256","version":19,"memory_kib":65536,"time_cost":3,"parallelism":4,"salt_b64":"` +
-		base64.StdEncoding.EncodeToString(make([]byte, 16)) +
-		`","digest_b64":"` + base64.StdEncoding.EncodeToString(make([]byte, 32)) +
-		`","created_at":1,"one_shot":true}`)
-	if err := os.WriteFile(path, body, home.FileMode); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-	if _, err := ParseSetupNonce(path); err == nil {
-		t.Fatal("non-argon2id algorithm accepted")
-	}
-}
-
-func TestParseSetupNonceRejectsOneShotFalse(t *testing.T) {
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "nonce.hash")
-	body := []byte(`{"algorithm":"argon2id","version":19,"memory_kib":65536,"time_cost":3,"parallelism":4,"salt_b64":"` +
-		base64.StdEncoding.EncodeToString(make([]byte, 16)) +
-		`","digest_b64":"` + base64.StdEncoding.EncodeToString(make([]byte, 32)) +
-		`","created_at":1,"one_shot":false}`)
-	if err := os.WriteFile(path, body, home.FileMode); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-	if _, err := ParseSetupNonce(path); err == nil {
-		t.Fatal("one_shot=false accepted")
-	}
-}
-
-// validNonceBodyExcept returns a syntactically-valid setup_nonce.hash
-// JSON body with the given field overridden to the supplied raw JSON
-// fragment. When fragment == "" the field is omitted entirely. Used
-// by the required-field amend tests below so each case is one line.
-func validNonceBodyExcept(t *testing.T, field, fragment string) []byte {
-	t.Helper()
-	salt := base64.StdEncoding.EncodeToString(make([]byte, 16))
-	digest := base64.StdEncoding.EncodeToString(make([]byte, 32))
-	fields := map[string]string{
-		"algorithm":   `"argon2id"`,
-		"version":     `19`,
-		"memory_kib":  `65536`,
-		"time_cost":   `3`,
-		"parallelism": `4`,
-		"salt_b64":    `"` + salt + `"`,
-		"digest_b64":  `"` + digest + `"`,
-		"created_at":  `1`,
-		"one_shot":    `true`,
-	}
-	if fragment == "" {
-		delete(fields, field)
-	} else {
-		fields[field] = fragment
-	}
-	var parts []string
-	// Stable, documented order from §4.2.
-	for _, k := range []string{
-		"algorithm", "version", "memory_kib", "time_cost", "parallelism",
-		"salt_b64", "digest_b64", "created_at", "one_shot",
-	} {
-		v, ok := fields[k]
-		if !ok {
-			continue
-		}
-		parts = append(parts, `"`+k+`":`+v)
-	}
-	body := "{" + strings.Join(parts, ",") + "}"
-	return []byte(body)
-}
-
-func TestParseSetupNonceRequiresFields(t *testing.T) {
-	cases := []struct {
-		name     string
-		field    string
-		fragment string // "" means omit
-	}{
-		{"version missing", "version", ""},
-		{"version zero", "version", "0"},
-		{"version wrong", "version", "18"},
-		{"memory_kib missing", "memory_kib", ""},
-		{"memory_kib zero", "memory_kib", "0"},
-		{"time_cost missing", "time_cost", ""},
-		{"time_cost zero", "time_cost", "0"},
-		{"parallelism missing", "parallelism", ""},
-		{"parallelism zero", "parallelism", "0"},
-		{"created_at missing", "created_at", ""},
-		{"created_at zero", "created_at", "0"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			tmp := t.TempDir()
-			path := filepath.Join(tmp, "nonce.hash")
-			if err := os.WriteFile(path, validNonceBodyExcept(t, tc.field, tc.fragment), home.FileMode); err != nil {
-				t.Fatalf("seed: %v", err)
-			}
-			if _, err := ParseSetupNonce(path); err == nil {
-				t.Fatalf("ParseSetupNonce accepted %s", tc.name)
-			}
-		})
-	}
-}
-
-func TestParseSetupNonceRejectsTrailingData(t *testing.T) {
-	tmp := t.TempDir()
-	path := filepath.Join(tmp, "nonce.hash")
-	body := validNonceBodyExcept(t, "", "")
-	// Two top-level objects glued together.
-	body = append(body, validNonceBodyExcept(t, "", "")...)
-	if err := os.WriteFile(path, body, home.FileMode); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-	if _, err := ParseSetupNonce(path); err == nil {
-		t.Fatal("ParseSetupNonce accepted trailing JSON object")
 	}
 }
 

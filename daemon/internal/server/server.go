@@ -25,6 +25,7 @@ import (
 
 	"github.com/nocoo/meowth/daemon/internal/server/auth"
 	"github.com/nocoo/meowth/daemon/internal/server/handlers"
+	"github.com/nocoo/meowth/daemon/internal/server/mint"
 )
 
 // Config carries everything Server.New needs. Production wiring fills
@@ -38,6 +39,13 @@ type Config struct {
 	// BodyLimit is the max request body in bytes per docs/architecture/02
 	// §12. Defaults to 1 MiB when zero.
 	BodyLimit int64
+
+	// MintWindow is the resolved Phase 3.8 bootstrap mint state.
+	// nil → POST /bootstrap/mint is NOT mounted; the router-level
+	// NotFound returns the standard /problems/not_found 404 instead.
+	// docs/architecture/04 §5.1 / §6.1 — server.New does not gate
+	// on Closed() at mount time; that is a runtime handler concern.
+	MintWindow *mint.MintWindow
 }
 
 const defaultBodyLimit int64 = 1 << 20
@@ -90,6 +98,16 @@ func New(cfg Config) (*Server, error) {
 		r.Post("/", h.Create)
 		r.Delete("/{id}", h.Delete)
 	})
+
+	// docs/architecture/04 §6.1 — POST /bootstrap/mint is mounted
+	// only when the startup probe surfaced an open mint window.
+	// When nil, the router-level NotFound returns the standard
+	// /problems/not_found 404 (locked by
+	// TestUnmountedBootstrapMintRoutesToGenericNotFound).
+	if cfg.MintWindow != nil {
+		mh := handlers.NewMintHandler(cfg.MintWindow, cfg.DB, cfg.Logger)
+		r.Post("/bootstrap/mint", mh.Mint)
+	}
 
 	// 404 / 405 fall through to problem+json defaults; chi's default
 	// 404 returns "404 page not found" plaintext, so we override.

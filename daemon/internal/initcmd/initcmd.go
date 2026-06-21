@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/nocoo/meowth/daemon/internal/home"
+	"github.com/nocoo/meowth/daemon/internal/setupnonce"
 	"github.com/nocoo/meowth/daemon/internal/store"
 )
 
@@ -182,7 +183,7 @@ func runSkipToken(ctx context.Context, h *home.Home, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := WriteSetupNonce(h.SetupNoncePath, salt, digest); err != nil {
+	if err := setupnonce.Write(h.SetupNoncePath, salt, digest); err != nil {
 		return err
 	}
 	// Path B: setup_nonce.hash now persists the argon2 digest, but the

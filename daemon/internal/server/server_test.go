@@ -14,9 +14,13 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/argon2"
+
 	"github.com/nocoo/meowth/daemon/internal/home"
 	"github.com/nocoo/meowth/daemon/internal/server/auth"
+	"github.com/nocoo/meowth/daemon/internal/server/mint"
 	"github.com/nocoo/meowth/daemon/internal/server/problem"
+	"github.com/nocoo/meowth/daemon/internal/setupnonce"
 	"github.com/nocoo/meowth/daemon/internal/store"
 )
 
@@ -406,5 +410,60 @@ func TestUnmountedBootstrapMintRoutesToGenericNotFound(t *testing.T) {
 	}
 	if body.Type != string(problem.KindNotFound) {
 		t.Fatalf("unmounted mint type = %q, want %q", body.Type, problem.KindNotFound)
+	}
+}
+
+func TestMountedMintEndpointReceivesPost(t *testing.T) {
+	// docs/architecture/04 §6.1: when Config.MintWindow != nil the
+	// server.New must mount POST /bootstrap/mint so requests reach
+	// the handler (which then enforces loopback / origin / argon2).
+	srv, db, _ := newTestServer(t)
+	_ = srv
+	_ = db
+	// Reuse the existing test home to seed a nonce + open a window,
+	// then build a new Server with the window attached.
+	h, err := home.Test()
+	if err != nil {
+		t.Fatalf("home.Test: %v", err)
+	}
+	setupCode := "mws_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+	salt := make([]byte, store.Argon2SaltLen)
+	for i := range salt {
+		salt[i] = byte(i + 1)
+	}
+	digest := argon2.IDKey([]byte(setupCode), salt, store.Argon2Time, store.Argon2Memory, store.Argon2Parallelism, store.Argon2KeyLen)
+	if err := setupnonce.Write(h.SetupNoncePath, salt, digest); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	parsed, err := setupnonce.Parse(h.SetupNoncePath)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	w, err := mint.Open(parsed, h.SetupNoncePath, logger)
+	if err != nil {
+		t.Fatalf("mint.Open: %v", err)
+	}
+	srv2, err := New(Config{
+		DB:         db,
+		Logger:     logger,
+		MintWindow: w,
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	// Wrong code → 404 problem+json (counted but we don't assert
+	// the count here — covered in handler tests).
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/bootstrap/mint", strings.NewReader(`{"setup_code":"mws_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"}`))
+	req.RemoteAddr = "127.0.0.1:60000"
+	req.Header.Set("Content-Type", "application/json")
+	srv2.Handler().ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rr.Code)
+	}
+	if rr.Header().Get("Content-Type") != problem.ContentType {
+		t.Fatalf("content-type = %q", rr.Header().Get("Content-Type"))
 	}
 }

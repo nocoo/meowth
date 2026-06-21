@@ -17,6 +17,7 @@ import (
 	"github.com/nocoo/meowth/daemon/internal/initcmd"
 	"github.com/nocoo/meowth/daemon/internal/remoteaccess"
 	"github.com/nocoo/meowth/daemon/internal/server"
+	"github.com/nocoo/meowth/daemon/internal/server/mint"
 	"github.com/nocoo/meowth/daemon/internal/store"
 )
 
@@ -175,7 +176,26 @@ func runServe(args []string, stdout, stderr *os.File) error {
 		"acknowledged_by", ra.AcknowledgedBy,
 		"listen_override", *addrOverride != "",
 	)
-	srv, err := server.New(server.Config{DB: db, Logger: logger})
+
+	// docs/architecture/04 §5.1 — startup mint window probe.
+	// Probe is the only place §5.3 stale-cleanup happens. A return
+	// of (nil, nil) means the endpoint must NOT be mounted; an
+	// error is fatal.
+	mintWindow, err := mint.Probe(ctx, mint.ProbeInput{
+		Home:    h,
+		DB:      db,
+		IsLocal: ra.IsLocal(),
+		Logger:  logger,
+	})
+	if err != nil {
+		return fmt.Errorf("meowthd serve: mint probe: %w", err)
+	}
+
+	srv, err := server.New(server.Config{
+		DB:         db,
+		Logger:     logger,
+		MintWindow: mintWindow,
+	})
 	if err != nil {
 		return err
 	}

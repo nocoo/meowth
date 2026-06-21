@@ -33,29 +33,55 @@ type InsertTokenParams struct {
 // owns input validation, uuid v7 minting, and unit conversion from
 // time.Time to the on-disk unix-second column.
 func InsertToken(ctx context.Context, db *sql.DB, p InsertTokenParams) (*Token, error) {
-	if !p.CreatedVia.IsValid() {
-		return nil, fmt.Errorf("store: invalid CreatedVia %q", p.CreatedVia)
-	}
-	if p.Name == "" {
-		return nil, errors.New("store: token name is required")
-	}
-	if err := ValidateTokenPrefix(p.Prefix); err != nil {
+	row, args, err := buildInsertTokenArgs(p)
+	if err != nil {
 		return nil, err
 	}
+	if err := gen.New(db).InsertToken(ctx, *args); err != nil {
+		return nil, fmt.Errorf("store: insert token: %w", err)
+	}
+	return row, nil
+}
+
+// InsertTokenTx is the *sql.Tx-bound variant of InsertToken. The
+// mint endpoint uses it under MintWindow.Mu so the "exists re-check
+// + insert + commit" sequence in docs/architecture/04 §6.3 step 4
+// is one atomic SQLite transaction.
+func InsertTokenTx(ctx context.Context, tx *sql.Tx, p InsertTokenParams) (*Token, error) {
+	row, args, err := buildInsertTokenArgs(p)
+	if err != nil {
+		return nil, err
+	}
+	if err := gen.New(tx).InsertToken(ctx, *args); err != nil {
+		return nil, fmt.Errorf("store: insert token (tx): %w", err)
+	}
+	return row, nil
+}
+
+// buildInsertTokenArgs runs the shared validation + uuid v7 mint +
+// timestamp truncation for both the *sql.DB and *sql.Tx variants.
+func buildInsertTokenArgs(p InsertTokenParams) (*Token, *gen.InsertTokenParams, error) {
+	if !p.CreatedVia.IsValid() {
+		return nil, nil, fmt.Errorf("store: invalid CreatedVia %q", p.CreatedVia)
+	}
+	if p.Name == "" {
+		return nil, nil, errors.New("store: token name is required")
+	}
+	if err := ValidateTokenPrefix(p.Prefix); err != nil {
+		return nil, nil, err
+	}
 	if len(p.TokenHash) != int(Argon2KeyLen) {
-		return nil, fmt.Errorf("store: token_hash must be %d bytes, got %d", Argon2KeyLen, len(p.TokenHash))
+		return nil, nil, fmt.Errorf("store: token_hash must be %d bytes, got %d", Argon2KeyLen, len(p.TokenHash))
 	}
 	if len(p.Salt) != Argon2SaltLen {
-		return nil, fmt.Errorf("store: salt must be %d bytes, got %d", Argon2SaltLen, len(p.Salt))
+		return nil, nil, fmt.Errorf("store: salt must be %d bytes, got %d", Argon2SaltLen, len(p.Salt))
 	}
-
 	id, err := uuid.NewV7()
 	if err != nil {
-		return nil, fmt.Errorf("store: uuid v7: %w", err)
+		return nil, nil, fmt.Errorf("store: uuid v7: %w", err)
 	}
 	now := time.Now().UTC().Truncate(time.Second)
-
-	if err := gen.New(db).InsertToken(ctx, gen.InsertTokenParams{
+	args := gen.InsertTokenParams{
 		ID:         id.String(),
 		Name:       p.Name,
 		Prefix:     p.Prefix,
@@ -63,11 +89,8 @@ func InsertToken(ctx context.Context, db *sql.DB, p InsertTokenParams) (*Token, 
 		Salt:       p.Salt,
 		CreatedAt:  now.Unix(),
 		CreatedVia: string(p.CreatedVia),
-	}); err != nil {
-		return nil, fmt.Errorf("store: insert token: %w", err)
 	}
-
-	return &Token{
+	row := &Token{
 		ID:         id.String(),
 		Name:       p.Name,
 		Prefix:     p.Prefix,
@@ -75,7 +98,18 @@ func InsertToken(ctx context.Context, db *sql.DB, p InsertTokenParams) (*Token, 
 		Salt:       p.Salt,
 		CreatedAt:  now,
 		CreatedVia: p.CreatedVia,
-	}, nil
+	}
+	return row, &args, nil
+}
+
+// CountTokensTx is the *sql.Tx-bound CountTokens used by the mint
+// endpoint for its locked re-check before INSERT.
+func CountTokensTx(ctx context.Context, tx *sql.Tx) (int, error) {
+	n, err := gen.New(tx).CountTokens(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("store: count tokens (tx): %w", err)
+	}
+	return int(n), nil
 }
 
 // ListActiveTokensByPrefix returns every non-revoked tokens row whose
