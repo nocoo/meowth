@@ -34,6 +34,7 @@
     "test:l2:remote-access": "tsx scripts/run-remote-access-l2.ts",
     "test:l2:mint": "tsx scripts/run-mint-l2.ts",
     "test:l2:exec": "tsx scripts/run-exec-l2.ts",
+    "test:l2:real": "tsx scripts/run-real-backends-l2.ts",
     "dashboard:e2e": "pnpm --filter @meowth/dashboard e2e",
     "sqlc:gen": "cd daemon/internal/store && go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1 generate",
     "scan:osv": "bash scripts/run-osv-scan.sh",

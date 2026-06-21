@@ -3,6 +3,8 @@ package agentfactory
 import (
 	"context"
 	"errors"
+	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"testing"
@@ -10,7 +12,12 @@ import (
 	"github.com/nocoo/meowth/daemon/pkg/agent"
 )
 
-func TestProductionFactoryReturnsUnavailable(t *testing.T) {
+func TestProductionFactoryReturnsUnavailableWithEmptyPATH(t *testing.T) {
+	// With a deliberately-empty PATH every supported type's
+	// LookPath fails → ErrBackendUnavailable. This replaces the
+	// pre-3.12 "always returns ErrBackendUnavailable regardless
+	// of PATH" stub behaviour.
+	t.Setenv("PATH", t.TempDir())
 	f := NewProduction()
 	if f.Mode() != "production" {
 		t.Fatalf("mode = %q", f.Mode())
@@ -86,7 +93,7 @@ func TestFakeFactoryDispatchByType(t *testing.T) {
 func TestFromEnvSelectsProductionByDefault(t *testing.T) {
 	t.Setenv("MEOWTH_BACKEND_FACTORY", "")
 	t.Setenv("MEOWTH_TEST", "")
-	f, err := FromEnv()
+	f, err := FromEnv(nil)
 	if err != nil {
 		t.Fatalf("FromEnv: %v", err)
 	}
@@ -98,7 +105,7 @@ func TestFromEnvSelectsProductionByDefault(t *testing.T) {
 func TestFromEnvRejectsFakeWithoutTestMode(t *testing.T) {
 	t.Setenv("MEOWTH_BACKEND_FACTORY", "fake")
 	t.Setenv("MEOWTH_TEST", "")
-	if _, err := FromEnv(); err == nil {
+	if _, err := FromEnv(nil); err == nil {
 		t.Fatal("FromEnv accepted fake without MEOWTH_TEST=1")
 	}
 }
@@ -106,7 +113,7 @@ func TestFromEnvRejectsFakeWithoutTestMode(t *testing.T) {
 func TestFromEnvAcceptsFakeWhenTestModeSet(t *testing.T) {
 	t.Setenv("MEOWTH_BACKEND_FACTORY", "fake")
 	t.Setenv("MEOWTH_TEST", "1")
-	f, err := FromEnv()
+	f, err := FromEnv(nil)
 	if err != nil {
 		t.Fatalf("FromEnv: %v", err)
 	}
@@ -117,7 +124,7 @@ func TestFromEnvAcceptsFakeWhenTestModeSet(t *testing.T) {
 
 func TestFromEnvRejectsUnknownValue(t *testing.T) {
 	t.Setenv("MEOWTH_BACKEND_FACTORY", "claude-only")
-	if _, err := FromEnv(); err == nil {
+	if _, err := FromEnv(nil); err == nil {
 		t.Fatal("FromEnv accepted unknown value")
 	}
 }
@@ -125,7 +132,7 @@ func TestFromEnvRejectsUnknownValue(t *testing.T) {
 func TestFromEnvProductionAlias(t *testing.T) {
 	t.Setenv("MEOWTH_BACKEND_FACTORY", "production")
 	t.Setenv("MEOWTH_TEST", "")
-	f, err := FromEnv()
+	f, err := FromEnv(nil)
 	if err != nil {
 		t.Fatalf("FromEnv: %v", err)
 	}
@@ -212,4 +219,93 @@ func TestProductionAgentsKeepsInstalledWhenVersionProbeFails(t *testing.T) {
 func writeFakeBinary(t *testing.T, path, body string) error {
 	t.Helper()
 	return os.WriteFile(path, []byte("#!/bin/sh\n"+body+"\n"), 0o755) //nolint:gosec // exec scripts under t.TempDir() need the executable bit
+}
+
+// stubBackend satisfies agent.Backend without ever spawning a
+// process. Tests inject it via ProductionFactory.NewBackend so we
+// can assert exactly which executable path the factory resolved
+// and which logger it forwarded.
+type stubBackend struct{}
+
+func (b *stubBackend) Execute(_ context.Context, _ string, _ agent.ExecOptions) (*agent.Session, error) {
+	return nil, errors.New("stubBackend.Execute: not exercised by L1")
+}
+
+// TestProductionNewBuildsAgentConfigFromResolverAndLogger covers
+// reviewer correction #3: prove the resolved executable path and
+// the supplied logger both reach the agent.Config the factory
+// passes to NewBackend.
+func TestProductionNewBuildsAgentConfigFromResolverAndLogger(t *testing.T) {
+	const expectedPath = "/opt/fake/claude"
+	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
+	stub := &stubBackend{}
+	var receivedCfg agent.Config
+	var receivedType string
+
+	f := NewProductionWithLogger(logger)
+	f.Resolver = func(typ string) (string, error) {
+		if typ != "claude" {
+			t.Fatalf("resolver typ = %q, want claude", typ)
+		}
+		return expectedPath, nil
+	}
+	f.NewBackend = func(typ string, cfg agent.Config) (agent.Backend, error) {
+		receivedType = typ
+		receivedCfg = cfg
+		return stub, nil
+	}
+	got, err := f.New("claude")
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if got != stub {
+		t.Fatalf("New returned a different backend than the stub")
+	}
+	if receivedType != "claude" {
+		t.Fatalf("NewBackend typ = %q, want claude", receivedType)
+	}
+	if receivedCfg.ExecutablePath != expectedPath {
+		t.Fatalf("agent.Config.ExecutablePath = %q, want %q", receivedCfg.ExecutablePath, expectedPath)
+	}
+	if receivedCfg.Logger != logger {
+		t.Fatalf("agent.Config.Logger not forwarded; got %v want %v", receivedCfg.Logger, logger)
+	}
+}
+
+// TestProductionNewWrapsResolverErrorAsUnavailable covers the
+// "supported type, missing binary" path (reviewer correction #5).
+func TestProductionNewWrapsResolverErrorAsUnavailable(t *testing.T) {
+	f := NewProduction()
+	f.Resolver = func(_ string) (string, error) { return "", errors.New("not found in $PATH") }
+	_, err := f.New("claude")
+	if !errors.Is(err, ErrBackendUnavailable) {
+		t.Fatalf("err = %v, want ErrBackendUnavailable", err)
+	}
+}
+
+// TestProductionNewWrapsConstructorErrorAsUnavailable covers the
+// "supported type, binary present, but agent.New fails" path
+// (reviewer correction #5).
+func TestProductionNewWrapsConstructorErrorAsUnavailable(t *testing.T) {
+	f := NewProduction()
+	f.Resolver = func(_ string) (string, error) { return "/opt/fake/claude", nil }
+	f.NewBackend = func(_ string, _ agent.Config) (agent.Backend, error) {
+		return nil, errors.New("simulated agent.New failure")
+	}
+	_, err := f.New("claude")
+	if !errors.Is(err, ErrBackendUnavailable) {
+		t.Fatalf("err = %v, want ErrBackendUnavailable", err)
+	}
+}
+
+// TestProductionNewStillRejectsUnknownType ensures the unknown-
+// type branch keeps returning ErrUnknownBackend even after the
+// 3.12 wiring (reviewer correction #5).
+func TestProductionNewStillRejectsUnknownType(t *testing.T) {
+	f := NewProduction()
+	f.Resolver = func(_ string) (string, error) { return "/should/not/be/called", nil }
+	_, err := f.New("godot")
+	if !errors.Is(err, ErrUnknownBackend) {
+		t.Fatalf("err = %v, want ErrUnknownBackend", err)
+	}
 }

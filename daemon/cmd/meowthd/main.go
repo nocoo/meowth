@@ -207,8 +207,10 @@ func runServe(args []string, stdout, stderr *os.File) error {
 	}
 
 	// Resolve the backend factory from env. Production by default;
-	// MEOWTH_BACKEND_FACTORY=fake requires MEOWTH_TEST=1.
-	factory, err := agentfactory.FromEnv()
+	// MEOWTH_BACKEND_FACTORY=fake requires MEOWTH_TEST=1. The
+	// daemon logger is threaded into ProductionFactory so the
+	// agent.Config it builds inherits the structured logger.
+	factory, err := agentfactory.FromEnv(logger)
 	if err != nil {
 		return fmt.Errorf("meowthd serve: %w", err)
 	}

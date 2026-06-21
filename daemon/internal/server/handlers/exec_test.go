@@ -151,12 +151,19 @@ func TestExecHappyPathWritesSessionStartedAndPersists(t *testing.T) {
 }
 
 func TestExecProductionFactoryReturns503BackendUnavailable(t *testing.T) {
-	// Production factory is the 3.11 stub — every type returns
-	// ErrBackendUnavailable. The handler must surface that as 503.
+	// Production factory built with a deliberately-failing
+	// resolver so we get ErrBackendUnavailable regardless of
+	// what binaries happen to live on the test host's PATH.
+	// docs/architecture/02 §4.3: supported type + binary not
+	// usable → 503 /problems/backend_unavailable.
 	db := newTestDB(t)
+	prod := agentfactory.NewProduction()
+	prod.Resolver = func(string) (string, error) {
+		return "", errors.New("test: no backends installed")
+	}
 	h := &AgentExecHandler{
 		DB:      db,
-		Factory: agentfactory.NewProduction(),
+		Factory: prod,
 		Logger:  slog.New(slog.NewJSONHandler(io.Discard, nil)),
 		Runner:  &stubRunner{result: ExecRunResult{Status: "completed"}},
 	}

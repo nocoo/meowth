@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -66,14 +67,15 @@ type Factory interface {
 	Agents() []AgentInfo
 }
 
-// ProductionFactory is the daemon's real factory. In Phase 3.11a
-// every New call returns ErrBackendUnavailable; Phase 3.12 will
-// replace this with the genuine agent.New(type, config) wiring.
-//
-// Probe results (Agents()) DO call exec.LookPath + agent.DetectVersion
-// so /v1/agents reports the local CLI presence + version even
-// before the production factory is fully wired.
+// ProductionFactory is the daemon's real factory. It resolves the
+// backend CLI via exec.LookPath and constructs the concrete
+// agent.Backend via agent.New. Each Agents() / New() call probes
+// live so a CLI installed after daemon startup becomes visible
+// immediately (no cache, see docs/architecture/02 §6.1).
 type ProductionFactory struct {
+	// Logger is forwarded into agent.Config when constructing a
+	// backend. Defaults to slog.Default when nil.
+	Logger *slog.Logger
 	// VersionProbe is the injection point for tests. Production
 	// callers leave it nil; we fall through to agent.DetectVersion.
 	// A version probe that returns ("", err) yields Version="" but
@@ -83,10 +85,28 @@ type ProductionFactory struct {
 	// VersionProbeTimeout caps how long DetectVersion runs per
 	// agent so GET /v1/agents stays fast even when a CLI hangs.
 	VersionProbeTimeout time.Duration
+	// Resolver is the executable-path resolver. Defaults to
+	// exec.LookPath. Tests override to assert which path the
+	// factory hands to agent.Config.
+	Resolver func(agentType string) (string, error)
+	// NewBackend is the injectable agent.Backend constructor.
+	// Defaults to agent.New. Tests override so they can assert
+	// the Config the factory builds (ExecutablePath / Logger)
+	// without spinning up a real backend.
+	NewBackend func(agentType string, cfg agent.Config) (agent.Backend, error)
 }
 
-// NewProduction returns a ProductionFactory.
+// NewProduction returns a ProductionFactory using slog.Default.
+// Callers that want to attach a request-id-aware logger should
+// build the factory directly: `&ProductionFactory{Logger: l}`.
 func NewProduction() *ProductionFactory { return &ProductionFactory{} }
+
+// NewProductionWithLogger returns a ProductionFactory wired with
+// the supplied logger so agent.Config.Logger inherits the daemon's
+// structured logger.
+func NewProductionWithLogger(logger *slog.Logger) *ProductionFactory {
+	return &ProductionFactory{Logger: logger}
+}
 
 // Mode returns "production".
 func (*ProductionFactory) Mode() string { return "production" }
@@ -98,13 +118,39 @@ func (*ProductionFactory) SupportedTypes() []string {
 	return out
 }
 
-// New returns ErrUnknownBackend or ErrBackendUnavailable. Phase
-// 3.12 replaces the latter with agent.New.
-func (*ProductionFactory) New(agentType string) (agent.Backend, error) {
+// New resolves the CLI binary via Resolver (default exec.LookPath)
+// and constructs the agent.Backend via NewBackend (default
+// agent.New). Returns ErrUnknownBackend for types not in
+// agent.SupportedTypes and ErrBackendUnavailable when the binary
+// cannot be located or the constructor fails.
+func (f *ProductionFactory) New(agentType string) (agent.Backend, error) {
 	if !agent.IsSupportedType(agentType) {
 		return nil, fmt.Errorf("%w: %q", ErrUnknownBackend, agentType)
 	}
-	return nil, fmt.Errorf("%w: production factory not wired until Phase 3.12 (type=%q)", ErrBackendUnavailable, agentType)
+	resolver := f.Resolver
+	if resolver == nil {
+		resolver = exec.LookPath
+	}
+	path, err := resolver(agentType)
+	if err != nil {
+		return nil, fmt.Errorf("%w: type=%q LookPath: %v", ErrBackendUnavailable, agentType, err)
+	}
+	ctor := f.NewBackend
+	if ctor == nil {
+		ctor = agent.New
+	}
+	logger := f.Logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+	backend, err := ctor(agentType, agent.Config{
+		ExecutablePath: path,
+		Logger:         logger,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: type=%q agent.New: %v", ErrBackendUnavailable, agentType, err)
+	}
+	return backend, nil
 }
 
 // Agents probes each supported type for executable presence and
@@ -196,14 +242,19 @@ func (*FakeFactory) Agents() []AgentInfo {
 //   - MEOWTH_BACKEND_FACTORY=fake without MEOWTH_TEST=1 → error
 //   - any other MEOWTH_BACKEND_FACTORY value → error
 //
+// logger is forwarded into ProductionFactory so the agent.Config
+// the factory builds inherits the daemon's structured logger.
+// nil is acceptable; ProductionFactory falls back to slog.Default.
+// Fake mode ignores the logger (it does not invoke agent.New).
+//
 // The error path is fatal: daemon refuses to start. This prevents
 // a misconfigured production process from accidentally serving
 // fake backends.
-func FromEnv() (Factory, error) {
+func FromEnv(logger *slog.Logger) (Factory, error) {
 	requested := os.Getenv("MEOWTH_BACKEND_FACTORY")
 	switch requested {
 	case "", "production":
-		return NewProduction(), nil
+		return NewProductionWithLogger(logger), nil
 	case "fake":
 		if os.Getenv("MEOWTH_TEST") != "1" {
 			return nil, errors.New("agentfactory: MEOWTH_BACKEND_FACTORY=fake requires MEOWTH_TEST=1")
