@@ -605,18 +605,19 @@ Content-Type: application/problem+json; charset=utf-8
 1. request_id     # X-Request-Id header（缺则生成 uuid v7），写入 ctx；所有日志带它
 2. access_log     # method/path/status/duration_ms/request_id；不记录 body
 3. recover        # panic → 500 problem+json type=internal；写 daemon 日志带 stack
-4. body_limit     # 1 MiB（v1）；超 → 413 problem+json type=payload_too_large
-5. cors (dev only)   # 仅在 --dev 启动时挂载；先于 bearer_auth；处理 OPTIONS preflight；生产构建禁用；详 §2.4
-6. bearer_auth    # 仅 /v1/* 与 /v1/agents/{type}/exec；豁免 /healthz、/、静态、/bootstrap/*、/problems/*、OPTIONS preflight
-7. security_headers  # CSP / nosniff / Referrer-Policy / COOP / CORP / Permissions-Policy；详 07
-8. router            # chi router；分发到具体 handler
+4. nosniff        # X-Content-Type-Options: nosniff（所有响应；详 07 §4.1 C）
+5. body_limit     # 1 MiB（v1）；超 → 413 problem+json type=payload_too_large
+6. cors (dev only)   # 仅在 --dev 启动时挂载；先于 bearer_auth；处理 OPTIONS preflight；生产构建禁用；详 §2.4
+7. bearer_auth    # 仅 /v1/* 与 /v1/agents/{type}/exec；豁免 /healthz、/、静态、/bootstrap/*、/problems/*、OPTIONS preflight
+8. router            # chi router；分发到具体 handler；HTML/static handler 自己在响应里挂 security_headers（详 07 §4.1 A/B）
 ```
 
 每层职责：
 
 - **bearer_auth**：从 `Authorization: Bearer ...` 取 token，按 prefix 查 SQLite，argon2id 验证（实现细节 → 03 / Phase 3.6）；非 `/v1/*` 路径直通；`OPTIONS` preflight 直通（避免 CORS preflight 因缺 bearer 被 401，使 CORS middleware 失效）；失败 → 401 problem+json `type=unauthorized`，**不**记录失败 token 字面值，access_log 只记 prefix（前 9 字符，`mwt_` + 5 base32）；常量时间比对（详 → 03）
 - **cors (dev only)**：默认**不挂载**；`--dev` 下放行 `Origin: http://localhost:5173`，无白名单则拒；**必须位于 bearer_auth 之前**，以便浏览器 `OPTIONS /v1/...` preflight（不带 bearer）能拿到正确 CORS header；不写入响应 cache。**若 dev CORS 在工程层被认为多余**（实操中 dashboard dev 走 Vite proxy 同源转发已足够），可在 Phase 3.7 实施时直接不实现该 middleware，daemon 只依赖 Vite proxy；该决策记入 §15 未决问题。
-- **security_headers**：仅在 `GET /` / `GET /index.html` / 静态资源上挂；详 07
+- **nosniff**：全局 middleware，所有响应（含 401 / 413 / 404 / problem+json / dashboard HTML / static asset）注入 `X-Content-Type-Options: nosniff`；与 docs/architecture/07 §4.1 C 一致；详 → 07。
+- **security_headers**：**不**作为 chi middleware 全局挂载；仅 dashboard HTML / SPA fallback handler 与静态 asset handler 自行调用 `secheaders.Document` / `secheaders.Asset` wrapper（07 §4.1 A/B + §4.2 / §4.3）。`/v1/*` / `/healthz` / `/bootstrap/*` 等 API/JSON 响应只带 `nosniff`，不带 CSP / COOP / CORP / Referrer-Policy / Permissions-Policy。
 
 ---
 

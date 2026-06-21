@@ -548,7 +548,7 @@ dashboard **不**引入会动态求值用户输入的库：
 | 2 | 是否在 v1 引入 `Strict-Transport-Security`？v1 daemon 不持 TLS（[`05`](05-remote-access-modes.md) §9 禁止），HSTS 由前置反代（Caddy / Cloudflare）负责；本文档不强求 | 当用户上反代时由反代配置 | 不在 v1 范围 |
 | 3 | dist scan 是否覆盖 source map (`*.map`)？v1 build 默认开 sourcemap；攻击者可读取源码结构但不能直接执行；倾向**不**禁 sourcemap，但 dist scan 不解析 `.map` | 实施 Phase 3.15 时 SDE 复核 | 待 Phase 3.15 |
 | 4 | `SecretReveal` 失焦自动 mask 是 §7.1 #4 的可选项；v1 是否实现？倾向**实现**（用 `visibilitychange`），增强偷窥防护 | 实施 Phase 3.16+ 时 SDE 复核 | 待 |
-| 5 | 02 §12 middleware chain 需要勘误：分离出全局 `nosniff` middleware 与 HTML-only `security_headers` middleware（§4.1 已锁定）。这需要在 Phase 3.10 落地时同步小幅 commit 修改 02 §12，或 Phase 3.10 commit 自身覆盖该 02 勘误 | SDE 实施 Phase 3.10 时决定（02 勘误 vs 同 commit 落入） | 待 Phase 3.10 |
+| 5 | 02 §12 middleware chain 需要勘误：分离出全局 `nosniff` middleware 与 HTML-only `security_headers` middleware（§4.1 已锁定）。这需要在 Phase 3.10 落地时同步小幅 commit 修改 02 §12，或 Phase 3.10 commit 自身覆盖该 02 勘误 | SDE 实施 Phase 3.10 时决定（02 勘误 vs 同 commit 落入） | **resolved** — 由 Phase 3.10 同 commit 落入：02 §12 chain 已调整为 `request_id → access_log → recover → nosniff → body_limit → bearer_auth → router`；`security_headers` 现作为 `secheaders.Document` / `secheaders.Asset` helper 提供，不挂 chi middleware，仅 dashboard HTML / static handler 自行包装 |
 
 ---
 

@@ -20,6 +20,7 @@ import (
 	"github.com/nocoo/meowth/daemon/internal/server/auth"
 	"github.com/nocoo/meowth/daemon/internal/server/mint"
 	"github.com/nocoo/meowth/daemon/internal/server/problem"
+	"github.com/nocoo/meowth/daemon/internal/server/secheaders"
 	"github.com/nocoo/meowth/daemon/internal/setupnonce"
 	"github.com/nocoo/meowth/daemon/internal/store"
 )
@@ -466,4 +467,103 @@ func TestMountedMintEndpointReceivesPost(t *testing.T) {
 	if rr.Header().Get("Content-Type") != problem.ContentType {
 		t.Fatalf("content-type = %q", rr.Header().Get("Content-Type"))
 	}
+}
+
+// documentHeaders are the docs/architecture/07 §4.2 HTML-document
+// headers that must NEVER appear on API / bootstrap / problem
+// responses. Listed by name so the matrix assertions below stay
+// readable.
+var documentHeaders = []string{
+	secheaders.HeaderCSP,
+	secheaders.HeaderReferrerPolicy,
+	secheaders.HeaderCOOP,
+	secheaders.HeaderCORP,
+	secheaders.HeaderPermissionsPolicy,
+}
+
+func assertNosniff(t *testing.T, hdr http.Header, label string) {
+	t.Helper()
+	got := hdr.Values(secheaders.HeaderNosniff)
+	if len(got) != 1 || got[0] != secheaders.HeaderNosniffValue {
+		t.Fatalf("%s: nosniff header = %v, want single %q", label, got, secheaders.HeaderNosniffValue)
+	}
+}
+
+func assertNoDocumentHeaders(t *testing.T, hdr http.Header, label string) {
+	t.Helper()
+	for _, name := range documentHeaders {
+		if v := hdr.Get(name); v != "" {
+			t.Fatalf("%s: API/problem path leaked %s = %q", label, name, v)
+		}
+	}
+}
+
+func TestNosniffOnAllPaths(t *testing.T) {
+	// docs/architecture/07 §4.1 C: nosniff is GLOBAL — every
+	// response, regardless of status, carries
+	// `X-Content-Type-Options: nosniff`. The companion check is
+	// that the document-only headers (CSP, COOP, ...) do NOT
+	// leak onto API or bootstrap responses.
+	srv, db, touched := newTestServer(t)
+	secret, _ := insertToken(t, db)
+
+	type tc struct {
+		name       string
+		method     string
+		path       string
+		bearer     string
+		wantStatus int
+	}
+	cases := []tc{
+		{"healthz 200", http.MethodGet, "/healthz", "", http.StatusOK},
+		{"v1 tokens 401", http.MethodGet, "/v1/tokens", "", http.StatusUnauthorized},
+		{"v1 tokens 200", http.MethodGet, "/v1/tokens", secret, http.StatusOK},
+		{"unmounted bootstrap mint 404", http.MethodPost, "/bootstrap/mint", "", http.StatusNotFound},
+		{"unknown route 404", http.MethodGet, "/no-such-route", "", http.StatusNotFound},
+	}
+	authCount := 0
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			rr := httptest.NewRecorder()
+			r := httptest.NewRequest(c.method, c.path, nil)
+			if c.bearer != "" {
+				r.Header.Set("Authorization", "Bearer "+c.bearer)
+				authCount++
+			}
+			srv.Handler().ServeHTTP(rr, r)
+			if rr.Code != c.wantStatus {
+				t.Fatalf("status = %d, want %d (body=%s)", rr.Code, c.wantStatus, rr.Body.String())
+			}
+			assertNosniff(t, rr.Header(), c.name)
+			assertNoDocumentHeaders(t, rr.Header(), c.name)
+		})
+	}
+	// Drain any async last_used_at goroutines started by the
+	// bearer middleware so cleanup is race-free.
+	for i := 0; i < authCount; i++ {
+		drainTouch(t, touched)
+	}
+}
+
+func TestNosniffOnBodyLimit413(t *testing.T) {
+	// Reviewer-cited: prove the chain order — nosniff is BEFORE
+	// body_limit, so the 413 also carries the header. This
+	// reuses the over-1MiB request the body-limit test uses.
+	srv, db, touched := newTestServer(t)
+	secret, _ := insertToken(t, db)
+	big := []byte(`{"name":"`)
+	big = append(big, bytes.Repeat([]byte("a"), (1<<20)+1)...)
+	big = append(big, []byte(`"}`)...)
+
+	rr := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/v1/tokens", bytes.NewReader(big))
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Authorization", "Bearer "+secret)
+	srv.Handler().ServeHTTP(rr, r)
+	if rr.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want 413", rr.Code)
+	}
+	assertNosniff(t, rr.Header(), "413")
+	assertNoDocumentHeaders(t, rr.Header(), "413")
+	drainTouch(t, touched)
 }

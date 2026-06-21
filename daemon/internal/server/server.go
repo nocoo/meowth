@@ -26,6 +26,7 @@ import (
 	"github.com/nocoo/meowth/daemon/internal/server/auth"
 	"github.com/nocoo/meowth/daemon/internal/server/handlers"
 	"github.com/nocoo/meowth/daemon/internal/server/mint"
+	"github.com/nocoo/meowth/daemon/internal/server/secheaders"
 )
 
 // Config carries everything Server.New needs. Production wiring fills
@@ -79,11 +80,16 @@ func New(cfg Config) (*Server, error) {
 	}
 
 	r := chi.NewRouter()
-	// Chain order locked by docs/architecture/02 §12; Phase 3.10 will
-	// insert nosniff/security_headers in their documented positions.
+	// Chain order locked by docs/architecture/02 §12 + docs/
+	// architecture/07 §4.1:
+	//   request_id → access_log → recover → nosniff → body_limit
+	//   → bearer_auth → router
+	// nosniff runs before body_limit so 413 responses also carry
+	// the header.
 	r.Use(requestIDMiddleware)
 	r.Use(accessLogMiddleware(cfg.Logger))
 	r.Use(recoverMiddleware(cfg.Logger))
+	r.Use(secheaders.Nosniff())
 	r.Use(bodyLimitMiddleware(cfg.BodyLimit))
 	r.Use(bearer)
 

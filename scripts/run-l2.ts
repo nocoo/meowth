@@ -150,7 +150,7 @@ process.on('exit', cleanup);
 
 const meowthd = join(REPO_ROOT, 'daemon', 'cmd', 'meowthd');
 
-type FetchResult = { status: number; body: unknown };
+type FetchResult = { status: number; body: unknown; headers: Headers };
 
 async function jsonRequest(
   base: string,
@@ -175,7 +175,29 @@ async function jsonRequest(
       // leave as text
     }
   }
-  return { status: r.status, body };
+  return { status: r.status, body, headers: r.headers };
+}
+
+// expectNosniff asserts docs/architecture/07 §4.1 C — every response
+// carries `X-Content-Type-Options: nosniff` exactly once. Also
+// rejects accidentally-leaked HTML-document headers from
+// docs/architecture/07 §4.2 on API / problem responses.
+function expectNosniff(r: FetchResult, label: string): void {
+  const v = r.headers.get('x-content-type-options');
+  if (v !== 'nosniff') {
+    throw new Error(`${label}: X-Content-Type-Options = ${v ?? '<missing>'}; want nosniff`);
+  }
+  for (const k of [
+    'content-security-policy',
+    'referrer-policy',
+    'cross-origin-opener-policy',
+    'cross-origin-resource-policy',
+    'permissions-policy',
+  ]) {
+    if (r.headers.get(k) !== null) {
+      throw new Error(`${label}: API response leaked HTML-document header ${k}`);
+    }
+  }
 }
 
 function dumpResponse(label: string, r: FetchResult): string {
@@ -272,6 +294,7 @@ async function main(): Promise<void> {
           last.body !== null &&
           (last.body as Record<string, unknown>).ok === true
         ) {
+          expectNosniff(last, 'healthz 200');
           return;
         }
       } catch {
@@ -287,6 +310,7 @@ async function main(): Promise<void> {
   await step('GET /v1/tokens without bearer → 401 problem+json', async () => {
     const r = await jsonRequest(baseURL, 'GET', '/v1/tokens');
     if (r.status !== 401) throw new Error(dumpResponse('want 401', r));
+    expectNosniff(r, '401 unauthorized');
   });
 
   await step('GET /v1/tokens with root bearer → 200, no secret/hash/salt', async () => {
@@ -301,6 +325,7 @@ async function main(): Promise<void> {
         if (k in entry) throw new Error(`GET /v1/tokens leaked ${k}`);
       }
     }
+    expectNosniff(r, 'GET /v1/tokens 200');
   });
 
   await step('POST /v1/tokens mints secondary l2-canary', async () => {
@@ -319,6 +344,7 @@ async function main(): Promise<void> {
     secondaryID = body.id;
     secondaryBearer = body.secret;
     log(`secondaryID=${secondaryID} secondaryBearer=${redactBearer(secondaryBearer)}`);
+    expectNosniff(r, 'POST /v1/tokens 201');
   });
 
   await step('DELETE secondary returns 200 + {id, revoked_at}, no secret/hash/salt', async () => {
@@ -332,11 +358,13 @@ async function main(): Promise<void> {
     for (const k of ['secret', 'token_hash', 'salt']) {
       if (k in body) throw new Error(`DELETE /v1/tokens leaked ${k}`);
     }
+    expectNosniff(r, 'DELETE /v1/tokens 200');
   });
 
   await step('GET /v1/tokens with revoked secondary bearer → 401', async () => {
     const r = await jsonRequest(baseURL, 'GET', '/v1/tokens', { bearer: secondaryBearer });
     if (r.status !== 401) throw new Error(dumpResponse('want 401 after revoke', r));
+    expectNosniff(r, 'GET /v1/tokens 401 (revoked)');
   });
 
   await step('GET /v1/tokens with root bearer still 200 (daemon healthy)', async () => {
@@ -349,6 +377,7 @@ async function main(): Promise<void> {
         if (k in entry) throw new Error(`GET /v1/tokens leaked ${k} on second list`);
       }
     }
+    expectNosniff(r, 'GET /v1/tokens 200 (post-revoke)');
   });
 
   await step('SIGTERM serve child and wait for clean exit', async () => {

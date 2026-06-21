@@ -233,7 +233,7 @@ async function stopServe(child: ChildProcess): Promise<void> {
   }
 }
 
-type ResponseBundle = { status: number; body: unknown };
+type ResponseBundle = { status: number; body: unknown; headers: Headers };
 
 async function jsonReq(
   base: string,
@@ -258,7 +258,25 @@ async function jsonReq(
       // leave as text
     }
   }
-  return { status: r.status, body };
+  return { status: r.status, body, headers: r.headers };
+}
+
+function expectNosniff(r: ResponseBundle, label: string): void {
+  const v = r.headers.get('x-content-type-options');
+  if (v !== 'nosniff') {
+    throw new Error(`${label}: X-Content-Type-Options = ${v ?? '<missing>'}; want nosniff`);
+  }
+  for (const k of [
+    'content-security-policy',
+    'referrer-policy',
+    'cross-origin-opener-policy',
+    'cross-origin-resource-policy',
+    'permissions-policy',
+  ]) {
+    if (r.headers.get(k) !== null) {
+      throw new Error(`${label}: response leaked HTML-document header ${k}`);
+    }
+  }
 }
 
 async function pollHealthz(base: string): Promise<void> {
@@ -335,6 +353,7 @@ async function main(): Promise<void> {
       if (mint1.status !== 201) {
         throw new Error(`M1 mint status=${mint1.status} body=${JSON.stringify(stripSecret(mint1.body))}`);
       }
+      expectNosniff(mint1, 'M1 /bootstrap/mint 201');
       const minted = mint1.body as { id?: string; secret?: string; prefix?: string; created_via?: string };
       if (!minted.secret || !minted.secret.startsWith('mwt_') || minted.secret.length !== 43) {
         throw new Error('M1 secret missing or malformed');
@@ -352,6 +371,7 @@ async function main(): Promise<void> {
       if (list.status !== 200) {
         throw new Error(`/v1/tokens with new bearer: status=${list.status}`);
       }
+      expectNosniff(list, 'M1 /v1/tokens 200');
       assertNoSecretLeak(list.body);
 
       // M2 — replay returns 404 + no secret
@@ -359,6 +379,7 @@ async function main(): Promise<void> {
       if (mint2.status !== 404) {
         throw new Error(`M2 replay status=${mint2.status}, want 404`);
       }
+      expectNosniff(mint2, 'M2 /bootstrap/mint 404 (replay)');
       assertNoSecretLeak(mint2.body);
     } finally {
       await stopServe(r.child);
@@ -380,6 +401,7 @@ async function main(): Promise<void> {
       if (mint.status !== 404) {
         throw new Error(`M3 status=${mint.status}, want 404`);
       }
+      expectNosniff(mint, 'M3 /bootstrap/mint 404 (unmounted)');
       assertNoSecretLeak(mint.body);
     } finally {
       await stopServe(r.child);
