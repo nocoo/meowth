@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/nocoo/meowth/daemon/internal/bootstraptoken"
 	"github.com/nocoo/meowth/daemon/internal/home"
 	"github.com/nocoo/meowth/daemon/internal/initcmd"
+	"github.com/nocoo/meowth/daemon/internal/remoteaccess"
 	"github.com/nocoo/meowth/daemon/internal/server"
 	"github.com/nocoo/meowth/daemon/internal/store"
 )
@@ -22,7 +25,13 @@ var Version = "dev"
 
 func main() {
 	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		// runServe has already printed the full three-section
+		// diagnostic via FormatStartupFailure for *StartupError
+		// paths; in that case we just exit non-zero without
+		// re-printing the sentinel.
+		if err != errStartupValidation {
+			fmt.Fprintln(os.Stderr, err)
+		}
 		os.Exit(1)
 	}
 }
@@ -85,28 +94,64 @@ func runBootstrapToken(args []string, _ *os.File, _ *os.File) error {
 	return bootstraptoken.Run(context.Background(), h, bootstraptoken.Options{}, os.Stdout)
 }
 
-// runServe boots the HTTP control plane (Phase 3.7). The bind address
-// defaults to 127.0.0.1:7777; --listen-addr lets L2 ask for an OS-
-// allocated port (":0") and read the real address from stdout.
-//
-// The remote_access config (docs/architecture/05) is NOT consulted
-// here yet — that lands with Phase 3.9 and will replace the default
-// with the resolved bind.
-func runServe(args []string, stdout, _ *os.File) error {
+// runServe boots the HTTP control plane. The listen address is
+// derived from `[remote_access]` in the daemon config file (see
+// home.Home.ConfigPath); see docs/architecture/05 for the schema
+// and startup validation pipeline. `--listen-addr` is a test-only
+// escape hatch (requires MEOWTH_TEST=1) that replaces the actual
+// listener address without touching the parsed RemoteAccess —
+// IsLocal() still reflects the config file so Phase 3.8's mint
+// endpoint mount decision is audit-faithful.
+func runServe(args []string, stdout, stderr *os.File) error {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
-	fs.SetOutput(os.Stderr)
-	addr := fs.String("listen-addr", "127.0.0.1:7777",
-		"TCP listen address (host:port). Use 127.0.0.1:0 to let the OS pick a port.")
+	fs.SetOutput(stderr)
+	addrOverride := fs.String("listen-addr", "",
+		"test-only listener override; requires MEOWTH_TEST=1. "+
+			"Format host:port; host must be 127.0.0.1 or ::1; port 0..65535. "+
+			"In production the listener is derived from [remote_access] in config.toml.")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() > 0 {
 		return fmt.Errorf("meowthd serve: unexpected positional arguments %v", fs.Args())
 	}
+
+	// Validate the override flag (gating + shape) BEFORE touching
+	// home / config / DB so misuse never leaves files behind. The
+	// flag is only honoured in MEOWTH_TEST=1; in production we
+	// reject it up front.
+	if *addrOverride != "" {
+		if _, err := validateListenAddrOverride(*addrOverride); err != nil {
+			return err
+		}
+	}
+
 	h, err := resolveHome()
 	if err != nil {
 		return err
 	}
+
+	// docs/architecture/05 §5 + reviewer's "validation before
+	// h.Ensure / store.Open" rule: nothing on disk is touched
+	// until the config validates. If we hit a *StartupError, the
+	// daemon exits cleanly without leaving a SQLite file or test
+	// marker behind.
+	ifaceAddrs, err := remoteaccess.LocalInterfaceAddrs()
+	if err != nil {
+		return fmt.Errorf("meowthd serve: interface addrs: %w", err)
+	}
+	ra, err := remoteaccess.Load(h.ConfigPath, ifaceAddrs)
+	if err != nil {
+		state := stateFromConfig(h.ConfigPath)
+		_, _ = fmt.Fprint(stderr, remoteaccess.FormatStartupFailure(state, err))
+		return errStartupValidation
+	}
+
+	listenAddr, err := resolveListenAddr(ra, *addrOverride)
+	if err != nil {
+		return err
+	}
+
 	if err := h.Ensure(); err != nil {
 		return err
 	}
@@ -117,11 +162,19 @@ func runServe(args []string, stdout, _ *os.File) error {
 	}
 	defer func() { _ = db.Close() }()
 
-	listener, err := server.Listen(*addr)
+	listener, err := server.Listen(listenAddr)
 	if err != nil {
 		return err
 	}
-	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	logger := slog.New(slog.NewJSONHandler(stderr, nil))
+	// docs/architecture/05 §5 step 9: acknowledged_by is an audit
+	// label, not a secret — log it as plaintext.
+	logger.Info("remote_access startup",
+		"mode", string(ra.Mode),
+		"bind", ra.ListenAddr(),
+		"acknowledged_by", ra.AcknowledgedBy,
+		"listen_override", *addrOverride != "",
+	)
 	srv, err := server.New(server.Config{DB: db, Logger: logger})
 	if err != nil {
 		return err
@@ -130,9 +183,84 @@ func runServe(args []string, stdout, _ *os.File) error {
 	defer stop()
 	return srv.Serve(signalCtx, listener, func(a net.Addr) {
 		// L2 harness greps stdout for `^listening: ` to discover the
-		// actually-bound address when --listen-addr=:0 was used.
+		// actually-bound address when an OS-allocated port was used.
 		_, _ = fmt.Fprintf(stdout, "listening: %s\n", a.String())
 	})
+}
+
+// errStartupValidation is the sentinel main() prints with NO extra
+// wrapping after FormatStartupFailure has already written the
+// full three-section diagnostic to stderr.
+var errStartupValidation = fmt.Errorf("meowthd: remote_access validation failed")
+
+// stateFromConfig reads the config (best-effort) and renders a
+// State value the diagnostic can echo back. Reading failures
+// return an empty State; the formatter renders <unset> for the
+// missing fields.
+func stateFromConfig(path string) remoteaccess.State {
+	data, err := os.ReadFile(path) //nolint:gosec // path is the daemon's resolved home config path
+	if err != nil {
+		return remoteaccess.State{}
+	}
+	// Single-pass cheap field extraction; we deliberately avoid
+	// re-parsing the TOML here because the parse may have just
+	// failed. The fragments below are enough to surface what the
+	// user wrote without colouring the diagnostic with our own
+	// re-parse interpretation.
+	get := func(k string) string {
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(line)
+			if !strings.HasPrefix(line, k) {
+				continue
+			}
+			rest := strings.TrimSpace(strings.TrimPrefix(line, k))
+			if !strings.HasPrefix(rest, "=") {
+				continue
+			}
+			val := strings.TrimSpace(strings.TrimPrefix(rest, "="))
+			val = strings.Trim(val, `"`)
+			return val
+		}
+		return ""
+	}
+	return remoteaccess.State{
+		Mode:           get("mode"),
+		BindAddr:       get("bind_addr"),
+		BindPort:       get("bind_port"),
+		AcknowledgedBy: get("acknowledged_by"),
+	}
+}
+
+// resolveListenAddr returns the host:port the HTTP listener should
+// bind to. By default it is ra.ListenAddr() — derived from the
+// validated config. The --listen-addr flag is a test-only override
+// (gated by MEOWTH_TEST=1) used by scripts/run-l2.ts to pick an
+// OS-allocated port.
+func resolveListenAddr(ra *remoteaccess.RemoteAccess, override string) (string, error) {
+	if override == "" {
+		return ra.ListenAddr(), nil
+	}
+	return validateListenAddrOverride(override)
+}
+
+// validateListenAddrOverride enforces the override's gating
+// (MEOWTH_TEST=1) and its host/port shape. Returns the normalised
+// host:port string the listener should use.
+func validateListenAddrOverride(override string) (string, error) {
+	if os.Getenv("MEOWTH_TEST") != "1" {
+		return "", fmt.Errorf("meowthd serve: --listen-addr is a test-only override; set MEOWTH_TEST=1 to use it")
+	}
+	ap, err := netip.ParseAddrPort(override)
+	if err != nil {
+		return "", fmt.Errorf("meowthd serve: --listen-addr %q: %w", override, err)
+	}
+	host := ap.Addr().Unmap()
+	if host != netip.MustParseAddr("127.0.0.1") && host != netip.MustParseAddr("::1") {
+		return "", fmt.Errorf("meowthd serve: --listen-addr host must be 127.0.0.1 or ::1 (got %s)", host)
+	}
+	// netip.ParseAddrPort already enforces a uint16 port; we accept
+	// port=0 because the test harness uses it to pick an OS port.
+	return ap.String(), nil
 }
 
 // resolveHome picks production or test mode based on the documented
@@ -159,7 +287,9 @@ usage:
   meowthd bootstrap-token  mint an emergency root token into an existing ~/.meowth
                            (independent of mint window / remote_access / tokens-empty)
   meowthd serve [--listen-addr host:port]
-                           start the HTTP control plane (defaults to 127.0.0.1:7777)
+                           start the HTTP control plane; listener is derived from
+                           [remote_access] in config.toml. --listen-addr is a
+                           test-only override (requires MEOWTH_TEST=1).
   meowthd help             print this message
 
 env:

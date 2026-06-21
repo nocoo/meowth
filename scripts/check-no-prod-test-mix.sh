@@ -31,16 +31,22 @@ if (( ${#test_misplaced[@]} > 0 )); then
   fail=1
 fi
 
-# ---- ~/.meowth/ may only appear in daemon/internal/home/home.go ----
-# We allow daemon/internal/home/home.go (the resolver). Everything
-# else under daemon/ that mentions ~/.meowth/ is a violation (init
-# CLI, bootstrap-token CLI, store, etc must derive paths via the
-# home package).
+# ---- ~/.meowth/ may only appear in the home resolver or in the
+#      docs/architecture/05 §6.2 diagnostic templates ----
+# We allow:
+#   - daemon/internal/home/home.go (path resolver — source of truth).
+#   - daemon/internal/remoteaccess/diag.go (D-code fix templates per
+#     docs/architecture/05 §6.2 must literally print the config path
+#     so the operator knows where to `vim`).
+# Everything else under daemon/ that mentions ~/.meowth/ is a
+# violation (init CLI, bootstrap-token CLI, store, etc must derive
+# paths via the home package).
 mapfile -t prod_misplaced < <(grep -RIn --include='*.go' \
   --exclude-dir=node_modules --exclude-dir=.git \
   --exclude-dir=pkg \
   "~/.meowth/" daemon 2>/dev/null \
   | grep -v '^daemon/internal/home/home.go:' \
+  | grep -v '^daemon/internal/remoteaccess/diag.go:' \
   | grep -v '_test.go:' \
   || true)
 if (( ${#prod_misplaced[@]} > 0 )); then

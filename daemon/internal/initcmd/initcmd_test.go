@@ -54,6 +54,23 @@ func TestRunDefaultCreatesRootToken(t *testing.T) {
 	if info.Mode().Perm() != home.FileMode {
 		t.Fatalf("config.toml mode = %v, want %v", info.Mode().Perm(), home.FileMode)
 	}
+	// docs/architecture/05 §2.2: config carries the explicit local
+	// block — not the legacy placeholder comment.
+	body, err := os.ReadFile(h.ConfigPath)
+	if err != nil {
+		t.Fatalf("read config.toml: %v", err)
+	}
+	for _, frag := range []string{
+		"[remote_access]",
+		`mode            = "local"`,
+		`bind_addr       = "127.0.0.1"`,
+		`bind_port       = 7777`,
+		`acknowledged_by = ""`,
+	} {
+		if !strings.Contains(string(body), frag) {
+			t.Fatalf("config.toml missing %q in:\n%s", frag, string(body))
+		}
+	}
 	// DB exists.
 	if _, err := os.Stat(h.DBPath); err != nil {
 		t.Fatalf("stat db: %v", err)

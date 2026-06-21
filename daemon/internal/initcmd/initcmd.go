@@ -39,11 +39,21 @@ type Options struct {
 // §4.1 step 6; will move to config when 05 (remote_access) lands.
 const DashboardURL = "http://127.0.0.1:7777"
 
-// minimalConfigToml is the placeholder body for the daemon config file
-// (config.toml under the home root). Phase 05 / 3.9 fills in real [remote_access] schema; until then the
-// file just exists at 0600 to anchor the contract that the init
-// process owns its presence.
-const minimalConfigToml = "# meowth daemon config (placeholder; populated by docs/architecture/05 in Phase 3.9)\n"
+// minimalConfigToml is the daemon config file written at init.
+// docs/architecture/05 §2.2 prefers an explicit [remote_access]
+// block over relying on the "missing block ⇒ default local"
+// fallback — that fallback exists for legacy / partial configs,
+// but freshly-initialised homes ship the canonical schema so
+// `grep` / audit reveal the actual mode at a glance.
+const minimalConfigToml = `# meowth daemon config — see docs/architecture/05-remote-access-modes.md
+# Edit and restart the daemon to apply changes.
+
+[remote_access]
+mode            = "local"
+bind_addr       = "127.0.0.1"
+bind_port       = 7777
+acknowledged_by = ""
+`
 
 // Run executes the init command end-to-end. It returns a non-nil
 // error if the home is non-empty (idempotency), the store cannot

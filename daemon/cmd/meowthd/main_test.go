@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 // runMeowthd invokes `go run ./cmd/meowthd <args...>` against the
@@ -179,5 +180,77 @@ func TestBootstrapTokenRejectsPositionalArgs(t *testing.T) {
 	}
 	if !strings.Contains(stderr, "unexpected positional") {
 		t.Fatalf("stderr lacks positional message: %q", stderr)
+	}
+}
+
+// serveRunMeowthd spawns `meowthd serve ...` and waits one second
+// for the child to either print `listening:` or fail. Returns the
+// captured stdout / stderr / exit code; on long-running success the
+// child is SIGKILLed before return.
+func serveRunMeowthd(t *testing.T, env []string, args ...string) (string, string, int) {
+	t.Helper()
+	cmd := exec.Command("go", append([]string{"run", "."}, args...)...) //nolint:gosec // tests own this binary
+	cmd.Env = append(os.Environ(), env...)
+	var stdoutBuf, stderrBuf strings.Builder
+	cmd.Stdout = &stdoutBuf
+	cmd.Stderr = &stderrBuf
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case err := <-done:
+		code := 0
+		if ee, ok := err.(*exec.ExitError); ok {
+			code = ee.ExitCode()
+		} else if err != nil {
+			t.Fatalf("wait: %v\nstderr=%s", err, stderrBuf.String())
+		}
+		return stdoutBuf.String(), stderrBuf.String(), code
+	case <-time.After(8 * time.Second):
+		// The child is healthily running serve; we only intended to
+		// observe startup behaviour.
+		_ = cmd.Process.Kill()
+		<-done
+		return stdoutBuf.String(), stderrBuf.String(), 0
+	}
+}
+
+// TestServeRejectsListenAddrInProduction asserts the --listen-addr
+// override is rejected without MEOWTH_TEST=1, BEFORE the daemon
+// touches home / config / DB. The flag-gating check is the very
+// first thing runServe does after flag.Parse.
+func TestServeRejectsListenAddrInProduction(t *testing.T) {
+	_, stderr, code := serveRunMeowthd(t, nil, "serve", "--listen-addr=127.0.0.1:0")
+	if code == 0 {
+		t.Fatal("serve --listen-addr without MEOWTH_TEST=1: want failure")
+	}
+	if !strings.Contains(stderr, "test-only override") {
+		t.Fatalf("stderr lacks test-only marker: %q", stderr)
+	}
+}
+
+// TestServeListenAddrTestModeRejectsBadHost covers the override
+// host allow-set (127.0.0.1 / ::1 only).
+func TestServeListenAddrTestModeRejectsBadHost(t *testing.T) {
+	_, stderr, code := serveRunMeowthd(t, []string{"MEOWTH_TEST=1"}, "serve", "--listen-addr=0.0.0.0:7777")
+	if code == 0 {
+		t.Fatal("serve --listen-addr=0.0.0.0: want failure")
+	}
+	if !strings.Contains(stderr, "127.0.0.1 or ::1") {
+		t.Fatalf("stderr lacks host allow-set: %q", stderr)
+	}
+}
+
+// TestServeListenAddrTestModeRejectsBlank covers empty / no-host
+// overrides — netip.ParseAddrPort rejects these.
+func TestServeListenAddrTestModeRejectsBlank(t *testing.T) {
+	_, stderr, code := serveRunMeowthd(t, []string{"MEOWTH_TEST=1"}, "serve", "--listen-addr=:0")
+	if code == 0 {
+		t.Fatal("serve --listen-addr=:0 (no host): want failure")
+	}
+	if !strings.Contains(stderr, "--listen-addr") {
+		t.Fatalf("stderr lacks --listen-addr context: %q", stderr)
 	}
 }
