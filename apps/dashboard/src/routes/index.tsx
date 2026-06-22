@@ -3,24 +3,13 @@ import AgentsPage from '@/pages/Agents';
 import OverviewPage from '@/pages/Overview';
 import SessionsListPage, { SessionDetailPage } from '@/pages/Sessions';
 import SettingsPage from '@/pages/Settings';
+import SetupPage from '@/pages/Setup';
 import TokensPage from '@/pages/Tokens';
 import { Navigate, type RouteObject, createBrowserRouter } from 'react-router';
 
 // docs/architecture/06 §7: the five product pages plus /setup.
-// 3.17 wires the page components; /setup remains an inline
-// placeholder until 3.19 lands the real flow. Routing guards
-// (bearer / setup hydration) land in 3.18.
-
-function Setup() {
-  return (
-    <main className="bg-background text-foreground flex min-h-screen items-center justify-center p-6">
-      <div className="bg-card text-card-foreground w-full max-w-md space-y-2 rounded-lg border p-6">
-        <h1 className="text-xl font-semibold">Setup</h1>
-        <p className="text-muted-foreground text-sm">Setup is not configured yet.</p>
-      </div>
-    </main>
-  );
-}
+// 3.17 wired the product pages; 3.19 lands the real /setup page.
+// Routing guards (bearer hydrate + 401 redirect) land in 3.20.
 
 export const routes: RouteObject[] = [
   {
@@ -38,7 +27,7 @@ export const routes: RouteObject[] = [
   },
   {
     path: '/setup',
-    element: <Setup />,
+    element: <SetupPage />,
   },
 ];
 
