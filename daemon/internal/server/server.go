@@ -25,9 +25,11 @@ import (
 
 	"github.com/nocoo/meowth/daemon/internal/agentfactory"
 	"github.com/nocoo/meowth/daemon/internal/server/auth"
+	"github.com/nocoo/meowth/daemon/internal/server/dashboard"
 	"github.com/nocoo/meowth/daemon/internal/server/handlers"
 	"github.com/nocoo/meowth/daemon/internal/server/mint"
 	"github.com/nocoo/meowth/daemon/internal/server/secheaders"
+	"github.com/nocoo/meowth/daemon/internal/server/static"
 )
 
 // Config carries everything Server.New needs. Production wiring fills
@@ -176,7 +178,19 @@ func New(cfg Config) (*Server, error) {
 	r.NotFound(handlers.NotFound)
 	r.MethodNotAllowed(handlers.MethodNotAllowed)
 
-	return &Server{cfg: cfg, handler: r, cancels: cancels}, nil
+	// docs/architecture/02 §3 + 06 §3.4 — wrap the chi router with
+	// the static handler so GET /, /index.html and extensionless SPA
+	// deep links return the embedded dashboard HTML. Reserved
+	// namespaces (/v1, /bootstrap, /healthz, /problems, /assets)
+	// continue to flow through the API router. /assets/* is served
+	// directly from the embedded dist with immutable Cache-Control.
+	dist, distErr := dashboard.DistFS()
+	if distErr != nil {
+		return nil, fmt.Errorf("server: load dashboard dist: %w", distErr)
+	}
+	handler := static.New(dist, r)
+
+	return &Server{cfg: cfg, handler: handler, cancels: cancels}, nil
 }
 
 // Handler returns the assembled http.Handler. Tests use this directly

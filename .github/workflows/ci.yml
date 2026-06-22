@@ -81,6 +81,11 @@ jobs:
     # docs/architecture/08 §7.1 darwin-amd64 cross-build assertion.
     # arm64 is included so both build targets are gated; no tests
     # run under the cross target — that is the documented trade-off.
+    # 3.21+: build goes through root `pnpm daemon:build` so the
+    # dashboard dist is freshly built + copied + go-embedded along
+    # the same code path used locally. The matrix injects GOOS /
+    # GOARCH which the `cd daemon && go build ./...` step inside
+    # `daemon:build` inherits.
     runs-on: macos-14
     strategy:
       fail-fast: false
@@ -88,17 +93,22 @@ jobs:
         goarch: [arm64, amd64]
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
       - uses: actions/setup-go@v5
         with:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
-      - name: go build darwin/${{ matrix.goarch }}
-        working-directory: daemon
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: pnpm daemon:build darwin/${{ matrix.goarch }}
         env:
           GOOS: darwin
           GOARCH: ${{ matrix.goarch }}
-        run: go build ./...
+        run: pnpm daemon:build
 
   l1-daemon:
     runs-on: macos-14
@@ -160,6 +170,29 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm test:l2
+
+  l2-embed:
+    # docs/architecture/06 §3.4.2 + 07 §11 — boots meowthd with the
+    # freshly built and embedded dashboard dist, hits a real port,
+    # asserts /, /assets/*, /v1/agents 401, /bootstrap/mint stays
+    # problem+json (no SPA leak). Runs after build matrix would
+    # have caught the same path, but isolates the L2 assertion.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm daemon:build
+      - run: pnpm test:l2:embed
 
   l3:
     # Phase 2.9 placeholder — Playwright config + two test.skip

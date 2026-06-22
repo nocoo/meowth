@@ -406,7 +406,12 @@ func TestBodyLimitMiddlewareTrips413OnOverlargeBody(t *testing.T) {
 func TestNotFoundReturnsProblemJSON(t *testing.T) {
 	srv, _, _ := newTestServer(t)
 	rr := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/nope", nil)
+	// /problems/* is a reserved namespace per docs/architecture/07
+	// §4 and static.IsHTMLFallback; the SPA wrapper never serves
+	// index.html for it, so we still observe the underlying chi
+	// NotFound handler. Bare extensionless paths like /nope now
+	// resolve to the dashboard HTML fallback in 3.21+.
+	r := httptest.NewRequest(http.MethodGet, "/problems/nope", nil)
 	srv.Handler().ServeHTTP(rr, r)
 	if rr.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rr.Code)
@@ -424,6 +429,26 @@ func TestNotFoundReturnsProblemJSON(t *testing.T) {
 	}
 	if body.Type != string(problem.KindNotFound) {
 		t.Fatalf("type = %q, want %q", body.Type, problem.KindNotFound)
+	}
+}
+
+// TestDashboardDeepLinkFallback verifies the 3.21 static SPA wrapper:
+// /overview is an extensionless dashboard deep link and must serve
+// the embedded index.html (or 404 when the dist guard is empty in
+// tests). Either way it must NOT emit a problem+json body and must
+// NOT carry document-level CSP if there is no real index.html.
+func TestDashboardDeepLinkFallback(t *testing.T) {
+	srv, _, _ := newTestServer(t)
+	rr := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/overview", nil)
+	srv.Handler().ServeHTTP(rr, r)
+	// In the unit-test environment dashboard/dist only contains
+	// .gitkeep, so the handler returns 404 with no body. The
+	// invariant we care about is that the response is NOT
+	// problem+json (i.e. it did not fall through to the API 404
+	// handler) and NOT 200 with index.html (no real dist).
+	if ct := rr.Header().Get("Content-Type"); ct == problem.ContentType {
+		t.Fatalf("dashboard deep link leaked problem+json: ct=%q body=%q", ct, rr.Body.String())
 	}
 }
 
@@ -592,7 +617,7 @@ func TestNosniffOnAllPaths(t *testing.T) {
 		{"v1 tokens 401", http.MethodGet, "/v1/tokens", "", http.StatusUnauthorized},
 		{"v1 tokens 200", http.MethodGet, "/v1/tokens", secret, http.StatusOK},
 		{"unmounted bootstrap mint 404", http.MethodPost, "/bootstrap/mint", "", http.StatusNotFound},
-		{"unknown route 404", http.MethodGet, "/no-such-route", "", http.StatusNotFound},
+		{"unknown route 404", http.MethodGet, "/problems/no-such-route", "", http.StatusNotFound},
 	}
 	authCount := 0
 	for _, c := range cases {
