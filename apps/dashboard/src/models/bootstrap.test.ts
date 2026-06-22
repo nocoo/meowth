@@ -15,14 +15,16 @@ afterEach(() => {
 
 describe('models/bootstrap.mintWithSetupCode', () => {
   it('POSTs /bootstrap/mint with a JSON setup_code body and returns the parsed MintResponse', async () => {
+    const secret = `mwt_${'B'.repeat(39)}`;
     const resp: MintResponse = {
       id: '0193-aaaa',
       name: 'bootstrap',
-      prefix: 'mws_AAAAA',
-      secret: `mwt_${'B'.repeat(39)}`,
+      prefix: secret.slice(0, 9), // 04 §4.3: prefix is the new bearer token prefix, not the setup-code prefix
+      secret,
       created_at: '2026-06-22T00:00:00Z',
       created_via: 'first_run_mint',
     };
+    expect(resp.prefix.startsWith('mwt_')).toBe(true);
     const spy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response(JSON.stringify(resp), { status: 201 }));

@@ -214,7 +214,7 @@ describe('useSetupViewModel.submitMint', () => {
         JSON.stringify({
           id: 'id-1',
           name: 'bootstrap',
-          prefix: 'mws_BBBBB',
+          prefix: MINT_RESPONSE_SECRET.slice(0, 9),
           secret: MINT_RESPONSE_SECRET,
           created_at: '2026-06-22T00:00:00Z',
           created_via: 'first_run_mint',

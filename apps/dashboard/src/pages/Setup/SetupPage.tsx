@@ -42,7 +42,7 @@ export default function SetupPage() {
   return (
     <main className="bg-background text-foreground flex min-h-screen items-center justify-center p-6">
       <div className="bg-card text-card-foreground w-full max-w-md space-y-4 rounded-lg border p-6">
-        <h1 className="text-xl font-semibold">Meowth · Setup</h1>
+        <h1 className="text-xl font-semibold">Meowth - Setup</h1>
 
         {vm.mode === 'token' ? (
           <form onSubmit={handleTokenSubmit} className="space-y-3" noValidate>
@@ -66,7 +66,7 @@ export default function SetupPage() {
                 disabled={submitting}
                 className="bg-primary text-primary-foreground rounded px-3 py-2 text-sm disabled:opacity-50"
               >
-                {submitting ? 'Continuing…' : 'Continue'}
+                {submitting ? 'Continuing...' : 'Continue'}
               </button>
             </div>
             <div className="border-border border-t pt-3 text-sm">
@@ -102,7 +102,7 @@ export default function SetupPage() {
                 disabled={submitting || vm.mintDisabled}
                 className="bg-primary text-primary-foreground rounded px-3 py-2 text-sm disabled:opacity-50"
               >
-                {submitting ? 'Minting…' : 'Mint token'}
+                {submitting ? 'Minting...' : 'Mint token'}
               </button>
             </div>
             {vm.mintDisabled && vm.mintDisabledReason ? (
