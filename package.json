@@ -28,7 +28,7 @@
     "dashboard:typecheck": "pnpm --filter @meowth/dashboard --filter @meowth/shared typecheck",
     "dashboard:test": "pnpm --filter @meowth/dashboard --filter @meowth/shared test:run",
     "dashboard:test:cover": "pnpm --filter @meowth/dashboard --filter @meowth/shared test:cover",
-    "dashboard:g1": "pnpm dashboard:fmt:check && pnpm dashboard:lint && pnpm dashboard:typecheck && pnpm dashboard:depcruise",
+    "dashboard:g1": "pnpm dashboard:fmt:check && pnpm dashboard:lint && pnpm dashboard:typecheck && pnpm dashboard:depcruise && pnpm scan:dashboard-source",
     "dashboard:depcruise": "pnpm --filter @meowth/dashboard depcruise",
     "test:l2": "tsx scripts/run-l2.ts && tsx scripts/run-remote-access-l2.ts && tsx scripts/run-mint-l2.ts && tsx scripts/run-exec-l2.ts",
     "test:l2:tokens": "tsx scripts/run-l2.ts",
@@ -42,6 +42,7 @@
     "scan:gitleaks:staged": "go run github.com/zricethezav/gitleaks/v8@v8.30.1 protect --staged --redact --no-banner",
     "scan:gitleaks:detect": "go run github.com/zricethezav/gitleaks/v8@v8.30.1 detect --redact --no-banner --no-git --source .",
     "scan:govulncheck": "cd daemon && go run golang.org/x/vuln/cmd/govulncheck@v1.4.0 ./...",
+    "scan:dashboard-source": "bash scripts/check-dashboard-source.sh",
     "scan:g2": "pnpm scan:osv && pnpm scan:gitleaks:detect && pnpm scan:govulncheck",
     "scan:d1": "bash scripts/check-no-prod-test-mix.sh",
     "prepare": "husky"

@@ -8,5 +8,20 @@
       "src/lib/palette.ts",
       "src/components/ui/**"
     ]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "security": {
+        "noDangerouslySetInnerHtml": "error",
+        "noGlobalEval": "error"
+      },
+      "suspicious": {
+        "noEmptyBlockStatements": "error"
+      },
+      "correctness": {
+        "noUnusedVariables": "error"
+      }
+    }
   }
 }
