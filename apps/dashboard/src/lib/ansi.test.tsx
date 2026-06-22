@@ -66,6 +66,32 @@ describe('ansiToReactNodes', () => {
     expect(asString(nodes)).toBe('ab');
   });
 
+  it('drops an OSC sequence (ESC ] ... BEL) including the payload', () => {
+    const nodes = ansiToReactNodes(`before${ESC}]0;title\x07after`);
+    const text = asString(nodes);
+    expect(text).toBe('beforeafter');
+    expect(text).not.toContain('\x07');
+    expect(text).not.toContain('title');
+  });
+
+  it('drops an OSC sequence terminated by ESC \\ (ST)', () => {
+    const nodes = ansiToReactNodes(`a${ESC}]52;c;Zm9v${ESC}\\b`);
+    expect(asString(nodes)).toBe('ab');
+  });
+
+  it('drops DCS / PM / APC / SOS string-control sequences', () => {
+    const samples: [string, string][] = [
+      [`a${ESC}Pq;data${ESC}\\b`, 'ab'], // DCS
+      [`a${ESC}^private${ESC}\\b`, 'ab'], // PM
+      [`a${ESC}_app${ESC}\\b`, 'ab'], // APC
+      [`a${ESC}Xstart${ESC}\\b`, 'ab'], // SOS
+    ];
+    for (const [input, expected] of samples) {
+      const nodes = ansiToReactNodes(input);
+      expect(asString(nodes)).toBe(expected);
+    }
+  });
+
   it('handles an unterminated CSI by dropping the tail safely', () => {
     const nodes = ansiToReactNodes(`ok${ESC}[31`);
     expect(asString(nodes)).toBe('ok');

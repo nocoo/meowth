@@ -291,12 +291,43 @@ export function ansiToReactNodes(input: string): ReactNode[] {
       i += 1;
       continue;
     }
-    // ESC encountered. We only recognise CSI: ESC '[' params final.
-    if (input[i + 1] !== '[') {
-      // Drop the ESC byte and any single follower (e.g. ESC '7' save cursor).
-      i += input[i + 1] !== undefined ? 2 : 1;
+    const next = input[i + 1];
+    if (next === undefined) {
+      // dangling ESC at end of input — drop it.
+      i += 1;
       continue;
     }
+    // String-control families that take a payload terminated by
+    // BEL (0x07) or ST (ESC '\'): OSC ']', DCS 'P', PM '^',
+    // APC '_', SOS 'X'. The entire payload (including the
+    // terminator) is consumed and dropped — we never render it
+    // as text and never honour cursor / title / clipboard
+    // requests carried by an OSC sequence.
+    if (next === ']' || next === 'P' || next === '^' || next === '_' || next === 'X') {
+      let j = i + 2;
+      while (j < input.length) {
+        const c = input.charCodeAt(j);
+        if (c === 0x07) {
+          j += 1;
+          break;
+        }
+        if (c === 0x1b && input[j + 1] === '\\') {
+          j += 2;
+          break;
+        }
+        j += 1;
+      }
+      i = j;
+      continue;
+    }
+    // Anything other than CSI '[' at this point is a non-CSI
+    // single-byte escape (e.g. ESC '7' save cursor, ESC '=' app
+    // keypad). Drop the ESC and the introducer byte.
+    if (next !== '[') {
+      i += 2;
+      continue;
+    }
+    // CSI: ESC '[' params final.
     // Walk parameter / intermediate bytes until we find a final byte.
     let j = i + 2;
     while (j < input.length) {
