@@ -56,6 +56,7 @@ const ITEMS: SidebarItem[] = [
 
 export default function AppSidebar() {
   const { pathname } = useLocation();
+  const setupActive = pathname === '/setup';
   return (
     <nav
       aria-label="Primary"
@@ -89,10 +90,11 @@ export default function AppSidebar() {
           to="/setup"
           className={cn(
             'flex items-center gap-2 rounded-md px-2 py-2 text-xs',
-            pathname === '/setup'
+            setupActive
               ? 'bg-secondary text-secondary-foreground'
               : 'hover:bg-secondary/60 text-muted-foreground',
           )}
+          aria-current={setupActive ? 'page' : undefined}
         >
           Setup
         </NavLink>

@@ -13,6 +13,16 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // Pin jsdom to a real http origin so `window.localStorage` is a
+    // usable Storage instance on every host. jsdom disables storage
+    // when the document loads from an opaque origin (about:blank),
+    // which on some Vitest configs surfaces as
+    // `localStorage is not available`.
+    environmentOptions: {
+      jsdom: {
+        url: 'http://localhost/',
+      },
+    },
     setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     coverage: {

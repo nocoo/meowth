@@ -67,5 +67,15 @@ describe('AppSidebar', () => {
     renderAt('/setup');
     const setup = screen.getByRole('link', { name: /Setup/ });
     expect(setup).toBeInTheDocument();
+    expect(setup).toHaveAttribute('aria-current', 'page');
+    // Product items must not also claim active state when on /setup.
+    const overview = screen.getByRole('link', { name: /Overview/ });
+    expect(overview).not.toHaveAttribute('aria-current');
+  });
+
+  it('Setup link is not active on a product route', () => {
+    renderAt('/overview');
+    const setup = screen.getByRole('link', { name: /Setup/ });
+    expect(setup).not.toHaveAttribute('aria-current');
   });
 });

@@ -41,7 +41,7 @@ function Setup() {
     <main className="bg-background text-foreground flex min-h-screen items-center justify-center p-6">
       <div className="bg-card text-card-foreground w-full max-w-md space-y-2 rounded-lg border p-6">
         <h1 className="text-xl font-semibold">Setup</h1>
-        <p className="text-muted-foreground text-sm">Setup flow lands in Phase 3.19.</p>
+        <p className="text-muted-foreground text-sm">Setup is not configured yet.</p>
       </div>
     </main>
   );
