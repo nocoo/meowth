@@ -1,9 +1,10 @@
 import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
-// Phase 3.13 vitest config: env=node is enough for the cn() L1
-// test. jsdom / @testing-library land in Phase 3.14 when the app
-// shell + ThemeToggle are introduced.
+// Phase 3.14 vitest config: env=jsdom so React component tests
+// (DashboardLayout / AppSidebar / ThemeToggle / Spinner) can
+// query the rendered DOM via @testing-library/react. The cn()
+// pure-string test runs equally fine under jsdom.
 export default defineConfig({
   resolve: {
     alias: {
@@ -11,7 +12,8 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'node',
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     coverage: {
       provider: 'v8',

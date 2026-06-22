@@ -9,7 +9,7 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "types": ["vite/client", "vitest/globals", "node"],
+    "types": ["vite/client", "vitest/globals", "node", "@testing-library/jest-dom"],
     "noEmit": true,
     "allowImportingTsExtensions": false
   },
