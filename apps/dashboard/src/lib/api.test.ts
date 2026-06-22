@@ -194,6 +194,37 @@ describe('apiStream', () => {
     expect(captured).toBe(netErr);
     expect(window.localStorage.getItem(TOKEN_KEY)).toBe('mwt_keep_me');
   });
+
+  it('throws /problems/no_body when the ok response has no body stream', async () => {
+    // A Response-shaped object with `body: null` exercises the
+    // 06 §8.1 contract: ok response with no stream → ApiError
+    // `{ status: 500, problem.type: '/problems/no_body' }`. We
+    // construct a plain object because real `new Response(null,
+    // { status: 200 }).body` is not null in jsdom; the
+    // production branch only matters in browsers that do return
+    // a null body for streamless responses.
+    const fakeOk = {
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      body: null,
+      async json() {
+        return {};
+      },
+    } as unknown as Response;
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(fakeOk);
+    let captured: unknown;
+    try {
+      await apiStream('/v1/sessions/abc/messages');
+    } catch (err) {
+      captured = err;
+    }
+    expect(isApiError(captured)).toBe(true);
+    if (isApiError(captured)) {
+      expect(captured.status).toBe(500);
+      expect(captured.problem.type).toBe('/problems/no_body');
+    }
+  });
 });
 
 describe('isApiError', () => {
