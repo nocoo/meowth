@@ -98,4 +98,43 @@ describe('useSessionDetailViewModel', () => {
     const { result } = renderHook(() => useSessionDetailViewModel(''), { wrapper });
     expect(result.current.status.kind).toBe('error');
   });
+
+  it('omits after_seq on the first request so seq=0 is included', async () => {
+    const session = {
+      id: SID,
+      backend_type: 'claude',
+      backend_session_id: 'bs',
+      status: 'completed',
+      started_at: '2026-06-22T00:00:00Z',
+      ended_at: '2026-06-22T00:00:10Z',
+      thread_name: '',
+      model: 'opus',
+    };
+    const page = {
+      session_id: SID,
+      events: [envelope(0, 'session_started', { backend: 'claude' })],
+      next_after_seq: 0,
+      has_more: false,
+    };
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.endsWith(`/v1/sessions/${SID}`)) {
+        return new Response(JSON.stringify(session), { status: 200 });
+      }
+      return new Response(JSON.stringify(page), { status: 200 });
+    });
+    const { result } = renderHook(() => useSessionDetailViewModel(SID), { wrapper });
+    await waitFor(() => expect(result.current.status.kind).toBe('ready'));
+    if (result.current.status.kind === 'ready') {
+      expect(result.current.status.messages.map((e) => e.seq)).toEqual([0]);
+    }
+    const messagesCall = spy.mock.calls.find((c) => {
+      const u = typeof c[0] === 'string' ? c[0] : (c[0] as Request).url;
+      return u.includes(`/v1/sessions/${SID}/messages`);
+    });
+    expect(messagesCall).toBeDefined();
+    const msgUrl =
+      typeof messagesCall?.[0] === 'string' ? messagesCall[0] : (messagesCall?.[0] as Request).url;
+    expect(msgUrl).not.toContain('after_seq');
+  });
 });

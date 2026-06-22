@@ -108,4 +108,35 @@ describe('SessionDetailPage', () => {
     // session_ended must render as a status row.
     expect(screen.getByTestId('status-row-session_ended')).toBeInTheDocument();
   });
+
+  it('renders payload.output through MessageText when payload.content is absent', async () => {
+    const session = {
+      id: 'sid',
+      backend_type: 'claude',
+      backend_session_id: 'bs',
+      status: 'completed',
+      started_at: '2026-06-22T00:00:00Z',
+      ended_at: '2026-06-22T00:00:01Z',
+      thread_name: '',
+      model: 'opus',
+    };
+    const page = {
+      session_id: 'sid',
+      events: [envelope(0, 'message', { output: 'tool result text' })],
+      next_after_seq: 0,
+      has_more: false,
+    };
+    let call = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      call += 1;
+      return new Response(call === 1 ? JSON.stringify(session) : JSON.stringify(page), {
+        status: 200,
+      });
+    });
+    const router = createMemoryRouter([{ path: '/sessions/:id', element: <SessionDetailPage /> }], {
+      initialEntries: ['/sessions/sid'],
+    });
+    render(<RouterProvider router={router} />);
+    await waitFor(() => expect(screen.getByText('tool result text')).toBeInTheDocument());
+  });
 });

@@ -1,31 +1,33 @@
 import MessageText from '@/components/MessageText';
-import type { Envelope } from '@/models/types';
-import useSessionDetailViewModel from '@/viewmodels/useSessionDetailViewModel';
+import useSessionDetailViewModel, {
+  type SessionMessageRow,
+} from '@/viewmodels/useSessionDetailViewModel';
 import { useParams } from 'react-router';
 
 // docs/architecture/06 §7.3 — Session detail page.
-// Filters heartbeat from display; renders `message` content via
-// MessageText; surfaces `error` and `session_ended` as structured
-// status rows.
+// Filters heartbeat from display; renders `message` payload
+// content/output via MessageText (02 §5.3 splits tool-result
+// text into payload.output, normal text into payload.content);
+// surfaces `error` and `session_ended` as structured status rows.
 
 function payloadString(payload: Record<string, unknown>, key: string): string | null {
   const value = payload[key];
   return typeof value === 'string' ? value : null;
 }
 
-function MessageEnvelope({ env }: { env: Envelope }) {
-  const content = payloadString(env.payload, 'content') ?? '';
+function MessageEnvelope({ env }: { env: SessionMessageRow }) {
+  const text = payloadString(env.payload, 'content') ?? payloadString(env.payload, 'output') ?? '';
   return (
     <div className="border-border border-t py-2">
       <div className="text-muted-foreground text-xs">
         seq {env.seq} · {env.ts}
       </div>
-      <MessageText content={content} />
+      <MessageText content={text} />
     </div>
   );
 }
 
-function StatusRow({ env, label }: { env: Envelope; label: string }) {
+function StatusRow({ env, label }: { env: SessionMessageRow; label: string }) {
   return (
     <div className="border-border border-t py-2 text-sm" data-testid={`status-row-${env.type}`}>
       <span className="text-muted-foreground text-xs">
@@ -36,15 +38,15 @@ function StatusRow({ env, label }: { env: Envelope; label: string }) {
         {(() => {
           const detail = payloadString(env.payload, 'detail');
           const reason = payloadString(env.payload, 'reason');
-          const text = detail ?? reason;
-          return text !== null ? <span className="ml-2 font-mono text-xs">{text}</span> : null;
+          const value = detail ?? reason;
+          return value !== null ? <span className="ml-2 font-mono text-xs">{value}</span> : null;
         })()}
       </p>
     </div>
   );
 }
 
-function renderEnvelope(env: Envelope): React.ReactNode {
+function renderEnvelope(env: SessionMessageRow): React.ReactNode {
   switch (env.type) {
     case 'heartbeat':
       return null;

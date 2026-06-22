@@ -10,6 +10,12 @@ import useAuthErrorHandler from './useAuthErrorHandler';
 
 const MAX_SNAPSHOT_PAGES = 200;
 
+// Re-export the message-row shape so the page never imports
+// `@/models/*` directly (06 §6.1: page only consumes viewmodel/
+// components types).
+export type SessionMessageRow = Envelope;
+export type SessionInfo = Session;
+
 export type SessionDetailStatus =
   | { kind: 'loading' }
   | { kind: 'ready'; session: Session; messages: readonly Envelope[] }
@@ -40,14 +46,21 @@ export default function useSessionDetailViewModel(sessionId: string): SessionDet
         const session = await getSession(sessionId);
         if (cancelled) return;
         const collected: Envelope[] = [];
-        let afterSeq = 0;
+        // Daemon defaults after_seq to -1 when the param is
+        // omitted and returns events with seq > after_seq, so
+        // omitting after_seq on the first request includes the
+        // seq=0 envelope. We send after_seq on follow-up pages
+        // only, anchored to next_after_seq from the previous
+        // page.
+        let afterSeq: number | null = null;
         let pages = 0;
         while (true) {
-          const page = await getSessionMessages(sessionId, { after_seq: afterSeq });
+          const opts: { after_seq?: number } = afterSeq === null ? {} : { after_seq: afterSeq };
+          const page = await getSessionMessages(sessionId, opts);
           if (cancelled) return;
           collected.push(...page.events);
           if (!page.has_more) break;
-          if (page.next_after_seq <= afterSeq) {
+          if (afterSeq !== null && page.next_after_seq <= afterSeq) {
             setStatus({
               kind: 'error',
               message: 'Daemon returned non-advancing message page; aborting.',
