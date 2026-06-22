@@ -194,7 +194,7 @@ func TestExecutePromptMarkerEmitsPayloadFirst(t *testing.T) {
 	}
 	plainMsgs, _ := drain(t, plain)
 
-	withMarker, err := f.Execute(context.Background(), PromptMarkerXSSPayload+payload, agent.ExecOptions{})
+	withMarker, err := f.Execute(context.Background(), promptMarkerXSSPayload+payload, agent.ExecOptions{})
 	if err != nil {
 		t.Fatalf("Execute marker: %v", err)
 	}
@@ -230,8 +230,8 @@ func TestExtractXSSPayload(t *testing.T) {
 		{"", false, "", "empty"},
 		{"hello", false, "", "no prefix"},
 		{"meowth_e2e_xss_payload:lower", false, "", "case sensitive"},
-		{PromptMarkerXSSPayload, true, "", "marker with empty payload"},
-		{PromptMarkerXSSPayload + "<script>x</script>", true, "<script>x</script>", "verbatim suffix"},
+		{promptMarkerXSSPayload, true, "", "marker with empty payload"},
+		{promptMarkerXSSPayload + "<script>x</script>", true, "<script>x</script>", "verbatim suffix"},
 	}
 	for _, c := range cases {
 		got, ok := extractXSSPayload(c.in)

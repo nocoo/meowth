@@ -25,14 +25,32 @@ const DOC_HEADER_NAMES = [
   'permissions-policy',
 ] as const;
 
+// docs/architecture/07 §4.2 — every CSP directive token is part of
+// the reviewed contract. Spec asserts the full set, not a subset,
+// so a future regression that drops or weakens a directive fails
+// loudly instead of slipping past partial matches.
+const CSP_DIRECTIVE_TOKENS = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+] as const;
+
 test('GET / serves index.html with full document header set', async ({ request }) => {
   const res = await request.get('/');
   expect(res.status()).toBe(200);
   const h = res.headers();
   expect(h['x-content-type-options']).toBe('nosniff');
-  expect(h['content-security-policy']).toContain("default-src 'self'");
-  expect(h['content-security-policy']).toContain("frame-ancestors 'none'");
-  expect(h['content-security-policy']).toContain("object-src 'none'");
+  const csp = h['content-security-policy'] ?? '';
+  for (const directive of CSP_DIRECTIVE_TOKENS) {
+    expect(csp, `CSP missing directive: ${directive}`).toContain(directive);
+  }
   expect(h['referrer-policy']).toBe('no-referrer');
   expect(h['cross-origin-opener-policy']).toBe('same-origin');
   expect(h['cross-origin-resource-policy']).toBe('same-origin');
@@ -90,10 +108,17 @@ test('GET /v1/agents with no bearer carries nosniff but no document headers', as
   expect(body).not.toContain(readRootToken());
 });
 
-test('GET /healthz carries nosniff', async ({ request }) => {
+test('GET /healthz carries nosniff but no document headers', async ({ request }) => {
   const res = await request.get('/healthz');
   expect(res.status()).toBe(200);
-  expect(res.headers()['x-content-type-options']).toBe('nosniff');
+  const h = res.headers();
+  expect(h['x-content-type-options']).toBe('nosniff');
+  // 07 §4.1 — /healthz is not a document and not an asset, so
+  // document-level headers must be absent. CORP is intentionally
+  // not required here per reviewer correction.
+  for (const name of DOC_HEADER_NAMES) {
+    expect(h[name]).toBeUndefined();
+  }
 });
 
 test('handpasted root token still works after header probes (no session pollution)', async ({

@@ -132,7 +132,7 @@ type fixtureTokenUsage struct {
 	CacheWriteTokens int64 `json:"cache_write_tokens,omitempty"`
 }
 
-// PromptMarkerXSSPayload is the test-only prompt prefix that asks
+// promptMarkerXSSPayload is the test-only prompt prefix that asks
 // the fake backend to emit an additional text message whose
 // Content is the marker's suffix. Used by the L3 XSS spec
 // (docs/architecture/07 §11 L3 (b)) to drive untrusted message
@@ -144,17 +144,20 @@ type fixtureTokenUsage struct {
 // this code) and on every prompt that does not start with the
 // prefix. The happy fixture's existing messages are still emitted;
 // the payload message is prepended once.
-const PromptMarkerXSSPayload = "MEOWTH_E2E_XSS_PAYLOAD:"
+//
+// Package-private on purpose: callers outside this package have no
+// business depending on the wire shape of a test-only hook.
+const promptMarkerXSSPayload = "MEOWTH_E2E_XSS_PAYLOAD:"
 
-// extractXSSPayload returns the suffix after PromptMarkerXSSPayload
+// extractXSSPayload returns the suffix after promptMarkerXSSPayload
 // when prompt starts with that marker, plus a true ok. Otherwise
 // returns ("", false) and the caller continues with the unchanged
 // fixture behaviour.
 func extractXSSPayload(prompt string) (string, bool) {
-	if !strings.HasPrefix(prompt, PromptMarkerXSSPayload) {
+	if !strings.HasPrefix(prompt, promptMarkerXSSPayload) {
 		return "", false
 	}
-	return prompt[len(PromptMarkerXSSPayload):], true
+	return prompt[len(promptMarkerXSSPayload):], true
 }
 
 // Execute satisfies agent.Backend. The returned *agent.Session has

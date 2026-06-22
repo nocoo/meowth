@@ -78,13 +78,25 @@ test('Create token → reveal → copy → done leaves no plaintext behind', asy
   const bodyText = await page.evaluate(() => document.body.innerText);
   expect(bodyText).not.toContain(plaintext);
 
-  // (5) localStorage bearer unchanged. The Tokens page must never
+  // (4b) No visible alert / toast surface contains the plaintext.
+  // The dashboard uses `role="alert"` for error banners (no toast
+  // system today). If a future toast component appears, extend the
+  // selector list — the contract is "no user-visible surface ever
+  // displays the plaintext after Done".
+  const alertSurfaces = page.getByRole('alert');
+  const alertCount = await alertSurfaces.count();
+  for (let i = 0; i < alertCount; i++) {
+    const text = (await alertSurfaces.nth(i).textContent()) ?? '';
+    expect(text, `alert[${i}] leaked plaintext`).not.toContain(plaintext);
+  }
+
+  // (6) localStorage bearer unchanged. The Tokens page must never
   // swap the active bearer to a freshly-minted token; the user can
   // do that manually if they want, but Create does not.
   const stored = await page.evaluate(() => window.localStorage.getItem('meowth_token'));
   expect(stored).toBe(rootToken);
 
-  // (6) No alert / confirm / prompt was triggered, and certainly
+  // (7) No alert / confirm / prompt was triggered, and certainly
   // none surfaced the plaintext.
   expect(dialogs).toHaveLength(0);
 });
