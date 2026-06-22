@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { execAgent, fetchAgents } from './agents';
-import type { ExecRequest } from './types';
+import type { Agent, ExecRequest } from './types';
+
+type AgentType = Agent['type'];
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -66,20 +68,40 @@ describe('models/agents.execAgent', () => {
     expect(new Headers(init?.headers).get('Content-Type')).toBe('application/json; charset=utf-8');
   });
 
-  it('URL-encodes the backend type segment', async () => {
-    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(streamingResponse());
-    await execAgent('claude', req);
-    const [path] = spy.mock.calls[0] ?? [];
-    expect(path).toBe('/v1/agents/claude/exec');
-    // sanity: encodeURIComponent does not double-encode normal chars
-  });
-
   it('passes through the caller-supplied AbortSignal', async () => {
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(streamingResponse());
     const controller = new AbortController();
     await execAgent('claude', req, { signal: controller.signal });
     const init = spy.mock.calls[0]?.[1];
     expect(init?.signal).toBe(controller.signal);
+  });
+
+  it('URL-encodes the backend type segment when it contains reserved characters', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(streamingResponse());
+    // Cast to bypass the AgentType union; this is a model-layer
+    // path-builder regression test, not a claim that daemon
+    // accepts the value.
+    await execAgent('bad/type' as AgentType, req);
+    const [path] = spy.mock.calls[0] ?? [];
+    expect(path).toBe('/v1/agents/bad%2Ftype/exec');
+  });
+
+  it('propagates an HTTP 400 invalid_request as ApiError', async () => {
+    const problem = {
+      type: '/problems/invalid_request',
+      title: 'Invalid request',
+      status: 400,
+      detail: 'prompt must not be empty',
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(problem), { status: 400 }),
+    );
+    try {
+      await execAgent('claude', req);
+      throw new Error('expected throw');
+    } catch (err) {
+      expect(err).toMatchObject({ status: 400, problem });
+    }
   });
 
   it('propagates an HTTP 404 as ApiError', async () => {
