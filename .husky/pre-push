@@ -23,9 +23,12 @@ echo "pre-push: project-level type-check + vet"
 pnpm daemon:vet
 pnpm dashboard:typecheck
 
-echo "pre-push: L1 (daemon + dashboard)"
-pnpm daemon:test
-pnpm dashboard:test
+echo "pre-push: L1 + coverage gate (daemon + dashboard)"
+# coverage runs already execute the L1 suite; do not double-run plain test.
+pnpm daemon:test:cover
+pnpm daemon:cover:check
+pnpm dashboard:test:cover
+pnpm dashboard:cover:check
 
 echo "pre-push: L2"
 pnpm test:l2

@@ -309,6 +309,25 @@ CI 跑 5.1 + 5.2 全部 + 以下额外项：
 
 overview §8 表写 "TS 行覆盖 ≥ 95%" 是早期遗留，**与本文档采用的 90% 不一致**；详 §14 #1 遗留勘误。
 
+#### 6.1.1 Baseline floor governance（Phase 3.25 落地后）
+
+S-tier gate 默认 daemon 95% / dashboard 90%。3.25 commit 启用 strict 模式时，部分手写 runtime 包/文件还未达到目标，因此引入 **baseline floor** 作为防回退保护：
+
+- **OK**：包/文件 ≥ default target（daemon 95% / dashboard 90%）。无需任何 baseline 入口；标准状态。
+- **BASELINE**：包/文件 < default target。在 `scripts/check-{daemon,dashboard}-coverage.sh` 内的 inline map 里固化当前 floor（向下取整为整数，避免浮点噪声）。低于 floor → CI/pre-push 立即 fail；≥ floor 但 < target → 通过本 phase。**目标仍是 target，floor 只是防回退**；提升某项至 ≥ target 时，由独立 commit 命名为 `test(<pkg|file>): lift coverage to S-tier and remove baseline` 同时移除该 baseline 项。
+- **EXEMPT-ENTRYPOINT**：daemon 侧 program entry 包（`daemon/cmd/*`）。main 函数没有独立单元测试价值；按 import path 前缀完全排除。dashboard 侧不使用此类（`main.tsx` / `App.tsx` 等装配薄壳归 EXEMPT-STRUCTURAL）。
+- **EXEMPT-GENERATED**：纯生成代码（`daemon/internal/store/gen` sqlc 产物）。inline 列出 + 写明 generator 出处；从 gate 完全排除。
+- **EXEMPT-STRUCTURAL**：装配/桶导出/类型重导出/ReactDOM bootstrap（如 `apps/dashboard/src/{main,App,routes/index}.tsx`、各 `pages/*/index.ts`）。inline 列出 + 写明结构性理由；从 gate 完全排除。
+
+治理硬约束：
+
+- 增加新的 baseline 项是**禁止的**——任何新文件/新 pkg 必须 ≥ target，除非 reviewer 显式批准（独立 commit 才能新增 baseline）。
+- 增加新的 EXEMPT-STRUCTURAL 项需要写明结构性理由；EXEMPT-GENERATED 仅对实打实的代码生成器产物开放。
+- baseline / exempt map 中列出但**不再出现在 coverage 报告**的条目（文件被删/重命名）是 stale entry，脚本同样 fail，防止 map 腐烂。
+- `MIN_PCT` 环境变量仅允许**提升**到不低于 default target 的值；任何低于 default 的值脚本立即 fail-fast (`exit 2`)。不存在 `EXTRA_EXEMPT_*` 类绕 gate 入口。
+
+baseline 项随后续 `test(<pkg|file>): lift coverage to S-tier and remove baseline` 系列小 commit 逐项收敛；最终 baseline map 清空时本文档此节自然收回。
+
 ### 6.2 与 overview §8 表的差异（遗留勘误，**不在本 commit 处理**）
 
 [`docs/01-project-overview.md`](../01-project-overview.md) §8 表写 "TS 行覆盖 ≥ 95%；Go pkg 覆盖 ≥ 95%"，但 §9.2 Phase 3.25 commit 写 "daemon 95% / dashboard 90%"。两个表数字不一致。

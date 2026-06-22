@@ -28,6 +28,7 @@
     "dashboard:typecheck": "pnpm --filter @meowth/dashboard --filter @meowth/shared typecheck",
     "dashboard:test": "pnpm --filter @meowth/dashboard --filter @meowth/shared test:run",
     "dashboard:test:cover": "pnpm --filter @meowth/dashboard --filter @meowth/shared test:cover",
+    "dashboard:cover:check": "bash scripts/check-dashboard-coverage.sh",
     "dashboard:g1": "pnpm dashboard:fmt:check && pnpm dashboard:lint && pnpm dashboard:typecheck && pnpm dashboard:depcruise && pnpm scan:dashboard-source",
     "dashboard:depcruise": "pnpm --filter @meowth/dashboard depcruise",
     "test:l2": "tsx scripts/run-l2.ts && tsx scripts/run-remote-access-l2.ts && tsx scripts/run-mint-l2.ts && tsx scripts/run-exec-l2.ts",

@@ -133,8 +133,7 @@ jobs:
       - run: pnpm daemon:cover:check
 
   l1-dashboard:
-    # Phase 3.25 raises the coverage gate (90%); for now this job
-    # only proves the harness runs and emits a profile.
+    # Phase 3.25 — coverage gate strict (90% default, baseline floors).
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
@@ -149,6 +148,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm dashboard:test:cover
+      - run: pnpm dashboard:cover:check
 
   l2:
     runs-on: macos-14
