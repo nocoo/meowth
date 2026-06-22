@@ -14,6 +14,10 @@ import { defineConfig } from '@playwright/test';
 // token out of failure screenshots even when capture is enabled.
 export default defineConfig({
   testDir: 'e2e',
+  // Playwright-side cleanup: runs after all tests even if the
+  // webServer was SIGKILL'd. Unlinks the OS-temp token file and
+  // the throw-away MEOWTH_TEST_HOME the fixture wrote.
+  globalTeardown: './e2e/dev/global-teardown.ts',
   reporter: [['html', { outputFolder: 'playwright-report', open: 'never' }]],
   outputDir: 'test-results',
   // 30s per test is plenty for two simple navigation flows; raises

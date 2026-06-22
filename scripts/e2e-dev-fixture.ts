@@ -25,6 +25,7 @@ import { join, resolve } from 'node:path';
 const REPO_ROOT = resolve(__dirname, '..');
 const DAEMON_DIR = join(REPO_ROOT, 'daemon');
 const TOKEN_FILE = join(tmpdir(), 'meowth-e2e-dev-token');
+const HOME_MARKER = join(tmpdir(), 'meowth-e2e-dev-home-path');
 
 function log(msg: string): void {
   process.stdout.write(`[e2e-dev-fixture] ${msg}\n`);
@@ -38,6 +39,13 @@ function cleanupTokenFile(): void {
       // best effort
     }
   }
+  if (existsSync(HOME_MARKER)) {
+    try {
+      unlinkSync(HOME_MARKER);
+    } catch {
+      // best effort
+    }
+  }
 }
 
 // Always start from a clean slate so a stale token file from a
@@ -45,6 +53,10 @@ function cleanupTokenFile(): void {
 cleanupTokenFile();
 
 const home = mkdtempSync(join(tmpdir(), 'meowth-e2e-home-'));
+// Write a non-secret marker pointing at the throw-away home so
+// the Playwright globalTeardown can rmSync it even if SIGKILL
+// prevented this script's handlers from running.
+writeFileSync(HOME_MARKER, home, { encoding: 'utf8', mode: 0o600 });
 
 function cleanup(): void {
   cleanupTokenFile();
