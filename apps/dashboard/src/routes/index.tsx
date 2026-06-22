@@ -1,3 +1,4 @@
+import AuthGate from '@/components/AuthGate';
 import DashboardLayout from '@/components/DashboardLayout';
 import AgentsPage from '@/pages/Agents';
 import OverviewPage from '@/pages/Overview';
@@ -7,14 +8,20 @@ import SetupPage from '@/pages/Setup';
 import TokensPage from '@/pages/Tokens';
 import { Navigate, type RouteObject, createBrowserRouter } from 'react-router';
 
-// docs/architecture/06 §7: the five product pages plus /setup.
-// 3.17 wired the product pages; 3.19 lands the real /setup page.
-// Routing guards (bearer hydrate + 401 redirect) land in 3.20.
+// docs/architecture/06 §7 + §10 — the five product pages live
+// behind <AuthGate>, which probes /v1/agents on mount and
+// redirects to /setup on missing/invalid token. /setup is
+// outside the gate so the gate never needs to short-circuit on
+// pathname (no conditional hooks).
 
 export const routes: RouteObject[] = [
   {
     path: '/',
-    element: <DashboardLayout />,
+    element: (
+      <AuthGate>
+        <DashboardLayout />
+      </AuthGate>
+    ),
     children: [
       { index: true, element: <Navigate to="/overview" replace /> },
       { path: 'overview', element: <OverviewPage /> },
