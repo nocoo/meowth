@@ -132,10 +132,35 @@ type fixtureTokenUsage struct {
 	CacheWriteTokens int64 `json:"cache_write_tokens,omitempty"`
 }
 
+// PromptMarkerXSSPayload is the test-only prompt prefix that asks
+// the fake backend to emit an additional text message whose
+// Content is the marker's suffix. Used by the L3 XSS spec
+// (docs/architecture/07 §11 L3 (b)) to drive untrusted message
+// content through the real exec → SQLite → /messages render path
+// without standing up a fake claude binary.
+//
+// Format: `MEOWTH_E2E_XSS_PAYLOAD:<payload>`. The marker is a
+// no-op on the production backend factory (which never reaches
+// this code) and on every prompt that does not start with the
+// prefix. The happy fixture's existing messages are still emitted;
+// the payload message is prepended once.
+const PromptMarkerXSSPayload = "MEOWTH_E2E_XSS_PAYLOAD:"
+
+// extractXSSPayload returns the suffix after PromptMarkerXSSPayload
+// when prompt starts with that marker, plus a true ok. Otherwise
+// returns ("", false) and the caller continues with the unchanged
+// fixture behaviour.
+func extractXSSPayload(prompt string) (string, bool) {
+	if !strings.HasPrefix(prompt, PromptMarkerXSSPayload) {
+		return "", false
+	}
+	return prompt[len(PromptMarkerXSSPayload):], true
+}
+
 // Execute satisfies agent.Backend. The returned *agent.Session has
 // buffered Messages + Result channels; the producer goroutine
 // closes both when done.
-func (f *Fake) Execute(ctx context.Context, _ string, _ agent.ExecOptions) (*agent.Session, error) {
+func (f *Fake) Execute(ctx context.Context, prompt string, _ agent.ExecOptions) (*agent.Session, error) {
 	entries, err := loadFixture(f.Scenario)
 	if err != nil {
 		return nil, err
@@ -143,11 +168,24 @@ func (f *Fake) Execute(ctx context.Context, _ string, _ agent.ExecOptions) (*age
 	msgs := make(chan agent.Message, 32)
 	results := make(chan agent.Result, 1)
 	delay := f.MessageDelay
+	xssPayload, hasXSS := extractXSSPayload(prompt)
 
 	go func() {
 		defer close(msgs)
 		defer close(results)
 		final := agent.Result{Status: "completed"}
+		if hasXSS {
+			// Emit the untrusted payload as a text message before
+			// the fixture's normal messages so the L3 spec sees
+			// it via /messages snapshot. The dashboard's
+			// MessageText component is the system under test.
+			select {
+			case <-ctx.Done():
+				results <- agent.Result{Status: "cancelled", Error: ctx.Err().Error()}
+				return
+			case msgs <- agent.Message{Type: agent.MessageType("text"), Content: xssPayload}:
+			}
+		}
 		for _, e := range entries {
 			if e.PauseMS > 0 {
 				if !sleepUntilDone(ctx, time.Duration(e.PauseMS)*time.Millisecond) {
