@@ -22,6 +22,13 @@ const ARTIFACTS: Array<{ token: string; marker: string }> = [
     token: join(tmpdir(), 'meowth-e2e-embed-token'),
     marker: join(tmpdir(), 'meowth-e2e-embed-home-path'),
   },
+  {
+    // 3.23: embed-mint fixture stores the mws_... setup-code in
+    // the same secret-handling shape (mode 0o600, OS-temp only,
+    // cleaned alongside the other fixtures).
+    token: join(tmpdir(), 'meowth-e2e-embed-mint-code'),
+    marker: join(tmpdir(), 'meowth-e2e-embed-mint-home-path'),
+  },
 ];
 
 function safeUnlink(p: string): void {

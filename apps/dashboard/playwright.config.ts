@@ -1,18 +1,24 @@
 import { type PlaywrightTestConfig, defineConfig } from '@playwright/test';
 
 // docs/architecture/08-6dq-hooks-wiring.md §3.4 — L3 fixtures.
-//   - dashboard-dev   → §3.4.1 Vite dev + meowthd (path A via init) on :7777
-//   - dashboard-embed → §3.4.2 daemon-embedded dashboard dist on :17777
+//   - dashboard-dev        → §3.4.1 Vite dev + meowthd path A on :7777
+//   - dashboard-embed      → §3.4.2 daemon-embedded dashboard dist on :17777
+//                            (mint window CLOSED — token already exists)
+//   - dashboard-embed-mint → §3.4.2 daemon-embedded dist on :17778, booted
+//                            via `init --skip-token` so the first-run mint
+//                            window is OPEN for happy path B coverage
 //
 // 3.20c landed the dev fixture; 3.22 lands the embed fixture for
 // happy path A (paste token, agents list, tokens dialog, fake exec
-// + session render). CSP / headers / XSS / SecretReveal full and
-// mint coverage land in later commits.
+// + session render); 3.23 lands the embed-mint fixture for happy
+// path B (paste setup-code → mint → /overview). CSP / headers / XSS
+// / SecretReveal full coverage land in 3.24.
 //
-// Trace / video are intentionally OFF for both projects to avoid
+// Trace / video are intentionally OFF for all projects to avoid
 // capturing localStorage values or action params that touch the
-// freshly minted root token. The `<input type=password>` keeps the
-// token out of failure screenshots even when capture is enabled.
+// freshly minted root token or setup-code. The `<input
+// type=password>` keeps both secrets out of failure screenshots
+// even when capture is enabled.
 //
 // Per-project webServer selection: Playwright runs every entry in
 // `webServer` for every invocation, so an embed-only run would
@@ -22,6 +28,7 @@ import { type PlaywrightTestConfig, defineConfig } from '@playwright/test';
 
 const DEV_FIXTURE = '../../scripts/e2e-dev-fixture.ts';
 const EMBED_FIXTURE = '../../scripts/e2e-embed-fixture.ts';
+const EMBED_MINT_FIXTURE = '../../scripts/e2e-embed-mint-fixture.ts';
 
 const DEV_SERVERS: PlaywrightTestConfig['webServer'] = [
   {
@@ -51,6 +58,17 @@ const EMBED_SERVERS: PlaywrightTestConfig['webServer'] = [
   },
 ];
 
+const EMBED_MINT_SERVERS: PlaywrightTestConfig['webServer'] = [
+  {
+    command: `pnpm tsx ${EMBED_MINT_FIXTURE}`,
+    url: 'http://127.0.0.1:17778/healthz',
+    timeout: 180_000,
+    reuseExistingServer: false,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  },
+];
+
 function selectedProjects(argv: readonly string[]): Set<string> {
   const out = new Set<string>();
   for (let i = 0; i < argv.length; i++) {
@@ -68,9 +86,12 @@ function buildWebServers(): PlaywrightTestConfig['webServer'] {
   const sel = selectedProjects(process.argv);
   const wantDev = sel.size === 0 || sel.has('dashboard-dev');
   const wantEmbed = sel.size === 0 || sel.has('dashboard-embed');
+  const wantEmbedMint = sel.size === 0 || sel.has('dashboard-embed-mint');
   const entries: NonNullable<PlaywrightTestConfig['webServer']>[number][] = [];
   if (wantDev) entries.push(...(DEV_SERVERS as NonNullable<typeof DEV_SERVERS>));
   if (wantEmbed) entries.push(...(EMBED_SERVERS as NonNullable<typeof EMBED_SERVERS>));
+  if (wantEmbedMint)
+    entries.push(...(EMBED_MINT_SERVERS as NonNullable<typeof EMBED_MINT_SERVERS>));
   return entries;
 }
 
@@ -99,6 +120,12 @@ export default defineConfig({
       fullyParallel: false,
       use: { baseURL: 'http://127.0.0.1:17777' },
       testMatch: /embed\/.*\.spec\.ts$/,
+    },
+    {
+      name: 'dashboard-embed-mint',
+      fullyParallel: false,
+      use: { baseURL: 'http://127.0.0.1:17778' },
+      testMatch: /embed-mint\/.*\.spec\.ts$/,
     },
   ],
   workers: 1,
