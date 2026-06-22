@@ -11,7 +11,21 @@ import type { components } from '@meowth/shared';
 
 export type Agent = components['schemas']['Agent'];
 export type AgentListResponse = components['schemas']['AgentListResponse'];
+export type HealthzResponse = components['schemas']['HealthzResponse'];
+
+export type TokenView = components['schemas']['TokenView'];
+export type TokenListResponse = components['schemas']['TokenListResponse'];
+export type TokenCreateRequest = components['schemas']['TokenCreateRequest'];
 export type TokenCreateResponse = components['schemas']['TokenCreateResponse'];
+export type TokenDeleteResponse = components['schemas']['TokenDeleteResponse'];
+
+export type Session = components['schemas']['Session'];
+export type SessionListResponse = components['schemas']['SessionListResponse'];
+export type MessagesSnapshotResponse = components['schemas']['MessagesSnapshotResponse'];
+export type Envelope = components['schemas']['Envelope'];
+export type EnvelopeType = Envelope['type'];
+
+export type ExecRequest = components['schemas']['ExecRequest'];
 
 export interface MintRequest {
   setup_code: string;
