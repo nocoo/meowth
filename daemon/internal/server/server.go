@@ -173,24 +173,31 @@ func New(cfg Config) (*Server, error) {
 		r.Post("/bootstrap/mint", mh.Mint)
 	}
 
-	// 404 / 405 fall through to problem+json defaults; chi's default
-	// 404 returns "404 page not found" plaintext, so we override.
-	r.NotFound(handlers.NotFound)
-	r.MethodNotAllowed(handlers.MethodNotAllowed)
-
-	// docs/architecture/02 §3 + 06 §3.4 — wrap the chi router with
-	// the static handler so GET /, /index.html and extensionless SPA
-	// deep links return the embedded dashboard HTML. Reserved
-	// namespaces (/v1, /bootstrap, /healthz, /problems, /assets)
-	// continue to flow through the API router. /assets/* is served
-	// directly from the embedded dist with immutable Cache-Control.
+	// docs/architecture/02 §3 + 06 §3.4 — embedded dashboard. The
+	// static handlers mount *inside* the chi router so every static
+	// success / 404 / fallback response still flows through the
+	// fixed middleware chain (request_id → access_log → recover →
+	// nosniff → body_limit → bearer). Bearer's existing requiresBearer
+	// rule keeps /, /assets/* and SPA fallbacks unauthenticated.
 	dist, distErr := dashboard.DistFS()
 	if distErr != nil {
 		return nil, fmt.Errorf("server: load dashboard dist: %w", distErr)
 	}
-	handler := static.New(dist, r)
+	r.Get("/", static.Index(dist).ServeHTTP)
+	r.Get("/index.html", static.Index(dist).ServeHTTP)
+	r.Get("/assets/*", static.Asset(dist).ServeHTTP)
 
-	return &Server{cfg: cfg, handler: handler, cancels: cancels}, nil
+	// 404 / 405 fall through to problem+json defaults; chi's default
+	// 404 returns "404 page not found" plaintext, so we override.
+	// The static NotFoundFallback serves index.html for extensionless
+	// dashboard deep links (e.g. /overview) and delegates everything
+	// else back to the problem+json 404 — all through the same
+	// middleware chain.
+	apiNotFound := http.HandlerFunc(handlers.NotFound)
+	r.NotFound(static.NotFoundFallback(dist, apiNotFound).ServeHTTP)
+	r.MethodNotAllowed(handlers.MethodNotAllowed)
+
+	return &Server{cfg: cfg, handler: r, cancels: cancels}, nil
 }
 
 // Handler returns the assembled http.Handler. Tests use this directly

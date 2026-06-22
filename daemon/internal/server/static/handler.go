@@ -1,16 +1,21 @@
-// Package static serves the embedded dashboard. It dispatches between:
+// Package static serves the embedded dashboard. It exposes three
+// discrete http.Handler factories so the caller (server.New) can
+// mount them inside the chi router and reuse the existing fixed
+// middleware chain (request_id → access_log → recover → nosniff →
+// body_limit → bearer):
 //
-//   - GET /assets/* — file from the embed FS with secheaders.Asset
-//     (immutable Cache-Control) and a Content-Type from the file ext
-//   - GET / and GET /<dashboard-deep-link> — index.html with
-//     secheaders.Document and Cache-Control: no-cache
-//   - everything else — falls through to the inner mux (API,
-//     /healthz, /bootstrap, /problems, anything with a file ext,
-//     non-GET methods)
+//   - Index(dist) — writes dist/index.html with secheaders.Document
+//     and Cache-Control: no-cache. Mount as GET /.
+//   - Asset(dist) — serves dist/<path> with secheaders.Asset(...).
+//     Mount as GET /assets/*; chi strips the prefix via chi.URLParam.
+//   - NotFoundFallback(dist, fallback) — decides whether the
+//     request is an extensionless SPA deep link and serves
+//     index.html; otherwise calls fallback (typically the
+//     problem+json 404 handler). Mount on chi.Router.NotFound.
 //
-// docs/architecture/06 §10.1 deep links (/overview, /sessions/:id,
-// /setup, /agents, /tokens, /settings) must render the SPA; reserved
-// API namespaces and asset-shaped misses must NOT fall back to HTML.
+// Going through the chi router guarantees every static success or
+// error response carries the chain's invariants — most importantly
+// the global X-Content-Type-Options: nosniff middleware.
 
 package static
 
@@ -22,13 +27,15 @@ import (
 	"path"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/nocoo/meowth/daemon/internal/server/secheaders"
 )
 
 // reservedPrefixes are paths that must never be served the SPA HTML
-// fallback. They keep their existing API / problem / health / bootstrap
-// semantics. /assets is reserved because asset misses should 404, not
-// fall back to index.html.
+// fallback. They keep their existing API / problem / health /
+// bootstrap semantics. /assets is reserved because asset misses
+// should 404, not fall back to index.html.
 var reservedPrefixes = []string{
 	"/v1",
 	"/bootstrap",
@@ -37,9 +44,9 @@ var reservedPrefixes = []string{
 	"/assets",
 }
 
-// IsHTMLFallback returns true when the request should be served the
-// dashboard's index.html for SPA routing. Pure function; the test
-// suite exercises every branch.
+// IsHTMLFallback returns true when a 404'd request should be served
+// the dashboard's index.html for SPA routing. Pure function; the
+// test suite exercises every branch.
 func IsHTMLFallback(method, urlPath string) bool {
 	if method != http.MethodGet {
 		return false
@@ -62,21 +69,31 @@ func IsHTMLFallback(method, urlPath string) bool {
 	return !strings.Contains(last, ".")
 }
 
-// New returns an http.Handler that serves the embedded dashboard
-// and delegates everything else to inner. The dist FS must contain
-// at least index.html when serving production traffic; with only
-// the .gitkeep guard, GET / and /assets/* will 404 (caller decides
-// to fail fast in CI via the prepare script).
-func New(dist fs.FS, inner http.Handler) http.Handler {
-	assetWrap := func(h http.Handler, contentType string) http.Handler {
-		return secheaders.Asset(contentType, true)(h)
-	}
-	documentWrap := secheaders.Document
-	indexFile, indexErr := fs.ReadFile(dist, "index.html")
+// Index returns a handler that writes dist/index.html with the
+// document-level security headers. Mount as GET / (and reuse for
+// GET /index.html via NotFoundFallback).
+func Index(dist fs.FS) http.Handler {
+	body, err := fs.ReadFile(dist, "index.html")
+	return secheaders.Document(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache")
+		_, _ = w.Write(body)
+	}))
+}
 
-	serveAsset := func(w http.ResponseWriter, r *http.Request) {
-		// Trim the leading slash for fs.FS.
-		name := strings.TrimPrefix(r.URL.Path, "/")
+// Asset returns a handler that serves dist/<path-after-prefix>. The
+// chi route must be GET /assets/* so the wildcard segment is
+// available via chi.URLParam(r, "*"). Missing files return 404 with
+// no Document headers but still flow through whatever middleware
+// chain the caller has mounted (e.g. global Nosniff).
+func Asset(dist fs.FS) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sub := chi.URLParam(r, "*")
+		name := path.Join("assets", sub)
 		data, err := fs.ReadFile(dist, name)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
@@ -88,41 +105,30 @@ func New(dist fs.FS, inner http.Handler) http.Handler {
 		}
 		ct := contentTypeFor(name)
 		w.Header().Set("Content-Type", ct)
-		assetWrap(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			// Asset bytes come from the embedded dist FS — daemon's
-			// own build output, not user input — and the only path
-			// component is r.URL.Path inside the /assets/ namespace.
-			// G705 (taint) is a false positive here: data is bytes
-			// from go:embed, content-type is derived from the embed
-			// filename, no header reflection.
+		secheaders.Asset(ct, true)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			// Asset bytes are go:embed'd output of the daemon's own
+			// dashboard build, not user input. Content-Type is
+			// derived from the embed file name. G705 (taint) is a
+			// false positive on this controlled flow.
 			//#nosec G705
 			_, _ = w.Write(data)
-		}), ct).ServeHTTP(w, r)
-	}
-
-	serveIndex := func(w http.ResponseWriter, r *http.Request) {
-		if indexErr != nil {
-			http.NotFound(w, r)
-			return
-		}
-		documentWrap(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Header().Set("Cache-Control", "no-cache")
-			_, _ = w.Write(indexFile)
 		})).ServeHTTP(w, r)
-	}
+	})
+}
 
+// NotFoundFallback returns a handler suitable for chi.Router.NotFound.
+// Extensionless dashboard deep links (e.g. /overview, /sessions/abc)
+// serve dist/index.html through Index; everything else (missing
+// asset, unknown extension, non-GET, reserved prefix) delegates to
+// fallback so the original problem+json 404 still wins.
+func NotFoundFallback(dist fs.FS, fallback http.Handler) http.Handler {
+	index := Index(dist)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Reserved namespaces and non-GET always delegate.
-		if r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/assets/") {
-			serveAsset(w, r)
-			return
-		}
 		if IsHTMLFallback(r.Method, r.URL.Path) {
-			serveIndex(w, r)
+			index.ServeHTTP(w, r)
 			return
 		}
-		inner.ServeHTTP(w, r)
+		fallback.ServeHTTP(w, r)
 	})
 }
 

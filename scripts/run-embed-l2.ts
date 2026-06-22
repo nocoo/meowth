@@ -106,13 +106,19 @@ async function main(): Promise<void> {
   step(`daemon listening at ${addr}`);
   const base = `http://${addr}`;
 
-  // GET / — index.html + CSP
-  step('GET / expects 200 text/html + CSP');
+  // GET / — index.html + CSP + nosniff + request-id (middleware chain)
+  step('GET / expects 200 text/html + CSP + nosniff + request-id');
   const rootRes = await fetch(`${base}/`);
   if (rootRes.status !== 200) fail(`GET / status = ${rootRes.status}`);
   const ct = rootRes.headers.get('content-type') ?? '';
   if (!ct.startsWith('text/html')) fail(`GET / content-type = ${ct}`);
   if (!rootRes.headers.get('content-security-policy')) fail('GET / missing CSP header');
+  if (rootRes.headers.get('x-content-type-options') !== 'nosniff') {
+    fail('GET / missing nosniff');
+  }
+  if (!rootRes.headers.get('x-request-id')) {
+    fail('GET / missing X-Request-Id (middleware chain bypass?)');
+  }
   const rootBody = await rootRes.text();
   if (!rootBody.includes('<!doctype html>') && !rootBody.includes('<!DOCTYPE html>')) {
     fail('GET / body did not look like dashboard index.html');
@@ -127,6 +133,19 @@ async function main(): Promise<void> {
   if (assetRes.status !== 200) fail(`GET ${assetPath} status = ${assetRes.status}`);
   const cache = assetRes.headers.get('cache-control') ?? '';
   if (!cache.includes('immutable')) fail(`GET ${assetPath} cache-control = ${cache}`);
+  if (assetRes.headers.get('x-content-type-options') !== 'nosniff') {
+    fail(`GET ${assetPath} missing nosniff`);
+  }
+
+  // GET /assets/missing.js — asset miss must still carry nosniff and no SPA leak.
+  step('GET /assets/missing.js expects 404 + nosniff, no SPA body');
+  const missAssetRes = await fetch(`${base}/assets/this-does-not-exist.js`);
+  if (missAssetRes.status !== 404) fail(`asset miss status = ${missAssetRes.status}`);
+  if (missAssetRes.headers.get('x-content-type-options') !== 'nosniff') {
+    fail('asset miss missing nosniff');
+  }
+  const missAssetBody = await missAssetRes.text();
+  if (missAssetBody.includes('<html')) fail('asset miss leaked index.html');
 
   // GET /v1/agents — reserved; no bearer → 401 problem+json
   step('GET /v1/agents expects 401 problem+json (no bearer)');
