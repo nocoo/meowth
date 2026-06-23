@@ -155,7 +155,11 @@ type Backend interface {
   - `GET  /healthz` — 免认证
   - `GET  /` 与静态资源 — 免认证（dashboard 静态文件，由 daemon embed）
   - `POST /bootstrap/mint` — **受 §7.8 全部硬约束保护**（mode-gated + loopback + setup_nonce.hash + 高熵 setup-code + one-shot + 速率锁定）。实现必须以 §7.8 为准，**不要按本摘要简化**
-- **绑定**：默认 `127.0.0.1:7777`；监听其他地址需走 §7.7 远程访问规则
+- **绑定**：默认 `127.0.0.1:7040`；监听其他地址需走 §7.7 远程访问规则
+- **本机 Caddy 反代**（Hexly 域名体系，详 [`docs/features/01-port-migration-to-hexly-caddy.md`](features/01-port-migration-to-hexly-caddy.md)）：
+  - `https://meowth.dev.hexly.ai` → daemon `7040`（prod + dev 日常 API/UI 入口）
+  - `https://meowth-vite.dev.hexly.ai` → Vite dev `37040`（dev-only）
+  - **mint 不走 Caddy**：必须 `http://127.0.0.1:7040/setup` 直连（§7.8 同源门）
 
 ### 7.4 数据与本机目录
 
@@ -204,7 +208,7 @@ CREATE INDEX idx_tokens_active ON tokens(revoked_at) WHERE revoked_at IS NULL;
 
 - **栈**：Vite + React 19 + React Router 7 + Tailwind v4 + basalt 设计系统
 - **形态明确（不是 Electron / 不是 Tauri / 不是 Node CLI）**：纯静态产物（`vite build` 出来一坨 HTML+JS+CSS），由 **daemon 自己挂在 `GET /` 下提供**（embed via `go:embed`）。dashboard 因此可以同源调用 daemon，**不需要 CORS**
-  - 实现细节：daemon 启动时把 `apps/dashboard/dist` 作为 `embed.FS` 挂在 root；dev 模式下走 Vite dev server (`5173`) + Vite proxy（`/v1/*` 与 `/healthz` 转发到 `127.0.0.1:7777`）
+  - 实现细节：daemon 启动时把 `apps/dashboard/dist` 作为 `embed.FS` 挂在 root；dev 模式下走 Vite dev server (`37040`) + Vite proxy（`/v1/*` 与 `/healthz` 转发到 `127.0.0.1:7040`）
 - **能力边界（硬约束）**：
   - ❌ 浏览器不能读 UNIX socket
   - ❌ 浏览器不能写 `~/.meowth/` 或 `~/Library/Application Support/`
@@ -244,12 +248,12 @@ Meowth 是「本机 agent 桥」，但目标包含「外部服务远程调度」
 
 | 方式 | 形态 | 适用 |
 |------|------|------|
-| **A. Tailscale** | daemon bind `100.x.x.x:7777`（Tailnet IP），ACL 限 device tag | 推荐默认；零运维 |
-| **B. SSH tunnel** | daemon bind `127.0.0.1:7777`，远端 `ssh -L 7777:127.0.0.1:7777 mac` | 单连接、低频调用 |
-| **C. HTTPS 反代** | 前面挂 Caddy / Cloudflare Tunnel，反代到 `127.0.0.1:7777` | 多端常驻 |
+| **A. Tailscale** | daemon bind `100.x.x.x:7040`（Tailnet IP），ACL 限 device tag | 推荐默认；零运维 |
+| **B. SSH tunnel** | daemon bind `127.0.0.1:7040`，远端 `ssh -L 7040:127.0.0.1:7040 mac` | 单连接、低频调用 |
+| **C. HTTPS 反代** | 前面挂 Caddy / Cloudflare Tunnel，反代到 `127.0.0.1:7040` | 多端常驻 |
 
 **显式禁止**：
-- ❌ 裸 `0.0.0.0:7777` 直接面对公网
+- ❌ 裸 `0.0.0.0:7040` 直接面对公网
 - ❌ daemon 自签或 ACME TLS（认证职责不进 daemon）
 - ❌ 把 token 作为 query string 传（`?token=xxx`）；只允许 `Authorization` header
 

@@ -153,9 +153,9 @@ v1 默认走方案 A（更可控；不依赖 OS 行为细节）。具体由 Phas
 
 #### 3.4.1 `dashboardDevFixture`（Vite proxy）
 
-- daemon 起在 `127.0.0.1:7777`（fake backend）
-- `pnpm --filter @meowth/dashboard dev` 在 `5173`
-- Playwright 访问 `http://localhost:5173/`
+- daemon 起在 `127.0.0.1:7040`（fake backend）
+- `pnpm --filter @meowth/dashboard dev` 在 `37040`
+- Playwright 访问 `http://meowth-vite.dev.hexly.ai/`
 - 覆盖：手输 token 路径（[`06`](06-dashboard-mvvm-and-basalt.md) §11 (a)）、401 redirect（[`06`](06-dashboard-mvvm-and-basalt.md) §11 (c)）、agent exec / cancel / session messages follow（v1 endpoints via Vite proxy）
 - **不**覆盖 mint 路径 B（[`06`](06-dashboard-mvvm-and-basalt.md) §3.4 / [`07`](07-dashboard-security-csp-and-xss.md) §4.4）
 - **不**覆盖 CSP header 断言（Vite dev 不注入 production CSP；[`07`](07-dashboard-security-csp-and-xss.md) §4.4）
@@ -164,8 +164,8 @@ v1 默认走方案 A（更可控；不依赖 OS 行为细节）。具体由 Phas
 
 - 跑 `pnpm --filter @meowth/dashboard build` → 产 `apps/dashboard/dist`
 - 跑 `go build -o bin/meowthd ./daemon/cmd/meowthd`（或根脚本 `pnpm daemon:build`，详 §3.3 流程 step 1）— daemon embed `apps/dashboard/dist`
-- daemon 起在 `127.0.0.1:7777`（fake backend）
-- Playwright 访问 `http://127.0.0.1:7777/`（same-origin）
+- daemon 起在 `127.0.0.1:7040`（fake backend）
+- Playwright 访问 `http://127.0.0.1:7040/`（same-origin）
 - 覆盖：mint 路径 B（[`06`](06-dashboard-mvvm-and-basalt.md) §11 (b)）、CSP / security headers 全套断言（[`07`](07-dashboard-security-csp-and-xss.md) §11 L3 a/b/c）、XSS payload 显示为转义、Tokens secret modal happy path
 - 这套 fixture 是 release 前的最终守门员
 

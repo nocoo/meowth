@@ -42,7 +42,7 @@
 [remote_access]
 mode             = "local"           # "local" | "tailscale" | "ssh_tunnel" | "https_proxy"
 bind_addr        = "127.0.0.1"       # IP literal or "localhost"; no CIDR, no port, no wildcard
-bind_port        = 7777               # TCP port; default 7777
+bind_port        = 7040               # TCP port; default 7040
 acknowledged_by  = ""                 # required when mode != "local"
 ```
 
@@ -52,7 +52,7 @@ acknowledged_by  = ""                 # required when mode != "local"
 |------|------|------|------|
 | `mode` | string | `"local"` | enum 之一；其它值拒绝启动；缺失字段（块存在）→ 诊断 D0 |
 | `bind_addr` | string | `"127.0.0.1"` | IP literal（`127.0.0.1` / `::1` / `100.64.x.y` 等）或字符串 `"localhost"`；详 §2.3 normalize 规则；缺失字段（块存在）→ 诊断 D0 |
-| `bind_port` | int | `7777` | 1..65535；端口**仅**来自此字段，不允许在 `bind_addr` 里拼接；缺失字段（块存在）→ 诊断 D0 |
+| `bind_port` | int | `7040` | 1..65535；端口**仅**来自此字段，不允许在 `bind_addr` 里拼接；缺失字段（块存在）→ 诊断 D0 |
 | `acknowledged_by` | string | `""` | 非空人类标签（用户名 / 团队 / 备注）；不是 secret；进诊断日志；**仅** `mode != "local"` 时必填且非空 |
 
 **字段存在性的硬规则**：
@@ -71,7 +71,7 @@ acknowledged_by  = ""                 # required when mode != "local"
 [remote_access]
 mode      = "local"
 bind_addr = "127.0.0.1"
-bind_port = 7777
+bind_port = 7040
 acknowledged_by = ""
 ```
 
@@ -90,7 +90,7 @@ config 字段允许写：
 - `"0.0.0.0"` / `"::"`（wildcard，本文档明令禁止）
 - 空字符串
 - 带 CIDR 后缀：`"127.0.0.1/8"`
-- 带端口：`"127.0.0.1:7777"` / `"[::1]:7777"`（端口只能来自 `bind_port`）
+- 带端口：`"127.0.0.1:7040"` / `"[::1]:7040"`（端口只能来自 `bind_port`）
 - 非 IP / 非 `"localhost"` 的任意字符串（`"meowth.local"`、`"my-mac"` 等）
 
 **实现要点**：
@@ -103,8 +103,8 @@ config 字段允许写：
 
 `mode = "local"` **不**等于"daemon 不可被远程访问"。daemon 自身只 bind loopback，但用户可以在 daemon 外部跑：
 
-- SSH tunnel：`ssh -L 7777:127.0.0.1:7777 mac`，远端通过 SSH 转发 → 触达本机 loopback
-- HTTPS reverse proxy：Caddy / Cloudflare Tunnel 配置 upstream `127.0.0.1:7777`，公网通过反代 → 触达本机 loopback
+- SSH tunnel：`ssh -L 7040:127.0.0.1:7040 mac`，远端通过 SSH 转发 → 触达本机 loopback
+- HTTPS reverse proxy：Caddy / Cloudflare Tunnel 配置 upstream `127.0.0.1:7040`，公网通过反代 → 触达本机 loopback
 - 任何其它本机进程把外部流量转成 loopback 请求
 
 如果用户**意图**让远程客户端访问 daemon，必须按真实暴露方式把 `mode` 设为 `ssh_tunnel` / `https_proxy` / `tailscale`，**即使 daemon 仍 bind loopback**。这是因为：
@@ -260,7 +260,7 @@ meowthd: startup failed — remote_access validation
             [remote_access]
             mode      = "local"
             bind_addr = "127.0.0.1"
-            bind_port = 7777
+            bind_port = 7040
           (or remove the entire [remote_access] block to fall back to defaults)
 ```
 
@@ -294,7 +294,7 @@ meowthd: startup failed — remote_access validation
 
 ```
   reason: bind_port <value> out of range (must be 1..65535)
-  fix:    set bind_port to 7777 (default) or a free TCP port on this host
+  fix:    set bind_port to 7040 (default) or a free TCP port on this host
           vim ~/.meowth/config.toml
 ```
 
@@ -384,11 +384,11 @@ tailscale ip
 [remote_access]
 mode            = "tailscale"
 bind_addr       = "100.64.10.20"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = "alice@laptop"
 ```
 
-启 daemon：`meowthd start`。远端有 Tailscale 的机器可访问 `http://100.64.10.20:7777/`。ACL 在 Tailscale admin console 控制；建议给本机 device 加 `tag:meowth-server`，并限制可访问的 source tag。
+启 daemon：`meowthd start`。远端有 Tailscale 的机器可访问 `http://100.64.10.20:7040/`。ACL 在 Tailscale admin console 控制；建议给本机 device 加 `tag:meowth-server`，并限制可访问的 source tag。
 
 ### 8.2 SSH tunnel
 
@@ -398,15 +398,15 @@ acknowledged_by = "alice@laptop"
 [remote_access]
 mode            = "ssh_tunnel"
 bind_addr       = "127.0.0.1"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = "alice@laptop"
 ```
 
 启 daemon。远端机器：
 
 ```bash
-ssh -N -L 7777:127.0.0.1:7777 alice@mac.local
-# 远端访问 http://127.0.0.1:7777/
+ssh -N -L 7040:127.0.0.1:7040 alice@mac.local
+# 远端访问 http://127.0.0.1:7040/
 ```
 
 ### 8.3 HTTPS reverse proxy（Caddy）
@@ -417,7 +417,7 @@ ssh -N -L 7777:127.0.0.1:7777 alice@mac.local
 [remote_access]
 mode            = "https_proxy"
 bind_addr       = "127.0.0.1"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = "alice@laptop"
 ```
 
@@ -425,7 +425,7 @@ acknowledged_by = "alice@laptop"
 
 ```
 meowth.example.com {
-    reverse_proxy 127.0.0.1:7777
+    reverse_proxy 127.0.0.1:7040
 }
 ```
 
@@ -441,7 +441,7 @@ credentials-file: <path>
 
 ingress:
   - hostname: meowth.example.com
-    service: http://127.0.0.1:7777
+    service: http://127.0.0.1:7040
   - service: http_status:404
 ```
 
@@ -453,7 +453,7 @@ ingress:
 
 直接来自 [`docs/01-project-overview.md`](../01-project-overview.md) §7.7，本节作为权威落地：
 
-- ❌ 裸 `0.0.0.0:7777` / `[::]:7777` 直接面对公网（任何 mode 都拒绝 wildcard）
+- ❌ 裸 `0.0.0.0:7040` / `[::]:7040` 直接面对公网（任何 mode 都拒绝 wildcard）
 - ❌ daemon 内置 TLS（自签或 ACME）——证书职责不进 daemon；让 Caddy / Cloudflare Tunnel / 反代终止 TLS
 - ❌ 把 token 作为 query string 传（`?token=xxx`）；只允许 `Authorization: Bearer ...` header（[`02`](02-daemon-http-protocol.md) §2.2 已明文）
 - ❌ remote mode 启用 daemon CORS（[`02`](02-daemon-http-protocol.md) §2.4 已明文 production zero-CORS；remote mode **不**改变这一策略）

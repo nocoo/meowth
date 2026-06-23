@@ -75,7 +75,7 @@
 6. **stdout 单次打印**：
    ```
    <secret 字面量>
-   Dashboard: http://127.0.0.1:7777
+   Dashboard: http://127.0.0.1:7040
    把上面的 token 粘贴到 dashboard 的 token 输入框。
    token 只显示这一次，请立即保存。
    ```
@@ -105,7 +105,7 @@
 6. **stdout 单次打印明文 setup-code**：
    ```
    <setup-code 字面量>
-   Dashboard: http://127.0.0.1:7777
+   Dashboard: http://127.0.0.1:7040
    在 dashboard /setup 页面输入上面的 setup-code 完成首个 token mint。
    setup-code 只显示这一次，请立即保存（脚本化部署可重定向到密钥库）。
    ```
@@ -328,7 +328,7 @@ if ip == nil || (!ip.IsLoopback() && !isIPv4MappedLoopback(ip)) {
 
 ### 6.6 浏览器来源门（防 drive-by lockout）
 
-loopback 检查（§6.2）能挡住远程网络流量，但**挡不住**用户浏览器上其它网页向 `http://127.0.0.1:7777/bootstrap/mint` 发 POST：即使攻击者读不到响应（CORS 不返回），用 malformed body 连打 5 次也能触发 lockout（§7），达成 drive-by **DoS**（让合法 mint 不可用）。
+loopback 检查（§6.2）能挡住远程网络流量，但**挡不住**用户浏览器上其它网页向 `http://127.0.0.1:7040/bootstrap/mint` 发 POST：即使攻击者读不到响应（CORS 不返回），用 malformed body 连打 5 次也能触发 lockout（§7），达成 drive-by **DoS**（让合法 mint 不可用）。
 
 mint endpoint handler 在 §6.2 loopback 检查**之后**追加**浏览器来源门**（这是 bootstrap endpoint 自身的 CSRF / drive-by lockout 防护，**不属于** 07 dashboard XSS/CSP 范畴）：
 
@@ -343,7 +343,7 @@ if fetchSite == "cross-site" || fetchSite == "same-site" {
 
 // Origin 必须缺失（非浏览器客户端如 curl）或等于 daemon 同源
 if origin != "" {
-    expectedOrigin := "http://" + r.Host // r.Host = "127.0.0.1:7777" 等
+    expectedOrigin := "http://" + r.Host // r.Host = "127.0.0.1:7040" 等
     if origin != expectedOrigin {
         return notFound(w) // 统一 404 外观
     }
@@ -358,7 +358,19 @@ if origin != "" {
 - **失败外观与计数**：上述门失败统一走 §6.5 的 404 外观；**不**计入 §7 FailureCount（攻击者通过来源门外触发的请求不应能消耗合法用户的 5 次预算）；**不**抖动（避免让 drive-by 攻击者通过时序探测能力）
 - 通过来源门的请求才进入 setup-code 解析与 argon2 比对路径（§6.3 step 1–5）
 
-dashboard 自己的 mint 调用（路径 B 用户在 `/setup` 输 setup-code）由 daemon 同源（`http://127.0.0.1:7777` embed 出来的页面）发起，`Origin: http://127.0.0.1:7777` + `Sec-Fetch-Site: same-origin`，通过来源门毫无影响。
+dashboard 自己的 mint 调用（路径 B 用户在 `/setup` 输 setup-code）由 daemon 同源（`http://127.0.0.1:7040` embed 出来的页面）发起，`Origin: http://127.0.0.1:7040` + `Sec-Fetch-Site: same-origin`，通过来源门毫无影响。
+
+#### 6.6.1 Caddy 反代 / `meowth.dev.hexly.ai` 入口的 mint 行为
+
+本机 Caddy 把 `https://meowth.dev.hexly.ai` 反代到 daemon `127.0.0.1:7040`（详 [`docs/features/01-port-migration-to-hexly-caddy.md`](../features/01-port-migration-to-hexly-caddy.md) §2.3）。从 Caddy HTTPS 入口加载的 dashboard，浏览器发出的 `Origin` 是 `https://meowth.dev.hexly.ai`，daemon 端 `r.Host` 取决于 Caddy 是否改写 Host header（默认透传 = `meowth.dev.hexly.ai`），`expected := "http://" + r.Host` 与 `Origin` 的 scheme/host 比对**必然不匹配** → §6.5 统一 404。
+
+这是设计意图，**不修复**：
+
+- daemon 不读 `X-Forwarded-Proto` / `Forwarded`（§6.2 已明令禁止信任 proxy 头），origin gate 故意只接受同源 loopback，避免攻击者借代理头伪造
+- 用户从 `https://meowth.dev.hexly.ai/setup` 访问时，dashboard `useSetupViewModel` 必须检测当前 `window.location.origin` 是否为 HTTP loopback（`http://127.0.0.1:*`、`http://localhost:*`、`http://[::1]:*`）；非 loopback origin（含 Caddy HTTPS）一律 disable 提交按钮 + 显示提示「Mint must be reached at http://127.0.0.1:7040/setup」
+- mint 路径 B 在 Caddy 时代的唯一正确触达方式：**直连 daemon loopback** `http://127.0.0.1:7040/setup`
+
+dashboard 端的 origin 检测细节见 [`06`](06-dashboard-mvvm-and-basalt.md) §3.4。
 
 ### 6.7 关于 `name`
 

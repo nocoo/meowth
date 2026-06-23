@@ -198,10 +198,10 @@ export default defineConfig({
     alias: { '@': path.resolve(__dirname, './src') }, // §3.1a
   },
   server: {
-    port: 5173,
+    port: 37040,
     proxy: {
-      '/v1':      { target: 'http://127.0.0.1:7777', changeOrigin: false },
-      '/healthz': { target: 'http://127.0.0.1:7777', changeOrigin: false },
+      '/v1':      { target: 'http://127.0.0.1:7040', changeOrigin: false },
+      '/healthz': { target: 'http://127.0.0.1:7040', changeOrigin: false },
       // /bootstrap/* 不 proxy（与 04 §6.6 浏览器来源门冲突；详 §3.4）
     },
   },
@@ -210,7 +210,7 @@ export default defineConfig({
 
 **dev proxy 与 production zero-CORS 的边界**：
 
-- dev 模式下 dashboard 跑 Vite dev server `:5173`，Vite 把 **`/v1/*` 与 `/healthz`** 转发到 daemon `127.0.0.1:7777`。dashboard 与 daemon 在浏览器侧**同源**（都通过 Vite dev server），daemon 不需要返回任何 CORS header
+- dev 模式下 dashboard 跑 Vite dev server `:37040`，Vite 把 **`/v1/*` 与 `/healthz`** 转发到 daemon `127.0.0.1:7040`。dashboard 与 daemon 在浏览器侧**同源**（都通过 Vite dev server），daemon 不需要返回任何 CORS header
 - **`/bootstrap/*` 不由 Vite proxy 接管**——理由与方案详 §3.4
 - 生产模式下 dashboard 由 daemon `go:embed` 同源提供（[`02`](02-daemon-http-protocol.md) §3）；同源所以 daemon **不**返回 `Access-Control-Allow-Origin`
 - **任何 mode**（含 [`05`](05-remote-access-modes.md) 的 tailscale / ssh_tunnel / https_proxy）都不能让 daemon 在生产打开 CORS——`Vite proxy` 是 dev-only 的工程便利，与 [`02`](02-daemon-http-protocol.md) §2.4 production zero-CORS 一致
@@ -227,13 +227,13 @@ basalt 的 token 全文以 `@theme` 形式存在于 `src/index.css`，由 §4.1 
 
 ### 3.4 dev proxy **不**覆盖 `/bootstrap/*`
 
-[`04`](04-bootstrap-and-first-run-mint.md) §6.6 浏览器来源门要求 `POST /bootstrap/mint` 请求的 `Origin` header 必须**精确等于** `http://` + daemon `r.Host`。Vite dev server 在 `http://localhost:5173` 跑，浏览器发的请求 `Origin: http://localhost:5173`；即使 Vite proxy 把 path 转到 daemon `127.0.0.1:7777`，daemon 看到的 `Origin` 仍是 `http://localhost:5173`，不匹配 `http://127.0.0.1:7777` → 04 §6.6 判定 cross-site → 统一 404。dev 下 `/setup` mint 表单因此会**假失败**。
+[`04`](04-bootstrap-and-first-run-mint.md) §6.6 浏览器来源门要求 `POST /bootstrap/mint` 请求的 `Origin` header 必须**精确等于** `http://` + daemon `r.Host`。Vite dev server 在 `http://meowth-vite.dev.hexly.ai` 跑，浏览器发的请求 `Origin: http://meowth-vite.dev.hexly.ai`；即使 Vite proxy 把 path 转到 daemon `127.0.0.1:7040`，daemon 看到的 `Origin` 仍是 `http://meowth-vite.dev.hexly.ai`，不匹配 `http://127.0.0.1:7040` → 04 §6.6 判定 cross-site → 统一 404。dev 下 `/setup` mint 表单因此会**假失败**。
 
 v1 选定方案（**不**修改 04 安全边界）：
 
 - **dev proxy 不接管 `/bootstrap/*`**（§3.2 已落实）
-- dev 下 `/setup` mint 表单**仍渲染**（同一份 page 代码，方便 UI 开发），但**提交按钮被 disabled**——`useSetupViewModel` 检测到当前 `window.location.origin !== daemon_same_origin`（dev 下 origin = `http://localhost:5173`，不是 daemon），把 submit 按钮置灰，旁边显示文案「Mint via dashboard is only available in the production build」；用户不能从 dev 下点出 POST 请求，因此 daemon 端不会收到任何 cross-site mint 尝试
-- mint L3 测试因此只在"production embed 形态"下跑（Phase 3.20 / 3.21 用 daemon embed dashboard dist 后通过 same-origin 触达）；dev 下 mint 行为 = "按钮 disabled + 文案" 即视为正确
+- dev 下 `/setup` mint 表单**仍渲染**（同一份 page 代码，方便 UI 开发），但**提交按钮按"是否 HTTP loopback origin"判定**——`useSetupViewModel` 检测当前 `window.location.origin`：HTTP loopback（`http://127.0.0.1:*`、`http://localhost:*`、`http://[::1]:*`）放行（mint 路径 B 真实跑在 daemon `http://127.0.0.1:7040`，e2e `dashboard-embed-mint` 也跑在 `http://127.0.0.1:17041`，都属 loopback），其它任何 origin（如 `http://meowth-vite.dev.hexly.ai`、Caddy HTTPS `https://meowth.dev.hexly.ai`）一律 disabled，旁边显示文案「Mint must be reached at http://127.0.0.1:7040/setup (not via Caddy HTTPS; localhost may resolve to IPv6 — prefer 127.0.0.1)」。这条规则同时保护 Caddy HTTPS 入口：浏览器从 `https://meowth.dev.hexly.ai/setup` 访问时表单不可点
+- mint L3 测试因此只在"production embed 形态"下跑（Phase 3.20 / 3.21 用 daemon embed dashboard dist 后通过 same-origin 触达 `http://127.0.0.1:17041`）；dev 下 mint 行为 = "按钮 disabled + 文案" 即视为正确
 - L2 层面对 mint endpoint 的 wire 测试由 daemon 侧 curl-level harness 覆盖（[`08`](08-6dq-hooks-wiring.md)），不在 dashboard 测试范围
 
 后续若要让 Vite dev 也支持 mint：需要先在 04 §6.6 显式允许 Vite dev origin（修改安全边界，单独立项）；本文档不在 v1 走该路径。
@@ -665,7 +665,7 @@ export function clearStoredToken(): void { localStorage.removeItem(KEY); }
 
 - mint 表单的 404 响应**不区分**原因（[`04`](04-bootstrap-and-first-run-mint.md) §6.5）；dashboard 也**不**尝试根据 404 推断 daemon 状态（如 "remote mode" / "lockout" / "hash missing"）。统一文案，把进一步诊断留给 daemon 日志
 - dashboard **不**做任何 unauthenticated daemon state introspection（无 ping 状态 endpoint、无 `GET /bootstrap/status`、无 first-run probe）；§9 决策树**只**用受保护 `/v1/agents` 的 200/401 + mint 端点的 200/404 这两条线索
-- **dev 模式下 mint 表单不承诺工作**（§3.4 已说明）：[`04`](04-bootstrap-and-first-run-mint.md) §6.6 浏览器来源门要求 `Origin` 等于 daemon `Host`，dev 下 Vite dev server `localhost:5173` 与 daemon `127.0.0.1:7777` 不同源；`useSetupViewModel` 检测到 `window.location.origin` 非 daemon 同源时，mint 表单 submit 按钮 **disabled** 且显示提示「Mint via dashboard is only available in the production build」；按钮 disabled = 不发出 cross-site POST。手输入框（路径 A）不受影响
+- **dev 模式下 mint 表单不承诺工作**（§3.4 已说明）：[`04`](04-bootstrap-and-first-run-mint.md) §6.6 浏览器来源门要求 `Origin` 等于 daemon `Host`，dev 下 Vite dev server `meowth-vite.dev.hexly.ai` 与 daemon `127.0.0.1:7040` 不同源；`useSetupViewModel` 检测到 `window.location.origin` 非 HTTP loopback 时（含 Caddy HTTPS 入口 `https://meowth.dev.hexly.ai`），mint 表单 submit 按钮 **disabled** 且显示提示「Mint must be reached at http://127.0.0.1:7040/setup」；按钮 disabled = 不发出 cross-site POST。HTTP loopback origin（含 e2e 的 17041 fixture）放行
 
 ### 9.3 setup 路由守卫不能循环
 
@@ -711,7 +711,7 @@ App boot:
 | 层 | 覆盖什么 |
 |----|---------|
 | **L1** | viewmodels：useXxxViewModel hook 单测（mock model 函数返回值，断言 hook 返回 state）；models：fetch wrapper 测（mock `fetch`，断言 Authorization header / problem+json 解码）；envelope decoder：NDJSON 多行解析 / heartbeat 占 seq / usage replace 语义；§6.2 import-boundary 静态约束（dependency-cruiser run 或 import-boundary test）；§9 setup 决策树纯逻辑（mock fetch 200/401/404） |
-| **L3** | Playwright：(a) 手输 token 路径（dev or production embed）：mock daemon 返回 token → dashboard 跳 /overview → 列 5 agent → 创 token → 调 fake agent exec → 看消息；(b) **mint 路径必须走 production embed 形态**（[`§3.4`](#34-dev-proxy-不覆盖-bootstrap)）：跑 `daemon` + 通过 daemon 同源 origin `http://127.0.0.1:7777/setup` → mint 表单 → POST mint → 拿 secret → 跳 /overview；dev 模式 mint 表单显示禁用提示，不算回归；(c) 401 重定向：手工清 localStorage token → 任意页面访问 → redirect /setup |
+| **L3** | Playwright：(a) 手输 token 路径（dev or production embed）：mock daemon 返回 token → dashboard 跳 /overview → 列 5 agent → 创 token → 调 fake agent exec → 看消息；(b) **mint 路径必须走 production embed 形态**（[`§3.4`](#34-dev-proxy-不覆盖-bootstrap)）：跑 `daemon` + 通过 daemon 同源 origin `http://127.0.0.1:7040/setup` → mint 表单 → POST mint → 拿 secret → 跳 /overview；dev 模式 mint 表单显示禁用提示，不算回归；(c) 401 重定向：手工清 localStorage token → 任意页面访问 → redirect /setup |
 
 ---
 
