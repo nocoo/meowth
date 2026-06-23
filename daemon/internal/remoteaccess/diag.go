@@ -108,7 +108,7 @@ func errD0Missing(field string) *StartupError {
 			"  [remote_access]\n" +
 			"  mode      = \"local\"\n" +
 			"  bind_addr = \"127.0.0.1\"\n" +
-			"  bind_port = 7777\n" +
+			"  bind_port = 7040\n" +
 			"(or remove the entire [remote_access] block to fall back to defaults)",
 		Section: "§2.1 / §5 step 1a",
 	}
@@ -158,7 +158,7 @@ func errD4BadPort(value int64) *StartupError {
 		Field:   "bind_port",
 		Value:   fmt.Sprintf("%d", value),
 		Reason:  fmt.Sprintf("bind_port %d out of range (must be 1..65535)", value),
-		Fix:     "set bind_port to 7777 (default) or a free TCP port on this host\nvim ~/.meowth/config.toml",
+		Fix:     "set bind_port to 7040 (default) or a free TCP port on this host\nvim ~/.meowth/config.toml",
 		Section: "§2.1 / §5 step 5",
 	}
 }

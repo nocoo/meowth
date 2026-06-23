@@ -259,7 +259,7 @@ func (s *Server) Serve(ctx context.Context, listener net.Listener, listenerReady
 }
 
 // Listen is a thin convenience that resolves and binds addr (typically
-// "127.0.0.1:7777" or "127.0.0.1:0" for OS-allocated). Tests use it to
+// "127.0.0.1:7040" or "127.0.0.1:0" for OS-allocated). Tests use it to
 // get a *net.Listener whose Addr() reflects the actually-bound port.
 func Listen(addr string) (net.Listener, error) {
 	if addr == "" {

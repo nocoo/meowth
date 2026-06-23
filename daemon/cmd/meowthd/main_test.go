@@ -153,7 +153,7 @@ func TestBootstrapTokenSucceedsOnInitializedHome(t *testing.T) {
 	if !strings.Contains(stdout, "Emergency bootstrap") {
 		t.Fatalf("stdout missing banner: %q", stdout)
 	}
-	if !strings.Contains(stdout, "http://127.0.0.1:7777") {
+	if !strings.Contains(stdout, "http://127.0.0.1:7040") {
 		t.Fatalf("stdout missing Dashboard URL: %q", stdout)
 	}
 }
@@ -234,7 +234,7 @@ func TestServeRejectsListenAddrInProduction(t *testing.T) {
 // TestServeListenAddrTestModeRejectsBadHost covers the override
 // host allow-set (127.0.0.1 / ::1 only).
 func TestServeListenAddrTestModeRejectsBadHost(t *testing.T) {
-	_, stderr, code := serveRunMeowthd(t, []string{"MEOWTH_TEST=1"}, "serve", "--listen-addr=0.0.0.0:7777")
+	_, stderr, code := serveRunMeowthd(t, []string{"MEOWTH_TEST=1"}, "serve", "--listen-addr=0.0.0.0:7040")
 	if code == 0 {
 		t.Fatal("serve --listen-addr=0.0.0.0: want failure")
 	}

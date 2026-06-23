@@ -27,7 +27,7 @@ info:
       - /bootstrap/mint — docs/architecture/04 §1
 
 servers:
-  - url: http://127.0.0.1:7777
+  - url: http://127.0.0.1:7040
     description: default local bind
 
 paths:

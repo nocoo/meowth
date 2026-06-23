@@ -56,7 +56,7 @@ const MaxConfigSize = 64 * 1024
 // §2.2 "block missing → equivalent to full local default" values.
 var (
 	DefaultBindAddr        = netip.MustParseAddr("127.0.0.1")
-	DefaultBindPort uint16 = 7777
+	DefaultBindPort uint16 = 7040
 )
 
 // tsV4 / tsV6 are the Tailscale prefixes per docs/architecture/05 §4.
@@ -283,7 +283,7 @@ func parseBindAddr(raw string) (netip.Addr, error) {
 	}
 	// AddrPort succeeds when "host:port" is given. We only accept
 	// bare addresses here; if AddrPort succeeds we know a port was
-	// embedded. ParseAddrPort accepts "[::1]:7777" too, so this
+	// embedded. ParseAddrPort accepts "[::1]:7040" too, so this
 	// catches IPv6+port.
 	if _, err := netip.ParseAddrPort(v); err == nil {
 		return netip.Addr{}, errD3(raw, "has_port")

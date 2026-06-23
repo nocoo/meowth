@@ -40,7 +40,7 @@ const DefaultName = "emergency bootstrap"
 // const (rather than imported) to avoid a cross-cmd dependency on a
 // peer subcommand. docs/architecture/04 §8.2 step 5 requires the
 // stdout banner advertise it alongside the secret.
-const DashboardURL = "http://127.0.0.1:7777"
+const DashboardURL = "http://127.0.0.1:7040"
 
 // Run executes the bootstrap-token CLI end-to-end. The home must
 // already exist (and own a meowth-managed DB); a missing home or

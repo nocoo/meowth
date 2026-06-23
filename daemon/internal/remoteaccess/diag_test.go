@@ -10,13 +10,13 @@ import (
 // envelope (header + state / reason / fix / doc) is rendered for
 // any *StartupError input.
 func TestFormatStartupFailureHasThreeSections(t *testing.T) {
-	out := FormatStartupFailure(State{Mode: "tailscale", BindAddr: "100.64.10.20", BindPort: "7777", AcknowledgedBy: ""}, errD2MissingAck("tailscale"))
+	out := FormatStartupFailure(State{Mode: "tailscale", BindAddr: "100.64.10.20", BindPort: "7040", AcknowledgedBy: ""}, errD2MissingAck("tailscale"))
 	for _, frag := range []string{
 		"meowthd: startup failed",
 		"state:",
 		"mode            = tailscale",
 		"bind_addr       = 100.64.10.20",
-		"bind_port       = 7777",
+		"bind_port       = 7040",
 		"acknowledged_by = <unset>",
 		"reason:",
 		"fix:",
@@ -101,7 +101,7 @@ func TestDiagCoverageForEachDCode(t *testing.T) {
 			want{
 				code:    "D4",
 				reason:  "bind_port 65536 out of range",
-				fix:     "set bind_port to 7777",
+				fix:     "set bind_port to 7040",
 				section: "§2.1 / §5 step 5",
 			},
 		},

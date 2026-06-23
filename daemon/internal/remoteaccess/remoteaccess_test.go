@@ -60,7 +60,7 @@ func TestLoadFileMissingReturnsDefaultLocal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if ra.Mode != ModeLocal || ra.BindAddr != mustAddr(t, "127.0.0.1") || ra.BindPort != 7777 || ra.AcknowledgedBy != "" {
+	if ra.Mode != ModeLocal || ra.BindAddr != mustAddr(t, "127.0.0.1") || ra.BindPort != 7040 || ra.AcknowledgedBy != "" {
 		t.Fatalf("default mismatch: %+v", ra)
 	}
 	if !ra.IsLocal() {
@@ -83,11 +83,11 @@ func TestLoadExplicitLocalBlock(t *testing.T) {
 	body := `[remote_access]
 mode            = "local"
 bind_addr       = "127.0.0.1"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = ""
 `
 	ra := loadOK(t, body, nil)
-	if ra.Mode != ModeLocal || ra.BindPort != 7777 {
+	if ra.Mode != ModeLocal || ra.BindPort != 7040 {
 		t.Fatalf("unexpected: %+v", ra)
 	}
 }
@@ -96,7 +96,7 @@ func TestLoadLocalhostNormalizes(t *testing.T) {
 	body := `[remote_access]
 mode      = "local"
 bind_addr = "localhost"
-bind_port = 7777
+bind_port = 7040
 `
 	ra := loadOK(t, body, nil)
 	if ra.BindAddr != mustAddr(t, "127.0.0.1") {
@@ -108,7 +108,7 @@ func TestLoadTailscaleWithMatchingIface(t *testing.T) {
 	body := `[remote_access]
 mode            = "tailscale"
 bind_addr       = "100.64.10.20"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = "alice@laptop"
 `
 	ifaces := []netip.Addr{mustAddr(t, "127.0.0.1"), mustAddr(t, "100.64.10.20")}
@@ -136,7 +136,7 @@ func TestLoadRejectsTopLevelUnknownKey(t *testing.T) {
 [remote_access]
 mode = "local"
 bind_addr = "127.0.0.1"
-bind_port = 7777
+bind_port = 7040
 `
 	_, err := Load(writeConfig(t, body), nil)
 	if err == nil {
@@ -152,7 +152,7 @@ func TestLoadRejectsUnknownFieldInsideBlock(t *testing.T) {
 	body := `[remote_access]
 mode = "local"
 bind_addr = "127.0.0.1"
-bind_port = 7777
+bind_port = 7040
 hidden_flag = true
 `
 	_, err := Load(writeConfig(t, body), nil)
@@ -170,7 +170,7 @@ hidden_flag = true
 func TestD0MissingMode(t *testing.T) {
 	body := `[remote_access]
 bind_addr = "127.0.0.1"
-bind_port = 7777
+bind_port = 7040
 `
 	se := loadCode(t, body, nil)
 	if se.Code != "D0" || se.Field != "mode" {
@@ -181,7 +181,7 @@ bind_port = 7777
 func TestD0MissingBindAddr(t *testing.T) {
 	body := `[remote_access]
 mode = "local"
-bind_port = 7777
+bind_port = 7040
 `
 	se := loadCode(t, body, nil)
 	if se.Code != "D0" || se.Field != "bind_addr" {
@@ -206,7 +206,7 @@ func TestD1BadModeEnum(t *testing.T) {
 	body := `[remote_access]
 mode = "lan"
 bind_addr = "127.0.0.1"
-bind_port = 7777
+bind_port = 7040
 `
 	se := loadCode(t, body, nil)
 	if se.Code != "D1" {
@@ -220,7 +220,7 @@ func TestD2EmptyAck(t *testing.T) {
 	body := `[remote_access]
 mode = "tailscale"
 bind_addr = "100.64.10.20"
-bind_port = 7777
+bind_port = 7040
 acknowledged_by = ""
 `
 	se := loadCode(t, body, []netip.Addr{mustAddr(t, "100.64.10.20")})
@@ -233,7 +233,7 @@ func TestD2WhitespaceAck(t *testing.T) {
 	body := `[remote_access]
 mode = "tailscale"
 bind_addr = "100.64.10.20"
-bind_port = 7777
+bind_port = 7040
 acknowledged_by = "   "
 `
 	se := loadCode(t, body, []netip.Addr{mustAddr(t, "100.64.10.20")})
@@ -249,8 +249,8 @@ func TestD3RejectionTable(t *testing.T) {
 		name, addr, want string
 	}{
 		{"empty", `""`, "empty"},
-		{"has_port_v4", `"127.0.0.1:7777"`, "has_port"},
-		{"has_port_v6", `"[::1]:7777"`, "has_port"},
+		{"has_port_v4", `"127.0.0.1:7040"`, "has_port"},
+		{"has_port_v6", `"[::1]:7040"`, "has_port"},
 		{"has_cidr", `"127.0.0.1/8"`, "has_cidr"},
 		{"wildcard_v4", `"0.0.0.0"`, "wildcard"},
 		{"wildcard_v6", `"::"`, "wildcard"},
@@ -258,7 +258,7 @@ func TestD3RejectionTable(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			body := "[remote_access]\nmode = \"local\"\nbind_addr = " + c.addr + "\nbind_port = 7777\n"
+			body := "[remote_access]\nmode = \"local\"\nbind_addr = " + c.addr + "\nbind_port = 7040\n"
 			se := loadCode(t, body, nil)
 			if se.Code != "D3" {
 				t.Fatalf("want D3 for %s, got %s", c.name, se.Code)
@@ -275,7 +275,7 @@ func TestLocalBind127002IsD5NotD3(t *testing.T) {
 	body := `[remote_access]
 mode = "local"
 bind_addr = "127.0.0.2"
-bind_port = 7777
+bind_port = 7040
 `
 	se := loadCode(t, body, nil)
 	if se.Code != "D5" {
@@ -343,7 +343,7 @@ func TestD5Subtemplates(t *testing.T) {
 			if c.mode != "local" {
 				ack = "alice"
 			}
-			body := "[remote_access]\nmode = \"" + c.mode + "\"\nbind_addr = \"" + c.addr + "\"\nbind_port = 7777\nacknowledged_by = \"" + ack + "\"\n"
+			body := "[remote_access]\nmode = \"" + c.mode + "\"\nbind_addr = \"" + c.addr + "\"\nbind_port = 7040\nacknowledged_by = \"" + ack + "\"\n"
 			se := loadCode(t, body, c.ifaces)
 			if se.Code != "D5" {
 				t.Fatalf("want D5 for %s, got %s (%s)", c.name, se.Code, se.Reason)
@@ -361,7 +361,7 @@ func TestD6TailscaleNotRunning(t *testing.T) {
 	body := `[remote_access]
 mode = "tailscale"
 bind_addr = "100.64.10.20"
-bind_port = 7777
+bind_port = 7040
 acknowledged_by = "alice"
 `
 	// No Tailscale IP at all in ifaceAddrs → "not running".
@@ -378,7 +378,7 @@ func TestD6TailscaleIPMismatch(t *testing.T) {
 	body := `[remote_access]
 mode = "tailscale"
 bind_addr = "100.64.10.20"
-bind_port = 7777
+bind_port = 7040
 acknowledged_by = "alice"
 `
 	// A Tailscale IP exists in ifaceAddrs but it's the wrong one →
@@ -398,7 +398,7 @@ func TestTailscaleIPv6AcceptsAndMatches(t *testing.T) {
 	body := `[remote_access]
 mode = "tailscale"
 bind_addr = "fd7a:115c:a1e0::1"
-bind_port = 7777
+bind_port = 7040
 acknowledged_by = "alice"
 `
 	ra := loadOK(t, body, []netip.Addr{mustAddr(t, "fd7a:115c:a1e0::1")})
@@ -431,12 +431,12 @@ func TestIsLocalMatrix(t *testing.T) {
 
 func TestListenAddrFormat(t *testing.T) {
 	cases := []struct{ addr, want string }{
-		{"127.0.0.1", "127.0.0.1:7777"},
-		{"::1", "[::1]:7777"},
+		{"127.0.0.1", "127.0.0.1:7040"},
+		{"::1", "[::1]:7040"},
 	}
 	for _, c := range cases {
 		t.Run(c.addr, func(t *testing.T) {
-			ra := RemoteAccess{BindAddr: mustAddr(t, c.addr), BindPort: 7777}
+			ra := RemoteAccess{BindAddr: mustAddr(t, c.addr), BindPort: 7040}
 			if got := ra.ListenAddr(); got != c.want {
 				t.Fatalf("ListenAddr(%s) = %s, want %s", c.addr, got, c.want)
 			}

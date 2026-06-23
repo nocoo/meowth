@@ -38,7 +38,7 @@ type Options struct {
 // DashboardURL is what the stdout banner advertises after init
 // completes. Hardcoded here per docs/architecture/04 §3.1 step 6 and
 // §4.1 step 6; will move to config when 05 (remote_access) lands.
-const DashboardURL = "http://127.0.0.1:7777"
+const DashboardURL = "http://127.0.0.1:7040"
 
 // minimalConfigToml is the daemon config file written at init.
 // docs/architecture/05 §2.2 prefers an explicit [remote_access]
@@ -52,7 +52,7 @@ const minimalConfigToml = `# meowth daemon config — see docs/architecture/05-r
 [remote_access]
 mode            = "local"
 bind_addr       = "127.0.0.1"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = ""
 `
 

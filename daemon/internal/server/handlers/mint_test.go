@@ -102,7 +102,7 @@ func mintReq(t *testing.T, body string) *http.Request {
 	r := httptest.NewRequest(http.MethodPost, "/bootstrap/mint", bytes.NewBufferString(body))
 	r.RemoteAddr = "127.0.0.1:54321"
 	r.Header.Set("Content-Type", "application/json")
-	r.Header.Set("Host", "127.0.0.1:7777")
+	r.Header.Set("Host", "127.0.0.1:7040")
 	return r
 }
 
@@ -177,7 +177,7 @@ func TestMintOriginGate(t *testing.T) {
 		{"none passes", "none", "", http.StatusCreated},
 		{"no Sec-Fetch-Site passes", "", "", http.StatusCreated},
 		{"bad Origin rejected", "", "http://attacker.example", http.StatusNotFound},
-		{"matching Origin passes", "", "http://127.0.0.1:7777", http.StatusCreated},
+		{"matching Origin passes", "", "http://127.0.0.1:7040", http.StatusCreated},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -187,7 +187,7 @@ func TestMintOriginGate(t *testing.T) {
 			rr := httptest.NewRecorder()
 			body, _ := json.Marshal(map[string]string{"setup_code": f.SetupCode})
 			r := mintReq(t, string(body))
-			r.Host = "127.0.0.1:7777"
+			r.Host = "127.0.0.1:7040"
 			if c.fetchSite != "" {
 				r.Header.Set("Sec-Fetch-Site", c.fetchSite)
 			}

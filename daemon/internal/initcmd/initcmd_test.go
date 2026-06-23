@@ -64,7 +64,7 @@ func TestRunDefaultCreatesRootToken(t *testing.T) {
 		"[remote_access]",
 		`mode            = "local"`,
 		`bind_addr       = "127.0.0.1"`,
-		`bind_port       = 7777`,
+		`bind_port       = 7040`,
 		`acknowledged_by = ""`,
 	} {
 		if !strings.Contains(string(body), frag) {
