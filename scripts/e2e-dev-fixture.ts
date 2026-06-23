@@ -8,7 +8,7 @@
  *      mwt_... root token
  *   3. Write token to a deterministic temp file the Playwright
  *      spec reads (path printed once on stdout for the user)
- *   4. `meowthd serve --bind 127.0.0.1:7777` → blocks until
+ *   4. `meowthd serve --bind 127.0.0.1:7040` → blocks until
  *      SIGINT / SIGTERM
  *
  * On shutdown the token file and the tmp MEOWTH_HOME are removed.
@@ -110,10 +110,10 @@ if (!firstLine.startsWith('mwt_')) {
 writeFileSync(TOKEN_FILE, firstLine, { encoding: 'utf8', mode: 0o600 });
 log(`token written to ${TOKEN_FILE} (file mode 0o600)`);
 
-// Step 2: serve. webServer waits for port 7777 to accept.
+// Step 2: serve. webServer waits for port 7040 to accept.
 const serve = spawn(
   'go',
-  ['run', './cmd/meowthd', 'serve', '--listen-addr', '127.0.0.1:7777'],
+  ['run', './cmd/meowthd', 'serve', '--listen-addr', '127.0.0.1:7040'],
   {
     cwd: DAEMON_DIR,
     env: { ...process.env, MEOWTH_TEST_HOME: home, MEOWTH_TEST: '1' },

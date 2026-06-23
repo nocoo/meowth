@@ -289,7 +289,7 @@ pushCase({
       `[remote_access]
 mode            = "local"
 bind_addr       = "127.0.0.1"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = ""
 `,
     );
@@ -365,7 +365,7 @@ pushCase(
     `[remote_access]
 mode            = "lan"
 bind_addr       = "127.0.0.1"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = ""
 `,
     { code: 'D1', fragment: 'not a valid enum value' },
@@ -379,7 +379,7 @@ pushCase(
     `[remote_access]
 mode            = "tailscale"
 bind_addr       = "100.64.10.20"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = ""
 `,
     { code: 'D2', fragment: 'acknowledged_by is empty' },
@@ -393,7 +393,7 @@ pushCase(
     `[remote_access]
 mode            = "local"
 bind_addr       = "0.0.0.0"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = ""
 `,
     { code: 'D3', fragment: 'wildcard' },
@@ -406,8 +406,8 @@ pushCase(
     'D3 bind_addr with port → exit 1',
     `[remote_access]
 mode            = "local"
-bind_addr       = "127.0.0.1:7777"
-bind_port       = 7777
+bind_addr       = "127.0.0.1:7040"
+bind_port       = 7040
 acknowledged_by = ""
 `,
     { code: 'D3', fragment: 'has_port' },
@@ -435,7 +435,7 @@ pushCase(
     `[remote_access]
 mode            = "tailscale"
 bind_addr       = "127.0.0.1"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = "l2-canary"
 `,
     { code: 'D5', fragment: 'tailscale must bind your Tailscale IP' },

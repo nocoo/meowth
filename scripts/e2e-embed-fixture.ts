@@ -9,7 +9,7 @@
  *
  * The fixture mints a root token via path A (`meowthd init`),
  * writes it to OS-temp with mode 0o600, writes a home marker, and
- * spawns `meowthd serve --listen-addr 127.0.0.1:17777` with
+ * spawns `meowthd serve --listen-addr 127.0.0.1:17040` with
  * MEOWTH_TEST=1 + MEOWTH_BACKEND_FACTORY=fake so /v1/agents and
  * exec endpoints work without real CLIs.
  *
@@ -31,7 +31,7 @@ const OUTPUT_DIR = join(REPO_ROOT, 'scripts/run-l2-output');
 const BINARY = join(OUTPUT_DIR, 'meowthd-embed');
 const TOKEN_FILE = join(tmpdir(), 'meowth-e2e-embed-token');
 const HOME_MARKER = join(tmpdir(), 'meowth-e2e-embed-home-path');
-const FIXED_PORT = 17777;
+const FIXED_PORT = 17040;
 
 function log(msg: string): void {
   process.stdout.write(`[e2e-embed-fixture] ${msg}\n`);
@@ -51,7 +51,7 @@ function cleanupArtifacts(): void {
 
 cleanupArtifacts();
 
-// Port availability check: try to bind 17777; if it fails the port
+// Port availability check: try to bind 17040; if it fails the port
 // is already in use, fail fast with a clear message. We do NOT kill
 // the owning process — test scripts must not nuke unknown PIDs.
 function assertPortFree(port: number): Promise<void> {

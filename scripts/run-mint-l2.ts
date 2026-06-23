@@ -329,7 +329,7 @@ function rewriteConfigToSSHTunnel(runHome: string): void {
 [remote_access]
 mode            = "ssh_tunnel"
 bind_addr       = "127.0.0.1"
-bind_port       = 7777
+bind_port       = 7040
 acknowledged_by = "mint-l2"
 `;
   writeFileSync(join(runHome, 'config.toml'), cfg, { mode: 0o600 });

@@ -27,7 +27,7 @@ const OUTPUT_DIR = join(REPO_ROOT, 'scripts/run-l2-output');
 const BINARY = join(OUTPUT_DIR, 'meowthd-embed-mint');
 const CODE_FILE = join(tmpdir(), 'meowth-e2e-embed-mint-code');
 const HOME_MARKER = join(tmpdir(), 'meowth-e2e-embed-mint-home-path');
-const FIXED_PORT = 17778;
+const FIXED_PORT = 17041;
 
 function log(msg: string): void {
   process.stdout.write(`[e2e-embed-mint-fixture] ${msg}\n`);

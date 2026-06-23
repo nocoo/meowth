@@ -1,10 +1,10 @@
 import { type PlaywrightTestConfig, defineConfig } from '@playwright/test';
 
 // docs/architecture/08-6dq-hooks-wiring.md §3.4 — L3 fixtures.
-//   - dashboard-dev        → §3.4.1 Vite dev + meowthd path A on :7777
-//   - dashboard-embed      → §3.4.2 daemon-embedded dashboard dist on :17777
+//   - dashboard-dev        → §3.4.1 Vite dev + meowthd path A on :7040
+//   - dashboard-embed      → §3.4.2 daemon-embedded dashboard dist on :17040
 //                            (mint window CLOSED — token already exists)
-//   - dashboard-embed-mint → §3.4.2 daemon-embedded dist on :17778, booted
+//   - dashboard-embed-mint → §3.4.2 daemon-embedded dist on :17041, booted
 //                            via `init --skip-token` so the first-run mint
 //                            window is OPEN for happy path B coverage
 //
@@ -33,15 +33,15 @@ const EMBED_MINT_FIXTURE = '../../scripts/e2e-embed-mint-fixture.ts';
 const DEV_SERVERS: PlaywrightTestConfig['webServer'] = [
   {
     command: `pnpm tsx ${DEV_FIXTURE}`,
-    url: 'http://127.0.0.1:7777/healthz',
+    url: 'http://127.0.0.1:7040/healthz',
     timeout: 60_000,
     reuseExistingServer: false,
     stdout: 'pipe',
     stderr: 'pipe',
   },
   {
-    command: 'pnpm exec vite --port 5173 --strictPort',
-    url: 'http://localhost:5173',
+    command: 'pnpm exec vite --port 37040 --strictPort',
+    url: 'http://localhost:37040',
     timeout: 60_000,
     reuseExistingServer: false,
   },
@@ -50,7 +50,7 @@ const DEV_SERVERS: PlaywrightTestConfig['webServer'] = [
 const EMBED_SERVERS: PlaywrightTestConfig['webServer'] = [
   {
     command: `pnpm tsx ${EMBED_FIXTURE}`,
-    url: 'http://127.0.0.1:17777/healthz',
+    url: 'http://127.0.0.1:17040/healthz',
     timeout: 180_000,
     reuseExistingServer: false,
     stdout: 'pipe',
@@ -61,7 +61,7 @@ const EMBED_SERVERS: PlaywrightTestConfig['webServer'] = [
 const EMBED_MINT_SERVERS: PlaywrightTestConfig['webServer'] = [
   {
     command: `pnpm tsx ${EMBED_MINT_FIXTURE}`,
-    url: 'http://127.0.0.1:17778/healthz',
+    url: 'http://127.0.0.1:17041/healthz',
     timeout: 180_000,
     reuseExistingServer: false,
     stdout: 'pipe',
@@ -112,19 +112,19 @@ export default defineConfig({
   projects: [
     {
       name: 'dashboard-dev',
-      use: { baseURL: 'http://localhost:5173' },
+      use: { baseURL: 'http://localhost:37040' },
       testMatch: /dev\/.*\.spec\.ts$/,
     },
     {
       name: 'dashboard-embed',
       fullyParallel: false,
-      use: { baseURL: 'http://127.0.0.1:17777' },
+      use: { baseURL: 'http://127.0.0.1:17040' },
       testMatch: /embed\/.*\.spec\.ts$/,
     },
     {
       name: 'dashboard-embed-mint',
       fullyParallel: false,
-      use: { baseURL: 'http://127.0.0.1:17778' },
+      use: { baseURL: 'http://127.0.0.1:17041' },
       testMatch: /embed-mint\/.*\.spec\.ts$/,
     },
   ],

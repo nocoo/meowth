@@ -4,7 +4,7 @@ import { handpasteToken, readRootToken } from './_fixtures';
 // docs/architecture/07 §4 / 08 §4 — L3 (a) security-header surface.
 //
 // All assertions hit the live same-origin daemon (embed fixture on
-// :17777) so we are testing the real chi middleware chain plus the
+// :17040) so we are testing the real chi middleware chain plus the
 // static.Index / static.Asset wrappers, not a mock. The HTML
 // document, the hashed asset, the JSON API error, and /healthz each
 // have a distinct header contract:

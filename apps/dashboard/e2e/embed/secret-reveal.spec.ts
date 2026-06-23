@@ -23,7 +23,7 @@ test('Create token → reveal → copy → done leaves no plaintext behind', asy
   // Clipboard read/write permissions are Chromium-only in Playwright.
   test.skip(browserName !== 'chromium', 'clipboard permissions require chromium');
   await context.grantPermissions(['clipboard-read', 'clipboard-write'], {
-    origin: 'http://127.0.0.1:17777',
+    origin: 'http://127.0.0.1:17040',
   });
 
   const dialogs: string[] = [];
