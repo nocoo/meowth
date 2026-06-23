@@ -178,4 +178,21 @@ fi
 
 ## 6. 验证结果
 
-> 落地完成后填。
+实施完成日期：2026-06-23
+
+| 层 | 命令 | 结果 |
+|---|---|---|
+| G1 daemon | `pnpm daemon:g1` | OK（gofmt + vet + golangci-lint 0 issues） |
+| G1 dashboard | `pnpm dashboard:g1` | OK（fmt + lint + typecheck + depcruise + source scan） |
+| L1 daemon + 覆盖率 | `pnpm daemon:test:cover && pnpm daemon:cover:check` | OK（21 包,baseline floor 全通过,target 95% 已达 3 个包） |
+| L1 dashboard + 覆盖率 | `pnpm dashboard:test:cover && pnpm dashboard:cover:check` | OK（197 tests,target 90% 已达 30 项） |
+| L2 tokens/mint/exec/remote-access | `pnpm test:l2` | OK（4 个 harness 全绿） |
+| L3 embed + embed-mint | `pnpm --filter @meowth/dashboard e2e --project=dashboard-embed --project=dashboard-embed-mint` | OK（12/12 passed in 12.9s） |
+| D1 隔离 | `pnpm scan:d1` | OK |
+| G2 安全 | `pnpm scan:g2` | OK（osv 0 / gitleaks 0 / govulncheck 0） |
+| Prod 构建 | `pnpm daemon:build` | OK（vite build + go:embed + go build 全绿） |
+
+### 跳过项
+
+- **L3 `dashboard-dev` project**：未跑。当前未单独验证；该 fixture 通过 `http://localhost:37040` 直连 Vite，而 Vite 6 `allowedHosts` 默认放行 loopback,加上 HMR 在 e2e 期间断连只产生 console warn 不影响 dom 测试,理论可跑。优先 embed + embed-mint 是因为它们覆盖 mint 流和 prod 形态,风险面更高。后续验证留给 CI。
+- **L3 Caddy HTTPS 手工实测**：未跑。`https://meowth.dev.hexly.ai/setup` 应看到 mint 按钮 disabled,等下次 `pnpm dev` 同时拉起 daemon + Vite 时跟进。
