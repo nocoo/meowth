@@ -4,6 +4,33 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] — 2026-06-25
+
+README simplification + license clarification. Functional code
+unchanged.
+
+### Changed
+
+- README cut down to: header + one-paragraph intro + 4-step quick
+  start + docs links + license. The capability table, doc map,
+  HTTP API recipes, remote-access section, dev commands list, and
+  `~/.meowth/` layout all moved into existing `docs/` files so the
+  README's job is "get me running in 4 commands".
+- License section now clearly distinguishes the **repo-root MIT
+  license** (covers all original code: daemon `cmd/` + `internal/`
+  + dashboard + scripts + docs) from the **Modified Apache 2.0**
+  retained for `daemon/pkg/agent/` (vendored from multica per
+  Apache 2.0 §4). Adds a one-line disclaimer that multica's two
+  extra clauses (anti-SaaS + retain-logo) do not apply to Meowth —
+  it's a personal local tool and the dashboard is fully
+  re-implemented (no `apps/web/` from multica).
+
+The CHANGELOG entry for v0.1.0 previously summarised the license
+as "Modified Apache 2.0 inherited from multica", which was
+inaccurate; the root license has always been MIT.
+
+[0.1.4]: https://github.com/nocoo/meowth/releases/tag/v0.1.4
+
 ## [0.1.3] — 2026-06-25
 
 Branding pass + README normalization. Functional code unchanged.
