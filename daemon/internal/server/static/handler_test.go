@@ -1,6 +1,7 @@
 package static
 
 import (
+	"errors"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -88,19 +89,24 @@ func newTestFS() fs.FS {
 		"index.html":         &fstest.MapFile{Data: []byte("<!doctype html><html><body>app</body></html>")},
 		"assets/index-X.js":  &fstest.MapFile{Data: []byte("export const x = 1;")},
 		"assets/index-Y.css": &fstest.MapFile{Data: []byte(":root{}")},
+		"favicon.ico":        &fstest.MapFile{Data: []byte("\x00\x00ICO")},
+		"logo-24.png":        &fstest.MapFile{Data: []byte("\x89PNG")},
 	}
 }
 
-// buildTestRouter mounts Index/Asset/NotFoundFallback inside a chi
-// router that also wires the same Nosniff middleware as production.
-// Tests use this to assert that every static path emits the global
-// header regardless of success / 404 outcome.
+// buildTestRouter mounts Index/Asset/RootAsset/NotFoundFallback
+// inside a chi router that also wires the same Nosniff middleware
+// as production. Tests use this to assert that every static path
+// emits the global header regardless of success / 404 outcome.
 func buildTestRouter(dist fs.FS) http.Handler {
 	r := chi.NewRouter()
 	r.Use(headerSetter("X-Content-Type-Options", "nosniff"))
 	r.Get("/", Index(dist).ServeHTTP)
 	r.Get("/index.html", Index(dist).ServeHTTP)
 	r.Get("/assets/*", Asset(dist).ServeHTTP)
+	r.Get("/favicon.ico", RootAsset(dist, "favicon.ico").ServeHTTP)
+	r.Get("/logo-24.png", RootAsset(dist, "logo-24.png").ServeHTTP)
+	r.Get("/missing-root.png", RootAsset(dist, "missing-root.png").ServeHTTP)
 	apiNotFound := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/problem+json")
 		w.WriteHeader(http.StatusNotFound)
@@ -203,6 +209,77 @@ func TestServeAsset_MissingReturns404WithNosniffNoDocumentHeaders(t *testing.T) 
 	}
 	if got := rec.Header().Get("Content-Security-Policy"); got != "" {
 		t.Errorf("asset-miss 404 leaked document CSP: %q", got)
+	}
+}
+
+func TestRootAsset_ServesFaviconAndLogo(t *testing.T) {
+	cases := []struct {
+		path       string
+		wantCT     string
+		wantPrefix []byte
+	}{
+		{"/favicon.ico", "image/", []byte{0x00, 0x00, 'I'}},
+		{"/logo-24.png", "image/png", []byte{0x89, 'P', 'N', 'G'}},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.path, func(t *testing.T) {
+			h := buildTestRouter(newTestFS())
+			req := httptest.NewRequest(http.MethodGet, c.path, nil)
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200", rec.Code)
+			}
+			ct := rec.Header().Get("Content-Type")
+			if !strings.HasPrefix(ct, c.wantCT) {
+				t.Errorf("Content-Type = %q, want prefix %q", ct, c.wantCT)
+			}
+			if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+				t.Errorf("RootAsset missing nosniff: %q", got)
+			}
+			if rec.Header().Get("Content-Security-Policy") != "" {
+				t.Error("RootAsset response must not carry document-level CSP")
+			}
+			body := rec.Body.Bytes()
+			if len(body) < len(c.wantPrefix) || string(body[:len(c.wantPrefix)]) != string(c.wantPrefix) {
+				t.Errorf("body prefix = %q, want %q", body[:min(len(body), len(c.wantPrefix))], c.wantPrefix)
+			}
+		})
+	}
+}
+
+func TestRootAsset_MissingReturns404(t *testing.T) {
+	h := buildTestRouter(newTestFS())
+	req := httptest.NewRequest(http.MethodGet, "/missing-root.png", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404 for missing root asset", rec.Code)
+	}
+	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Errorf("root-asset 404 missing nosniff: %q", got)
+	}
+}
+
+// erroringFS returns a non-NotExist error from Open so we can hit
+// RootAsset's "internal server error" branch — the production
+// embed.FS never produces this in practice, but the branch exists
+// for defense-in-depth against an embed regression and must still
+// be covered.
+type erroringFS struct{}
+
+func (erroringFS) Open(_ string) (fs.File, error) {
+	return nil, errors.New("synthetic fs failure")
+}
+
+func TestRootAsset_NonNotExistErrorReturns500(t *testing.T) {
+	h := RootAsset(erroringFS{}, "favicon.ico")
+	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 for non-NotExist fs error", rec.Code)
 	}
 }
 

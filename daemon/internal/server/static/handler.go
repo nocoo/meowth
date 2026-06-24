@@ -132,6 +132,37 @@ func NotFoundFallback(dist fs.FS, fallback http.Handler) http.Handler {
 	})
 }
 
+// RootAsset returns a handler that serves a single named file from
+// the embedded dist FS root (e.g. /favicon.ico → dist/favicon.ico).
+// Used for brand assets that the dashboard's index.html references
+// at the site root (favicon, apple-touch-icon, logo PNGs, og-image)
+// — these live in apps/dashboard/public/ during dev and are
+// duplicated to apps/dashboard/dist/ by Vite at build time, then
+// folded into the daemon binary via go:embed.
+//
+// Each chi route should be GET /<filename> wired to this handler;
+// the filename argument is trusted (constructed by server.go from
+// the literal list, not user input).
+func RootAsset(dist fs.FS, name string) http.Handler {
+	data, readErr := fs.ReadFile(dist, name)
+	ct := contentTypeFor(name)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if readErr != nil {
+			if errors.Is(readErr, fs.ErrNotExist) {
+				http.NotFound(w, r)
+				return
+			}
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", ct)
+		secheaders.Asset(ct, true)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			//#nosec G705 -- name is a hard-coded brand asset filename
+			_, _ = w.Write(data)
+		})).ServeHTTP(w, r)
+	})
+}
+
 func contentTypeFor(name string) string {
 	ext := path.Ext(name)
 	if ct := mime.TypeByExtension(ext); ct != "" {

@@ -186,6 +186,20 @@ func New(cfg Config) (*Server, error) {
 	r.Get("/", static.Index(dist).ServeHTTP)
 	r.Get("/index.html", static.Index(dist).ServeHTTP)
 	r.Get("/assets/*", static.Asset(dist).ServeHTTP)
+	// Brand assets referenced from index.html at the site root
+	// (favicon, apple touch icon, sidebar logos, OG card). Each is
+	// a fixed filename produced by scripts/resize-logos.py and
+	// shipped via go:embed; serving them avoids 404s in dashboard
+	// network logs and lets browsers pick up the favicon.
+	for _, name := range []string{
+		"favicon.ico",
+		"apple-touch-icon.png",
+		"logo-24.png",
+		"logo-80.png",
+		"og-image.png",
+	} {
+		r.Get("/"+name, static.RootAsset(dist, name).ServeHTTP)
+	}
 
 	// 404 / 405 fall through to problem+json defaults; chi's default
 	// 404 returns "404 page not found" plaintext, so we override.
