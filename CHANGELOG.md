@@ -4,6 +4,42 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-06-24
+
+Patch release that turns the v0.1.0 CI run green. The shipped daemon
+binary is functionally identical; the changes are all CI / toolchain
+hygiene.
+
+### Fixed
+
+- **CI lint + l1-dashboard**:`scripts/check-dashboard-source.sh`
+  shells out to `ripgrep`,which the GitHub `macos-14` image does
+  not ship. Both jobs now `brew install ripgrep` before running the
+  source scan.
+- **CI l3**: the `dashboard-dev` Playwright fixture spawns
+  `meowthd init` via `tsx + go run`,which the GitHub runner kills
+  with status `null` before the daemon ever serves. CI now scopes
+  to `--project=dashboard-embed --project=dashboard-embed-mint`,
+  matching the local convention recorded in
+  `docs/features/01-port-migration-to-hexly-caddy.md` §6.2.
+- **CI g2 (govulncheck)**: `daemon/go.mod` toolchain bumped from
+  `1.26.1` to `1.26.2`,fixing 7 stdlib CVEs the v0.1.0 run flagged
+  — notably `GO-2026-4870` (TLS 1.3 KeyUpdate persistent-connection
+  DoS in `crypto/tls`) and `GO-2026-4866` (case-sensitive
+  `excludedSubtrees` auth bypass in `crypto/x509`).
+
+### Documentation
+
+- `docs/architecture/README.md` corrected: CI workflow has existed
+  since Phase 2.12 and was wrongly listed as "doc-only" in 0.1.0.
+  Status section now enumerates the actual job list and the genuine
+  still-manual items (D1 isolation, `dashboard-dev` L3).
+- README's environment-requirements line bumped Go ≥ 1.26.2 to match
+  the toolchain.
+
+[0.1.1]: https://github.com/nocoo/meowth/releases/tag/v0.1.1
+[0.1.0]: https://github.com/nocoo/meowth/releases/tag/v0.1.0
+
 ## [0.1.0] — 2026-06-24
 
 First minor release. Phase 3.1–3.25 (daemon + dashboard + 6DQ test plan)
@@ -116,4 +152,3 @@ Tracked in [`daemon/pkg/agent/UPSTREAM.md`](daemon/pkg/agent/UPSTREAM.md):
   hand-test are not part of automation; verified manually per
   release.
 
-[0.1.0]: https://github.com/nocoo/meowth/releases/tag/v0.1.0
