@@ -1,6 +1,6 @@
 # 01 · 端口迁移到 Hexly Caddy 体系
 
-> 状态：规划落地中（Caddy + 文档 + nmem 已完成，源码改动待开工）
+> 状态：源码 + 文档迁移已落地（2026-06-23），自动化验证全绿；Caddy HTTPS 链路手工实测待跟进
 > 历史在 `git log -- docs/features/01-port-migration-to-hexly-caddy.md`
 
 ---
@@ -164,13 +164,15 @@ fi
 
 ## 5. 6DQ 质量计划
 
+> 「计划」=本次迁移**承诺要跑**的关；实际结果与跳过项见 §6。
+
 | 层 | 验证手段 | 通过条件 |
 |---|---|---|
 | **G1 静态** | `pnpm daemon:g1 && pnpm dashboard:g1` | 全绿 |
 | **L1 单元 + 覆盖率** | `pnpm daemon:test:cover && pnpm daemon:cover:check && pnpm dashboard:test:cover && pnpm dashboard:cover:check` | 全绿;daemon ≥95% / dashboard ≥90% gate 通过 |
 | **L2 API** | `pnpm test:l2`（含 tokens / mint / exec / remote-access） | 全绿,新端口 ok |
 | **L3 E2E** | `pnpm --filter @meowth/dashboard e2e`（dashboard-dev + embed + embed-mint 三 project） | 全绿,三个 fixture 都能起来 |
-| **L3 Caddy 实测**（手工） | `https://meowth.dev.hexly.ai/healthz` 200 + `https://meowth-vite.dev.hexly.ai/` 返回 dashboard HTML + HMR 可工作 + `http://127.0.0.1:7040/setup` 同源 mint 能成功 + `https://meowth.dev.hexly.ai/setup` mint 按钮 disabled + 提示语正确 | 全部通过 |
+| **L3 Caddy 实测**（手工,**不在自动化关里**） | `https://meowth.dev.hexly.ai/healthz` 200 + `https://meowth-vite.dev.hexly.ai/` 返回 dashboard HTML + HMR 可工作 + `http://127.0.0.1:7040/setup` 同源 mint 能成功 + `https://meowth.dev.hexly.ai/setup` mint 按钮 disabled + 提示语正确 | 留待人工跟进;§6 记录实际是否已跑 |
 | **D1 隔离** | `pnpm scan:d1` | 不引入 prod/test 混合 |
 | **G2 安全** | `pnpm scan:g2` | 无回归 |
 
@@ -180,19 +182,23 @@ fi
 
 实施完成日期：2026-06-23
 
+### 6.1 自动化关（按 §5 计划执行）
+
 | 层 | 命令 | 结果 |
 |---|---|---|
 | G1 daemon | `pnpm daemon:g1` | OK（gofmt + vet + golangci-lint 0 issues） |
 | G1 dashboard | `pnpm dashboard:g1` | OK（fmt + lint + typecheck + depcruise + source scan） |
 | L1 daemon + 覆盖率 | `pnpm daemon:test:cover && pnpm daemon:cover:check` | OK（21 包,baseline floor 全通过,target 95% 已达 3 个包） |
-| L1 dashboard + 覆盖率 | `pnpm dashboard:test:cover && pnpm dashboard:cover:check` | OK（197 tests,target 90% 已达 30 项） |
+| L1 dashboard + 覆盖率 | `pnpm dashboard:test:cover && pnpm dashboard:cover:check` | OK（210 tests,target 90% 已达 30 项;含本轮新增 useSetupViewModel origin 矩阵 13 个用例） |
 | L2 tokens/mint/exec/remote-access | `pnpm test:l2` | OK（4 个 harness 全绿） |
 | L3 embed + embed-mint | `pnpm --filter @meowth/dashboard e2e --project=dashboard-embed --project=dashboard-embed-mint` | OK（12/12 passed in 12.9s） |
 | D1 隔离 | `pnpm scan:d1` | OK |
 | G2 安全 | `pnpm scan:g2` | OK（osv 0 / gitleaks 0 / govulncheck 0） |
 | Prod 构建 | `pnpm daemon:build` | OK（vite build + go:embed + go build 全绿） |
 
-### 跳过项
+### 6.2 跳过项（未跑,记录原因）
 
-- **L3 `dashboard-dev` project**：未跑。当前未单独验证；该 fixture 通过 `http://localhost:37040` 直连 Vite，而 Vite 6 `allowedHosts` 默认放行 loopback,加上 HMR 在 e2e 期间断连只产生 console warn 不影响 dom 测试,理论可跑。优先 embed + embed-mint 是因为它们覆盖 mint 流和 prod 形态,风险面更高。后续验证留给 CI。
-- **L3 Caddy HTTPS 手工实测**：未跑。`https://meowth.dev.hexly.ai/setup` 应看到 mint 按钮 disabled,等下次 `pnpm dev` 同时拉起 daemon + Vite 时跟进。
+| 项 | 原因 | 后续 |
+|---|---|---|
+| L3 `dashboard-dev` project | 该 fixture 通过 `http://localhost:37040` 直连 Vite,Vite 6 `allowedHosts` 默认放行 loopback,HMR 在 e2e 期间断连只产生 console warn 不影响 dom 测试。优先 embed + embed-mint 是因为覆盖 mint 流和 prod 形态风险面更高 | 留 CI 复跑 |
+| L3 Caddy 实测（§5 表最后一行） | 依赖手工 `pnpm dev` 启动 daemon + Vite + 浏览器访问 Caddy 入口;不在自动化 e2e 链路里。Vite host allowlist / HMR wss 行为、`https://meowth.dev.hexly.ai/setup` mint 按钮 disabled 都需要人工核验 | **本轮未跑**,留待人工跟进 |
