@@ -74,6 +74,10 @@ jobs:
         # `pnpm e2e:install` runs Playwright's browser fetch as an
         # explicit step, not via postinstall.
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install ripgrep
+        # scripts/check-dashboard-source.sh greps the dashboard src
+        # via rg. The GitHub macos-14 image does not ship it.
+        run: brew install ripgrep
       - run: pnpm daemon:g1
       - run: pnpm dashboard:g1
 
@@ -147,6 +151,10 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install ripgrep
+        # check-dashboard-source.test.ts shells out to
+        # scripts/check-dashboard-source.sh, which requires rg.
+        run: brew install ripgrep
       - run: pnpm dashboard:test:cover
       - run: pnpm dashboard:cover:check
 
@@ -219,7 +227,14 @@ jobs:
           path: ~/Library/Caches/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('apps/dashboard/package.json') }}
       - run: pnpm --filter @meowth/dashboard e2e:install
-      - run: pnpm dashboard:e2e
+      - name: L3 Playwright (embed + embed-mint projects)
+        # dashboard-dev fixture (Vite + meowthd path A) is excluded
+        # here: docs/features/01 §6.2 marks it as skipped because
+        # GitHub macOS runners regularly fail the `meowthd init`
+        # step inside e2e-dev-fixture.ts. embed + embed-mint cover
+        # the production path (the release surface) and are the
+        # canonical Phase 3.20-3.24 regression set.
+        run: pnpm --filter @meowth/dashboard e2e --project=dashboard-embed --project=dashboard-embed-mint
 
   g2:
     # docs/architecture/08 §7.3: supply-chain only. Secret scan is
