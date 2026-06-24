@@ -15,7 +15,7 @@ macOS 本机 coding-agent 桥接层：Go daemon 暴露 HTTP，Vite/React dashboa
 | 4 种远程访问模式（local / tailscale / ssh\_tunnel / https\_proxy） | ✅ 启动期校验 |
 | SQLite 持久化（tokens hash / sessions / messages） | ✅ |
 | Web Dashboard（Setup / Overview / Agents / Sessions / Tokens / Settings） | ✅ `go:embed` 同源 |
-| 6DQ 质量门（G1 静态 + G2 安全 + L1 单测 + L2 真 HTTP + L3 Playwright + D1 隔离） | ✅ pre-commit / pre-push 自动跑 |
+| 6DQ 质量门（G1 静态 + G2 安全 + L1 单测 + L2 真 HTTP + L3 Playwright + D1 隔离） | ✅ 全套手动可跑;husky pre-commit 跑 lint-staged 子集,pre-push 跑 vet + tsc + L1 + 覆盖率 + L2 + G2;**L3 / D1 / CI 仍需手动执行** |
 
 详见 [`docs/01-project-overview.md`](docs/01-project-overview.md) §10.1 与 [`docs/architecture/README.md`](docs/architecture/README.md) 的实施状态表。
 
@@ -178,16 +178,25 @@ pnpm dev                     # turbo dev（启 Vite dev server :37040,需另启 
 pnpm build                   # 构建所有 JS 包
 pnpm daemon:build            # 构建 dashboard → 嵌入 → go build
 
-# 全套质量门（也由 husky 自动跑）
+# 全套质量门(手动)。Husky 只跑其中一个子集——见下方注释。
 pnpm daemon:g1               # gofmt + go vet + golangci-lint
 pnpm dashboard:g1            # biome + tsc + depcruise + source scan
-pnpm daemon:test:cover && pnpm daemon:cover:check         # L1 + 覆盖率(target 95%)
-pnpm dashboard:test:cover && pnpm dashboard:cover:check   # L1 + 覆盖率(target 90%)
-pnpm test:l2                 # L2 真 HTTP harness（tokens / mint / exec / remote-access）
-pnpm --filter @meowth/dashboard e2e  # L3 Playwright（embed + embed-mint fixtures）
-pnpm scan:d1                 # 检查 prod/test 路径无混合
-pnpm scan:g2                 # osv-scanner + gitleaks + govulncheck
+pnpm daemon:test:cover && pnpm daemon:cover:check         # L1 + 覆盖率(target 95%)         [pre-push]
+pnpm dashboard:test:cover && pnpm dashboard:cover:check   # L1 + 覆盖率(target 90%)         [pre-push]
+pnpm test:l2                 # L2 真 HTTP harness（tokens / mint / exec / remote-access）   [pre-push]
+pnpm --filter @meowth/dashboard e2e  # L3 Playwright（embed + embed-mint fixtures）         手动
+pnpm scan:d1                 # 检查 prod/test 路径无混合                                     手动
+pnpm scan:g2                 # osv-scanner + gitleaks + govulncheck                          [pre-push]
 ```
+
+**Husky 实际范围**(`.husky/pre-commit` + `.husky/pre-push`):
+
+| 钩子 | 跑什么 | 不跑什么 |
+|---|---|---|
+| pre-commit | `lint-staged`(staged 文件 → biome / gofmt 自动修) | 其他 G1 / L1 / L2 / 任何 cover gate |
+| pre-push   | `daemon:vet` + `dashboard:typecheck` + L1 + 覆盖率 + L2 + G2 | **L3 Playwright / D1 / CI matrix** |
+
+L3 / D1 release 前手动跑;CI matrix（GitHub Actions darwin runner）尚未接入。
 
 详见 [`docs/architecture/08-6dq-hooks-wiring.md`](docs/architecture/08-6dq-hooks-wiring.md)。
 
