@@ -3,12 +3,17 @@
 // Drives the /setup page through two modes (token paste vs mint
 // via setup-code) and the protected-probe handshake on mode A.
 //
-// 04 §6.6 / 06 §9.2 disable mint in dev because Vite serves
-// dashboard from a different origin than the daemon and mint
-// requests would be cross-origin (uniform 404). The disabled
-// state is exposed both through `mintDisabled` (so the UI can
-// gray out the button) AND enforced inside `submitMint`, which
-// no-ops with an error state instead of calling the model.
+// 04 §6.6 / 06 §3.4 disable mint whenever the current page origin
+// is NOT an HTTP loopback URL. This covers two cases at once:
+//   - Vite dev (http://meowth-vite.dev.hexly.ai) cannot POST mint
+//     because the request would be cross-origin (uniform 404).
+//   - Caddy HTTPS (https://meowth.dev.hexly.ai) cannot satisfy the
+//     daemon's `expected := "http://" + r.Host` origin gate either
+//     — and per docs/features/01 §2.3 mint must stay loopback-only.
+//
+// The disabled state is exposed both through `mintDisabled` (so the
+// UI can gray out the button) AND enforced inside `submitMint`,
+// which no-ops with an error state instead of calling the model.
 
 import { isApiError } from '@/lib/api';
 import { clearStoredToken, setStoredToken } from '@/lib/localStorage';
@@ -24,7 +29,8 @@ import { useNavigate } from 'react-router';
 const TOKEN_RE = /^mwt_[A-Z2-7]{39}$/;
 const SETUP_CODE_RE = /^mws_[A-Z2-7]{39}$/;
 
-const MINT_DISABLED_REASON = 'Mint via dashboard is only available in the production build.';
+const MINT_DISABLED_REASON =
+  'Mint must be reached at http://127.0.0.1:7040/setup (not via Caddy HTTPS; localhost may resolve to IPv6 — prefer 127.0.0.1).';
 const UNIFIED_MINT_404 =
   'Setup not available. If you have a token already, paste it above; otherwise see daemon logs.';
 const DAEMON_UNREACHABLE = 'Daemon unreachable. Check that meowthd is running and accessible.';
@@ -53,22 +59,45 @@ export interface SetupViewModel {
 
 export interface UseSetupViewModelOptions {
   /**
-   * Whether the mint flow should be disabled because the
-   * dashboard is served from a different origin than the daemon
-   * (see 06 §9.2 + 04 §6.6). Default reads `import.meta.env.DEV`
-   * so production embed enables mint; tests inject the boolean
-   * directly to avoid stubbing Vite globals.
+   * The current page origin (window.location.origin). Mint is
+   * disabled unless this is an HTTP loopback URL — that covers
+   * dev (Vite on a hexly hostname), Caddy HTTPS, and any other
+   * non-loopback case. Defaults to `window.location.origin`;
+   * tests inject a fixed string to avoid touching jsdom globals.
    */
-  isDev?: boolean;
+  currentOrigin?: string;
+}
+
+/**
+ * isHttpLoopbackOrigin returns true when `origin` is an HTTP URL
+ * pointing at a loopback host. The mint endpoint's origin gate
+ * compares the request's Origin header against `"http://" + r.Host`
+ * (docs/architecture/04 §6.6) and only loopback bind addresses
+ * pass that check; HTTPS via Caddy and any non-loopback host fail.
+ *
+ * Exported so docs/architecture/06 §3.4 has one referenceable
+ * predicate; the test suite covers the matrix.
+ */
+export function isHttpLoopbackOrigin(origin: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(origin);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'http:') return false;
+  const host = url.hostname;
+  return host === '127.0.0.1' || host === 'localhost' || host === '[::1]' || host === '::1';
 }
 
 export default function useSetupViewModel(options: UseSetupViewModelOptions = {}): SetupViewModel {
-  const isDev = options.isDev ?? import.meta.env.DEV;
+  const currentOrigin =
+    options.currentOrigin ?? (typeof window === 'undefined' ? '' : window.location.origin);
   const navigate = useNavigate();
   const [mode, setModeState] = useState<SetupMode>('token');
   const [status, setStatus] = useState<SetupStatus>({ kind: 'idle' });
 
-  const mintDisabled = isDev === true;
+  const mintDisabled = !isHttpLoopbackOrigin(currentOrigin);
   const mintDisabledReason = mintDisabled ? MINT_DISABLED_REASON : null;
 
   function setMode(next: SetupMode): void {
