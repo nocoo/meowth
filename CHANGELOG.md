@@ -4,6 +4,37 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] — 2026-06-25
+
+Branding pass + README normalization. Functional code unchanged.
+
+### Added
+
+- `logo.png` at repo root (2048×2048 RGBA) as the single source of
+  truth for brand artwork.
+- `scripts/resize-logos.py` (Python + Pillow) regenerates every
+  derivative deterministically. Vite SPA variant — no Next.js
+  `src/app/` convention — so outputs land in
+  `apps/dashboard/public/`.
+- `apps/dashboard/public/{logo-24,logo-80}.png`,
+  `favicon.ico` (16+32 multi-size), `apple-touch-icon.png` (180),
+  `og-image.png` (1200×630, dark `#171717` card).
+- `apps/dashboard/index.html` now declares `<link rel="icon">`,
+  `<link rel="apple-touch-icon">`, and the four `og:*` meta tags so
+  social-preview crawlers (and the meowth.dev.hexly.ai Caddy host)
+  render the OG card.
+- Sidebar brand row now shows the 24×24 logo next to the "Meowth"
+  wordmark (basalt B-3 convention).
+
+### Changed
+
+- README header rewritten to the personal-project standard: centered
+  128×128 logo + h1 + tagline + shields.io badges
+  (release / CI / platform / Go / Node / license) + horizontal rule.
+  Body content unchanged.
+
+[0.1.3]: https://github.com/nocoo/meowth/releases/tag/v0.1.3
+
 ## [0.1.2] — 2026-06-24
 
 Patch release. v0.1.1 fixed only 2 of the 4 v0.1.0 CI failures; this

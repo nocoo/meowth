@@ -1,8 +1,26 @@
-# Meowth
+<p align="center"><img src="logo.png" width="128" height="128" alt="Meowth logo" /></p>
+
+<h1 align="center">Meowth</h1>
+
+<p align="center">
+  <strong>macOS 本机 coding-agent 桥接层</strong><br>
+  统一 SDK · HTTP 控制面 · 本机 dashboard · 远程可调度
+</p>
+
+<p align="center">
+  <a href="https://github.com/nocoo/meowth/releases"><img alt="release" src="https://img.shields.io/github/v/release/nocoo/meowth?label=release&color=blue" /></a>
+  <a href="https://github.com/nocoo/meowth/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/nocoo/meowth/ci.yml?branch=main&label=CI" /></a>
+  <img alt="platform" src="https://img.shields.io/badge/platform-darwin--arm64%20%7C%20darwin--amd64-lightgrey" />
+  <img alt="go" src="https://img.shields.io/badge/Go-1.26.4-00ADD8?logo=go" />
+  <img alt="node" src="https://img.shields.io/badge/Node-%E2%89%A520-339933?logo=node.js" />
+  <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-Modified%20Apache%202.0-green" /></a>
+</p>
+
+---
 
 > 本项目根本目的与定位详见 [`docs/01-project-overview.md`](docs/01-project-overview.md)
 
-macOS 本机 coding-agent 桥接层：Go daemon 暴露 HTTP，Vite/React dashboard 管理本机已安装的 5 家 coding CLI（claude / copilot / codex / hermes / pi）。一句话：**「我」对本机一切 coding agent 的统一控制台与远程入口**。
+Go daemon 暴露 HTTP，Vite/React dashboard 管理本机已安装的 5 家 coding CLI（claude / copilot / codex / hermes / pi）。一句话：**「我」对本机一切 coding agent 的统一控制台与远程入口**。
 
 ## 当前能力
 
