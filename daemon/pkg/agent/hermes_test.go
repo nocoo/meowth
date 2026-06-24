@@ -579,24 +579,26 @@ func (b *bufferWriter) String() string {
 }
 
 // TestHermesClientAutoApprovesPermissionRequest asserts that when an
-// ACP agent sends us `session/request_permission` (kimi does this on
-// every Shell / file-mutating tool call), the client replies with
-// `approve_for_session` — without this the agent blocks 300s and the
-// task hangs. The id in the reply must match the agent's request id
-// so its in-flight future resolves.
+// ACP agent sends us `session/request_permission` (hermes ≥ 0.17.0 does
+// this for every Shell / file-mutating tool call when HERMES_YOLO_MODE
+// is not honoured server-side under ACP), the client replies with an
+// approve-shaped optionId taken from the request's own options array.
+//
+// The literal option_ids and preference order are pinned in
+// pickApprovalOptionID; the local-fix entry in pkg/agent/UPSTREAM.md
+// records why this differs from upstream multica.
 func TestHermesClientAutoApprovesPermissionRequest(t *testing.T) {
 	t.Parallel()
 
+	// Generic permission flow: prefer allow_session over allow_once.
 	w := &bufferWriter{}
 	c := &hermesClient{
 		cfg:     Config{Logger: slog.Default()},
 		stdin:   w,
 		pending: make(map[int]*pendingRPC),
 	}
+	c.handleLine(`{"jsonrpc":"2.0","id":42,"method":"session/request_permission","params":{"sessionId":"ses_1","options":[{"optionId":"allow_once","name":"Allow once","kind":"allow_once"},{"optionId":"allow_session","name":"Allow for session","kind":"allow_always"},{"optionId":"allow_always","name":"Allow always","kind":"allow_always"},{"optionId":"deny","name":"Deny","kind":"reject_once"}],"toolCall":{"toolCallId":"tc_1","title":"Shell","content":[]}}}`)
 
-	c.handleLine(`{"jsonrpc":"2.0","id":42,"method":"session/request_permission","params":{"sessionId":"ses_1","options":[{"optionId":"approve","name":"Approve once","kind":"allow_once"},{"optionId":"approve_for_session","name":"Approve for this session","kind":"allow_always"},{"optionId":"reject","name":"Reject","kind":"reject_once"}],"toolCall":{"toolCallId":"tc_1","title":"Shell","content":[]}}}`)
-
-	got := w.String()
 	var resp struct {
 		JSONRPC string `json:"jsonrpc"`
 		ID      int    `json:"id"`
@@ -607,20 +609,135 @@ func TestHermesClientAutoApprovesPermissionRequest(t *testing.T) {
 			} `json:"outcome"`
 		} `json:"result"`
 	}
-	if err := json.Unmarshal([]byte(strings.TrimSpace(got)), &resp); err != nil {
-		t.Fatalf("reply is not valid JSON: %q err=%v", got, err)
+	if err := json.Unmarshal([]byte(strings.TrimSpace(w.String())), &resp); err != nil {
+		t.Fatalf("generic-permission: reply not JSON: %q err=%v", w.String(), err)
 	}
-	if resp.JSONRPC != "2.0" {
-		t.Errorf("jsonrpc: got %q, want 2.0", resp.JSONRPC)
+	if resp.JSONRPC != "2.0" || resp.ID != 42 {
+		t.Errorf("generic-permission: envelope: jsonrpc=%q id=%d", resp.JSONRPC, resp.ID)
 	}
-	if resp.ID != 42 {
-		t.Errorf("id: got %d, want 42 (must echo agent's request id)", resp.ID)
+	if resp.Result.Outcome.Outcome != "selected" || resp.Result.Outcome.OptionID != "allow_session" {
+		t.Errorf("generic-permission: outcome={%q,%q}, want={selected,allow_session}",
+			resp.Result.Outcome.Outcome, resp.Result.Outcome.OptionID)
 	}
-	if resp.Result.Outcome.Outcome != "selected" {
-		t.Errorf("outcome.outcome: got %q, want %q", resp.Result.Outcome.Outcome, "selected")
+}
+
+// TestHermesClientAutoApprovesEditApproval covers the second permission
+// flow hermes uses (acp_adapter/edit_approval.py) which only offers
+// `allow_once` / `deny`. Replying with `allow_session` (good for the
+// generic flow) would route to deny here. The client must pick
+// allow_once when that's the only allow-shaped option.
+func TestHermesClientAutoApprovesEditApproval(t *testing.T) {
+	t.Parallel()
+
+	w := &bufferWriter{}
+	c := &hermesClient{
+		cfg:     Config{Logger: slog.Default()},
+		stdin:   w,
+		pending: make(map[int]*pendingRPC),
 	}
-	if resp.Result.Outcome.OptionID != "approve_for_session" {
-		t.Errorf("outcome.optionId: got %q, want %q", resp.Result.Outcome.OptionID, "approve_for_session")
+	c.handleLine(`{"jsonrpc":"2.0","id":7,"method":"session/request_permission","params":{"sessionId":"ses_1","options":[{"optionId":"allow_once","name":"Allow edit","kind":"allow_once"},{"optionId":"deny","name":"Deny","kind":"reject_once"}],"toolCall":{"toolCallId":"tc_2","title":"Edit","content":[]}}}`)
+
+	var resp struct {
+		Result struct {
+			Outcome struct {
+				Outcome  string `json:"outcome"`
+				OptionID string `json:"optionId"`
+			} `json:"outcome"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(w.String())), &resp); err != nil {
+		t.Fatalf("edit-approval: reply not JSON: %q err=%v", w.String(), err)
+	}
+	if resp.Result.Outcome.OptionID != "allow_once" {
+		t.Errorf("edit-approval: optionId=%q want allow_once", resp.Result.Outcome.OptionID)
+	}
+}
+
+// TestHermesClientCancelsWhenNoApproveOption guards the deny-only
+// pathological case: if a request only offers deny options, the
+// client must NOT fabricate an approve option; it returns outcome=cancelled.
+func TestHermesClientCancelsWhenNoApproveOption(t *testing.T) {
+	t.Parallel()
+
+	w := &bufferWriter{}
+	c := &hermesClient{
+		cfg:     Config{Logger: slog.Default()},
+		stdin:   w,
+		pending: make(map[int]*pendingRPC),
+	}
+	c.handleLine(`{"jsonrpc":"2.0","id":9,"method":"session/request_permission","params":{"sessionId":"ses_1","options":[{"optionId":"deny","name":"Deny","kind":"reject_once"},{"optionId":"deny_always","name":"Deny always","kind":"reject_always"}],"toolCall":{"toolCallId":"tc_3","title":"X","content":[]}}}`)
+
+	var resp struct {
+		Result struct {
+			Outcome struct {
+				Outcome  string `json:"outcome"`
+				OptionID string `json:"optionId"`
+			} `json:"outcome"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(w.String())), &resp); err != nil {
+		t.Fatalf("deny-only: reply not JSON: %q err=%v", w.String(), err)
+	}
+	if resp.Result.Outcome.Outcome != "cancelled" || resp.Result.Outcome.OptionID != "" {
+		t.Errorf("deny-only: outcome={%q,%q} want={cancelled,}", resp.Result.Outcome.Outcome, resp.Result.Outcome.OptionID)
+	}
+}
+
+// TestPickApprovalOptionID drills the helper directly across the
+// permutations we expect to see in the wild + the malformed cases.
+func TestPickApprovalOptionID(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{
+			"prefer allow_session",
+			`{"options":[{"optionId":"allow_once","kind":"allow_once"},{"optionId":"allow_session","kind":"allow_always"},{"optionId":"deny","kind":"reject_once"}]}`,
+			"allow_session",
+		},
+		{
+			"fall back to allow_always when no allow_session",
+			`{"options":[{"optionId":"allow_once","kind":"allow_once"},{"optionId":"allow_always","kind":"allow_always"},{"optionId":"deny","kind":"reject_once"}]}`,
+			"allow_always",
+		},
+		{
+			"edit_approval shape: only allow_once",
+			`{"options":[{"optionId":"allow_once","kind":"allow_once"},{"optionId":"deny","kind":"reject_once"}]}`,
+			"allow_once",
+		},
+		{
+			"deny-only returns empty",
+			`{"options":[{"optionId":"deny","kind":"reject_once"},{"optionId":"deny_always","kind":"reject_always"}]}`,
+			"",
+		},
+		{
+			"empty options",
+			`{"options":[]}`,
+			"",
+		},
+		{
+			"nil params returns empty",
+			``,
+			"",
+		},
+		{
+			"unknown allow_-prefixed option is acceptable as anyAllow fallback",
+			`{"options":[{"optionId":"allow_future_thing","kind":"allow_always"}]}`,
+			"allow_future_thing",
+		},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			got := pickApprovalOptionID([]byte(c.raw))
+			if got != c.want {
+				t.Errorf("got %q want %q", got, c.want)
+			}
+		})
 	}
 }
 

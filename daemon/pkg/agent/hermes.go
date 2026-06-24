@@ -556,6 +556,8 @@ func (c *hermesClient) handleLine(line string) {
 
 	// Agent → client request: has id + method (no result / error yet).
 	// Kimi uses this for session/request_permission; if we don't answer,
+	// kimi blocks waiting forever. Same applies to hermes — Hermes auto-approves
+	// these when launched with HERMES_YOLO_MODE=1, but we still handle
 	// the agent blocks for 300s and the task hangs. Hermes doesn't send
 	// these when launched with HERMES_YOLO_MODE=1, but we still handle
 	// the case generically for any future ACP backend we bolt on.
@@ -583,10 +585,19 @@ func (c *hermesClient) handleLine(line string) {
 // handleAgentRequest replies to JSON-RPC requests the agent sends
 // us (agent → client direction). The only one we care about today is
 // `session/request_permission`: the daemon is headless and cannot
-// actually prompt a user, so we auto-approve every action. Using
-// `approve_for_session` rather than `approve` means subsequent
-// identical actions (every Shell invocation, every file write) don't
-// round-trip through us — the agent remembers them locally.
+// actually prompt a user, so we auto-approve every action.
+//
+// hermes uses TWO different request paths with non-overlapping option
+// sets — the generic permission flow offers
+// `{allow_once, allow_session, allow_always, deny}` while the
+// edit-approval (file write) flow offers only `{allow_once, deny}`.
+// Replying with a fixed option_id breaks one of the two. Instead we
+// dynamically pick from the request's own `params.options` array:
+// prefer "session"-scoped over one-shot, but fall back to whichever
+// approve-like option is offered. Anything not in this whitelist
+// (kind starts with "reject_" / option_id starts with "deny") is
+// skipped, so a malformed request that only listed deny options
+// would correctly fall through to a generic method-not-found error.
 func (c *hermesClient) handleAgentRequest(raw map[string]json.RawMessage) {
 	var method string
 	_ = json.Unmarshal(raw["method"], &method)
@@ -599,17 +610,34 @@ func (c *hermesClient) handleAgentRequest(raw map[string]json.RawMessage) {
 	var resp map[string]any
 	switch method {
 	case "session/request_permission":
+		optionID := pickApprovalOptionID(raw["params"])
+		if optionID == "" {
+			// Request offered no approve-shaped option. Decline
+			// rather than fabricate one — hermes will surface
+			// the denial cleanly to the user.
+			resp = map[string]any{
+				"jsonrpc": "2.0",
+				"id":      json.RawMessage(rawID),
+				"result": map[string]any{
+					"outcome": map[string]any{"outcome": "cancelled"},
+				},
+			}
+			c.cfg.Logger.Warn("agent permission request had no approve-like option; cancelling",
+				"method", method)
+			break
+		}
 		resp = map[string]any{
 			"jsonrpc": "2.0",
 			"id":      json.RawMessage(rawID),
 			"result": map[string]any{
 				"outcome": map[string]any{
 					"outcome":  "selected",
-					"optionId": "approve_for_session",
+					"optionId": optionID,
 				},
 			},
 		}
-		c.cfg.Logger.Debug("auto-approved agent permission request", "method", method)
+		c.cfg.Logger.Debug("auto-approved agent permission request",
+			"method", method, "option_id", optionID)
 	default:
 		// Unknown agent→client method — reply with standard "method
 		// not found" so the agent doesn't block waiting for us. Better
@@ -633,6 +661,67 @@ func (c *hermesClient) handleAgentRequest(raw map[string]json.RawMessage) {
 	data = append(data, '\n')
 	if err := c.writeLine(data); err != nil {
 		c.cfg.Logger.Warn("write agent-request response", "method", method, "error", err)
+	}
+}
+
+// pickApprovalOptionID inspects the `options` array of a hermes
+// `session/request_permission` payload and returns the option_id that
+// best represents "approve / auto-accept" semantics. Returns "" when
+// no approve-shaped option is present.
+//
+// Preference order, by both `kind` and `option_id`:
+//  1. "allow_session" / kind="allow_always" labelled as session       — survives across all subsequent tool calls in the same session
+//  2. "allow_always"  / kind="allow_always"                           — generic always-allow (used when 1 is absent)
+//  3. "allow_once"    / kind="allow_once"                             — single-shot allow (file edit_approval flow only offers this)
+//  4. Any option whose kind starts with "allow_" or option_id starts
+//     with "allow_" — defensive fallback for future schema changes
+//
+// We never return an id whose kind starts with "reject_" or option_id
+// starts with "deny" — caller treats "" as "cancel the request".
+func pickApprovalOptionID(rawParams json.RawMessage) string {
+	var params struct {
+		Options []struct {
+			OptionID string `json:"optionId"`
+			Kind     string `json:"kind"`
+		} `json:"options"`
+	}
+	if len(rawParams) == 0 {
+		return ""
+	}
+	if err := json.Unmarshal(rawParams, &params); err != nil {
+		return ""
+	}
+
+	var allowSession, allowAlways, allowOnce, anyAllow string
+	for _, o := range params.Options {
+		if strings.HasPrefix(o.OptionID, "deny") || strings.HasPrefix(o.Kind, "reject_") {
+			continue
+		}
+		isAllow := strings.HasPrefix(o.OptionID, "allow") || strings.HasPrefix(o.Kind, "allow_")
+		if !isAllow {
+			continue
+		}
+		switch {
+		case o.OptionID == "allow_session" && allowSession == "":
+			allowSession = o.OptionID
+		case o.OptionID == "allow_always" && allowAlways == "":
+			allowAlways = o.OptionID
+		case o.OptionID == "allow_once" && allowOnce == "":
+			allowOnce = o.OptionID
+		}
+		if anyAllow == "" {
+			anyAllow = o.OptionID
+		}
+	}
+	switch {
+	case allowSession != "":
+		return allowSession
+	case allowAlways != "":
+		return allowAlways
+	case allowOnce != "":
+		return allowOnce
+	default:
+		return anyAllow
 	}
 }
 

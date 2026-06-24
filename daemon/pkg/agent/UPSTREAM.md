@@ -60,6 +60,27 @@ it still hasn't (keep the patch and verify the affected path still applies).
   the Phase 2.3 lint wiring; revisit when pumping if upstream tightens
   the same call sites.
 
+- **hermes ACP `session/request_permission` reply derived from the
+  request's own options array** — `hermes.go` `handleAgentRequest` +
+  `pickApprovalOptionID`. Upstream multica replies with a hard-coded
+  `{outcome:{outcome:"selected", optionId:"approve_for_session"}}`.
+  Hermes ≥ 0.17.0 uses two non-overlapping option sets:
+  - `acp_adapter/permissions.py` (generic Shell / agent tools) offers
+    `{"allow_once","allow_session","allow_always","deny","deny_always"}`
+    and routes anything else to "deny" via `_OPTION_ID_TO_HERMES`.
+  - `acp_adapter/edit_approval.py` (file-mutating tools like
+    `write_file`) offers ONLY `{"allow_once","deny"}` and requires
+    `option_id == "allow_once"` to count as approval.
+  A fixed reply breaks one of the two flows. Meowth's hermes client
+  now parses `params.options` and picks the first approve-shaped id
+  (preference: `allow_session` > `allow_always` > `allow_once` > any
+  `allow_*`). Coverage in `TestHermesClientAutoApprovesPermissionRequest`,
+  `TestHermesClientAutoApprovesEditApproval`,
+  `TestHermesClientCancelsWhenNoApproveOption`, and
+  `TestPickApprovalOptionID`. Revisit when pumping multica past the
+  commit that adopts an equivalent fix
+  (https://github.com/multica-ai/multica `server/pkg/agent/hermes.go`).
+
 - **Codex semantic-inactivity tests widened for slow CI runners** —
   `codex_test.go` `TestCodexExecuteLegacyFirstTurnMessageSatisfiesProgress`,
   `TestCodexExecuteSemanticInactivityAllowsContinuousMessages`, and
