@@ -15,7 +15,7 @@ macOS 本机 coding-agent 桥接层：Go daemon 暴露 HTTP，Vite/React dashboa
 | 4 种远程访问模式（local / tailscale / ssh\_tunnel / https\_proxy） | ✅ 启动期校验 |
 | SQLite 持久化（tokens hash / sessions / messages） | ✅ |
 | Web Dashboard（Setup / Overview / Agents / Sessions / Tokens / Settings） | ✅ `go:embed` 同源 |
-| 6DQ 质量门（G1 静态 + G2 安全 + L1 单测 + L2 真 HTTP + L3 Playwright + D1 隔离） | ✅ 全套手动可跑;husky pre-commit 跑 lint-staged 子集,pre-push 跑 vet + tsc + L1 + 覆盖率 + L2 + G2;**L3 / D1 / CI 仍需手动执行** |
+| 6DQ 质量门（G1 静态 + G2 安全 + L1 单测 + L2 真 HTTP + L3 Playwright + D1 隔离） | ✅ husky pre-commit 跑 lint-staged 子集,pre-push 跑 vet + tsc + L1 + 覆盖率 + L2 + G2;CI（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）在 macOS runner 上跑 lint / build matrix / l1 / l2 / l2-embed / l3(embed+embed-mint) / g2 / secret-scan;**D1 + dashboard-dev L3 仅手动跑** |
 
 详见 [`docs/01-project-overview.md`](docs/01-project-overview.md) §10.1 与 [`docs/architecture/README.md`](docs/architecture/README.md) 的实施状态表。
 
@@ -66,7 +66,7 @@ meowth/
 - macOS（darwin-arm64 / darwin-amd64）
 - Node ≥ 20（详 `.nvmrc`）
 - pnpm ≥ 11
-- Go ≥ 1.26.1（与上游 multica `server/go.mod` 对齐,详 [`docs/architecture/01`](docs/architecture/01-agent-sdk-pump-from-multica.md) §7）
+- Go ≥ 1.26.2（与上游 multica `server/go.mod` 对齐,详 [`docs/architecture/01`](docs/architecture/01-agent-sdk-pump-from-multica.md) §7）
 - 至少安装一家 coding CLI 才能真实跑 agent（`which claude / codex / copilot / hermes / pi`）
 
 ## 快速上手
@@ -194,9 +194,10 @@ pnpm scan:g2                 # osv-scanner + gitleaks + govulncheck             
 | 钩子 | 跑什么 | 不跑什么 |
 |---|---|---|
 | pre-commit | `lint-staged`(staged 文件 → biome / gofmt 自动修) | 其他 G1 / L1 / L2 / 任何 cover gate |
-| pre-push   | `daemon:vet` + `dashboard:typecheck` + L1 + 覆盖率 + L2 + G2 | **L3 Playwright / D1 / CI matrix** |
+| pre-push   | `daemon:vet` + `dashboard:typecheck` + L1 + 覆盖率 + L2 + G2 | L3 Playwright / D1 / CI matrix |
+| CI([`.github/workflows/ci.yml`](.github/workflows/ci.yml),GitHub macos-14 runner) | lint / build-darwin(amd64+arm64) / l1-daemon / l1-dashboard / l2 / l2-embed / l3(embed+embed-mint) / g2 / secret-scan | dashboard-dev L3 project（meowthd init 在 runner 上 flake） / D1 |
 
-L3 / D1 release 前手动跑;CI matrix（GitHub Actions darwin runner）尚未接入。
+D1 隔离与 dashboard-dev e2e release 前手动跑。
 
 详见 [`docs/architecture/08-6dq-hooks-wiring.md`](docs/architecture/08-6dq-hooks-wiring.md)。
 
