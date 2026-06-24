@@ -555,12 +555,11 @@ func (c *hermesClient) handleLine(line string) {
 	}
 
 	// Agent → client request: has id + method (no result / error yet).
-	// Kimi uses this for session/request_permission; if we don't answer,
-	// kimi blocks waiting forever. Same applies to hermes — Hermes auto-approves
-	// these when launched with HERMES_YOLO_MODE=1, but we still handle
-	// the agent blocks for 300s and the task hangs. Hermes doesn't send
-	// these when launched with HERMES_YOLO_MODE=1, but we still handle
-	// the case generically for any future ACP backend we bolt on.
+	// Both kimi and hermes use this for session/request_permission;
+	// if we don't answer, kimi blocks waiting forever and hermes
+	// blocks for ~300 s before timing out the tool call. We answer
+	// generically here so any future ACP backend we bolt on inherits
+	// the same auto-approval behaviour without per-backend wiring.
 	if _, hasID := raw["id"]; hasID {
 		if _, hasResult := raw["result"]; hasResult {
 			c.handleResponse(raw)
@@ -596,8 +595,9 @@ func (c *hermesClient) handleLine(line string) {
 // prefer "session"-scoped over one-shot, but fall back to whichever
 // approve-like option is offered. Anything not in this whitelist
 // (kind starts with "reject_" / option_id starts with "deny") is
-// skipped, so a malformed request that only listed deny options
-// would correctly fall through to a generic method-not-found error.
+// skipped, so a request that only listed deny options falls through
+// to the deny-only branch below, which replies with
+// outcome="cancelled" rather than fabricating an approve id.
 func (c *hermesClient) handleAgentRequest(raw map[string]json.RawMessage) {
 	var method string
 	_ = json.Unmarshal(raw["method"], &method)
