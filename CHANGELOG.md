@@ -4,6 +4,25 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-06-24
+
+Patch release. v0.1.1 fixed only 2 of the 4 v0.1.0 CI failures; this
+release finishes the job.
+
+### Fixed
+
+- **CI l3 job**: was failing with `scripts/build-daemon.sh: line 20:
+  exec: go: not found`. The l3 fixture (`e2e-embed-fixture`) builds
+  the daemon binary under test on the fly via `pnpm daemon:build`,
+  which needs the Go toolchain — but the l3 job step list omitted
+  `actions/setup-go@v5`. Added.
+- **CI g2 (govulncheck)**: 1.26.2 (shipped in v0.1.1) itself had 3
+  more stdlib CVEs after release: `GO-2026-5039` (net/textproto),
+  `GO-2026-5037` (crypto/x509), `GO-2026-4971` (net). Bumped to
+  `1.26.4`. Local govulncheck now clean against go1.26.4.
+
+[0.1.2]: https://github.com/nocoo/meowth/releases/tag/v0.1.2
+
 ## [0.1.1] — 2026-06-24
 
 Patch release that turns the v0.1.0 CI run green. The shipped daemon
