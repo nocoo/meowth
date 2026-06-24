@@ -220,6 +220,15 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
+      - uses: actions/setup-go@v5
+        # e2e-embed-fixture invokes `pnpm daemon:build` to produce
+        # the dashboard-dist + meowthd binary under test; without
+        # Go on PATH the fixture's go-build step exits 1 and
+        # Playwright never starts.
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Cache Playwright browsers
         uses: actions/cache@v4
