@@ -1,6 +1,6 @@
 {
   "name": "meowth",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.6.0",
   "engines": {
@@ -14,7 +14,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "clean": "turbo run clean && rm -rf node_modules",
-    "daemon:build": "pnpm --filter @meowth/dashboard build && bash scripts/prepare-dashboard-embed.sh && cd daemon && go build ./...",
+    "daemon:build": "pnpm --filter @meowth/dashboard build && bash scripts/prepare-dashboard-embed.sh && cd daemon && go build -ldflags \"-X main.Version=$(node -p \\\"require('../package.json').version\\\")\" ./...",
     "daemon:vet": "cd daemon && go vet ./...",
     "daemon:fmt:check": "cd daemon && test -z \"$(gofmt -l .)\" || (gofmt -l . && echo 'gofmt: files above are not formatted; run gofmt -w' >&2; exit 1)",
     "daemon:lint": "cd daemon && go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run",
