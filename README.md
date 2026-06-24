@@ -66,7 +66,7 @@ meowth/
 - macOS（darwin-arm64 / darwin-amd64）
 - Node ≥ 20（详 `.nvmrc`）
 - pnpm ≥ 11
-- Go ≥ 1.26.2（与上游 multica `server/go.mod` 对齐,详 [`docs/architecture/01`](docs/architecture/01-agent-sdk-pump-from-multica.md) §7）
+- Go ≥ 1.26.4（与上游 multica `server/go.mod` 对齐,详 [`docs/architecture/01`](docs/architecture/01-agent-sdk-pump-from-multica.md) §7）
 - 至少安装一家 coding CLI 才能真实跑 agent（`which claude / codex / copilot / hermes / pi`）
 
 ## 快速上手
