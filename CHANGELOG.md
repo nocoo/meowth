@@ -4,6 +4,56 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-06-25
+
+Frontend toolchain bump to align with the basalt B-family baseline
+(closest peer: surety). Daemon static-routing fix surfaced along
+the way. No agent-SDK or HTTP-API changes.
+
+Minor version bump because the dep tree shifted across several
+major versions (Vite 6→8, React Router 7→8, TypeScript 5→6); the
+public HTTP contract is unchanged.
+
+### Changed
+
+- **Frontend toolchain bumped**:
+  - vite                  6.4.3   → 8.1.0
+  - esbuild               0.25.0  → 0.28.1   (workspace override)
+  - @vitejs/plugin-react  4.7.0   → 6.0.3
+  - @tailwindcss/vite     ^4.2.2  → 4.3.1
+  - tailwindcss           ^4.2.2  → 4.3.1
+  - react-router          ~7.17.0 → 8.0.1
+  - typescript            ^5.7.2  → ^6.0.3   (root + shared + dashboard)
+  - @radix-ui/react-dialog 1.1.16 → 1.1.17
+  - lucide-react          1.17.0  → 1.21.0
+  - @playwright/test      1.61.0  → 1.61.1
+  - @types/react          ^19.2.0 → ^19.2.17
+  - @types/react-dom      ^19.2.0 → ^19.2.3
+- `apps/dashboard/tsconfig.json` drops `baseUrl: "."` (deprecated in
+  TS6, errors with TS5101) and uses an explicit `paths` mapping
+  `"@/*": ["./src/*"]`. Same shape surety uses.
+- `apps/dashboard/package.json` depcruise script now passes a glob
+  `"src/**/*.{ts,tsx}"` — dependency-cruiser 16 dropped implicit
+  directory recursion, a bare `src` argument silently scans 0 files.
+
+### Fixed
+
+- `daemon/internal/server`: `RootAsset` handler now serves the
+  brand PNGs and favicon at the site root. v0.1.3 added the
+  `<link rel="icon">` and `<link rel="apple-touch-icon">` in
+  `apps/dashboard/index.html`, but the daemon only routed
+  `/assets/*` — every brand asset 404'd in production-embed mode.
+  Caught when the new Vite 8 build started actually requesting them
+  during e2e.
+  - Added 3 test cases covering happy path, missing-file, and the
+    non-NotExist fs error branch (defense-in-depth).
+  - server.go mounts a closed list of 5 hard-coded filenames
+    (`favicon.ico`, `apple-touch-icon.png`, `logo-24.png`,
+    `logo-80.png`, `og-image.png`); RootAsset takes the literal
+    filename, so this is not a path-traversal exposure.
+
+[0.2.0]: https://github.com/nocoo/meowth/releases/tag/v0.2.0
+
 ## [0.1.4] — 2026-06-25
 
 README simplification + license clarification. Functional code
