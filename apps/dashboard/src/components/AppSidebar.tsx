@@ -62,7 +62,10 @@ export default function AppSidebar() {
       aria-label="Primary"
       className="bg-card text-card-foreground flex h-screen w-56 shrink-0 flex-col gap-1 border-r p-3"
     >
-      <div className="text-foreground px-2 py-3 text-base font-semibold">Meowth</div>
+      <div className="text-foreground flex items-center gap-2 px-2 py-3 text-base font-semibold">
+        <img src="/logo-24.png" alt="Meowth" width={24} height={24} />
+        <span>Meowth</span>
+      </div>
       <ul className="flex flex-col gap-1">
         {ITEMS.map((item) => {
           const active = item.matches(pathname);
