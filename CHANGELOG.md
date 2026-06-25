@@ -4,6 +4,92 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-06-25
+
+Dashboard Gen 2 structural UI redesign. Aligns the dashboard with
+the basalt B05 four-layer brightness ladder and the surety Gen 2
+floating-island app shell, and refactors every page into a
+Page/Content/Skeleton split (plus an extracted dialog for Tokens).
+No agent-SDK, daemon, or HTTP-API behavior changes.
+
+Minor version bump because the dashboard component tree shifted
+in a structurally breaking way (multiple components removed, file
+layout reorganised); the public HTTP contract and daemon
+behavior are unchanged.
+
+### Added
+
+- `components/layout/{app-shell,sidebar,sidebar-context,breadcrumbs}.tsx`
+  — Gen 2 floating-island app shell ported from surety. AppShell
+  owns the Sheet drawer trigger ref + manual `onCloseAutoFocus`
+  for focus return; Sidebar is the floating-island L1
+  navigation; SidebarContext shares collapsed/open state.
+- `components/StatCard.tsx` — Overview metric tile
+  (`{ title, body, icon? }`) used by the four "Daemon / Tokens /
+  Sessions / Agents" tiles.
+- Per-page Page / Content / Skeleton splits for Overview,
+  Agents, SessionsList, SessionDetail, Tokens, and Settings.
+  Page is a shell that owns the viewmodel + branch; Content is
+  pure-props business render; Skeleton is the pre-data
+  placeholder (stable string-key arrays, no index-as-key).
+- `pages/Tokens/TokensCreateDialog.tsx` — extracted token-create
+  dialog. Manual `role="dialog"` (non-destructive, so no G3
+  alert-dialog). Plaintext lifecycle is bounded: the secret
+  lives only in `vm.modal.createdSecret` during reveal phase
+  and clears on close; SecretReveal stays masked by default and
+  is asserted absent from the DOM after close.
+- Stage A source-derived primitives from surety (19 files
+  total: `tooltip` / `sheet` / `avatar` / `collapsible` /
+  `separator` / `badge` / `skeleton` / `empty-state` G1 +
+  `table` / `dropdown-menu` / `select` / `label` / `notice` /
+  `section-divider` / `switch` / `textarea` / `toggle` /
+  `toggle-group` / `sort-header` G2). Each carries a smoke
+  test; the page/layout layer imports only what it currently
+  needs.
+- `dependency-cruiser` config and `pnpm dashboard:depcruise`
+  in the G1 gate as the single source of truth for MVVM import
+  boundaries (pages-must-not-import-models, models-must-not-
+  import-react, pages-must-not-import-api).
+
+### Changed
+
+- Surface tier ladder formalised as L0 (`bg-background`) / L1
+  (`bg-card` floating island) / L2 (`bg-secondary`) / L3
+  (`bg-secondary` + `border-border` divider). One layer step
+  per nesting level; Skeleton inherits the same ladder as its
+  Content.
+- `radix-ui` aggregate package replaces per-primitive
+  `@radix-ui/react-<x>` packages. All source-copied ui files
+  import from the `radix-ui` namespace.
+- SettingsPage replaced the inline daemon healthz text with a
+  semantic `<Notice>` mapped per state: success (reachable),
+  warning (unreachable, polite), destructive (`role="alert"`,
+  error). The Dashboard build row stays in the Page shell so
+  its compile-time value is visible even during loading.
+- SetupPage replaced the local `ErrorBanner` and the disabled-
+  mint footnote `<p>` with semantic `<Notice>` (destructive
+  for the error path, info for disabled-mint). All form
+  behavior preserved — placeholders, validation regex, button
+  copy, `noValidate`, `type="password"`, the dev-mint origin
+  guard, and `resp.secret` handling are untouched.
+- `docs/architecture/06-dashboard-mvvm-and-basalt.md` rewritten
+  to reflect Gen 2 (§2 directory tree with the Page/Content/
+  Skeleton sub-files; §4 surety provenance + the full A3/A4
+  primitive inventory; §5.1 four-layer brightness ladder;
+  §6.4 per-page split contract; §6.5 per-page test contract;
+  §7 every page table expanded to list all sub-files; §12
+  rewritten as implementation history covering Phase 3.13–3.20
+  and Phase 2 Stage A/B/C/D).
+
+### Removed
+
+- `components/AppSidebar.tsx`, `components/DashboardLayout.tsx`,
+  and `components/ui/card.tsx` (replaced by the Gen 2
+  `components/layout/*` triplet + direct `bg-card` /
+  `bg-secondary` Tailwind surfaces inside Content).
+
+[0.3.0]: https://github.com/nocoo/meowth/releases/tag/v0.3.0
+
 ## [0.2.0] — 2026-06-25
 
 Frontend toolchain bump to align with the basalt B-family baseline

@@ -918,7 +918,7 @@ App boot:
 | **C6** `fdcc8ee` | style(dashboard): replace SetupPage ErrorBanner and disabled-mint footnote with semantic Notice | Setup styling-only 升级（非 split） |
 | C7 / C8 | SKIPPED | 无 stale e2e selector 累积 / 无跨页重复 fixture / coverage 整理在 C1–C6 内完成 |
 | **D1** | docs(arch): rewrite 06 for Gen 2 layout + L0..L3 + per-page Page/Content/Skeleton | 本文档：§2 / §4 / §5.1 / §6.4 / §6.5 / §7 / §12 同步到 Gen 2 落地形态 |
-| D2 | (待落地) | release bump 0.2.0 → 0.3.0 + CHANGELOG |
+| **D2** | chore(release): bump to 0.3.0 + CHANGELOG | release bump (root + apps/dashboard + packages/shared all `0.2.0 → 0.3.0`) + `CHANGELOG.md` `[0.3.0]` entry; daemon binary version probe `./daemon/meowthd` prints `meowthd 0.3.0` (injected via `scripts/build-daemon.sh -ldflags`) |
 
 Phase 2 闭环 gate 状态（D1 时点）：dashboard 75 files / 438 tests；Playwright 3 projects × 14/14；`dashboard:cover:check` `ok=55 baseline_floors=3 structural_exempt=10`。3 个剩余 baseline（`lib/ansi.ts` / `useSessionDetailViewModel.ts` / `useTokensViewModel.ts`）均明确在 Stage C 范围外，后续独立 lift。
 
