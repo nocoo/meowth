@@ -3,6 +3,17 @@
 // 1) Bind jest-dom matchers to Vitest's expect (reviewer correction #2).
 import '@testing-library/jest-dom/vitest';
 
+// 1a) Auto-cleanup the testing-library DOM between tests. Required
+//     because the dashboard vitest config does not set `globals:
+//     true`, so RTL does not register its `afterEach(cleanup)` hook
+//     for us. Without this, repeated `render()` calls accumulate in
+//     `document.body` and selector lookups see duplicate matches.
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
+afterEach(() => {
+  cleanup();
+});
+
 // 2) Guarantee a usable Storage on `window.localStorage` / `sessionStorage`.
 //    Node 22+ ships an experimental top-level `localStorage` that requires
 //    `--localstorage-file`; on Node 26 it shadows jsdom's Storage and surfaces

@@ -40,14 +40,53 @@ from basalt**. They are copied from surety in Stage A3/A4 of the
 dashboard redesign (see `docs/features/02-dashboard-redesign-to-basalt-gen2.md`).
 The "surety provenance" section below tracks those copies.
 
-### Meowth-local adapted — deferred to Phase 3.14
+### Meowth-local adapted — Phase 3.13 / Phase 2 redesign
 
-These components are written locally in Meowth, inspired by
-basalt's layout pattern but not source-copied. See 06 §4.1.2.
+These components are written locally in Meowth, inspired by other
+projects' layout patterns but not source-copied. Phase 3.13 listed
+the Gen 1 trio (AppSidebar, DashboardLayout, ThemeToggle); the
+Phase 2 dashboard redesign Stage B1 replaces the first two with a
+Gen 2 layout cluster under `components/layout/`. ThemeToggle stays
+in place.
 
-- `components/AppSidebar.tsx` (no i18n, no command palette; 5 pages + Setup)
-- `components/DashboardLayout.tsx` (no i18n, no LanguageToggle, no GitHub icon)
-- `components/ThemeToggle.tsx` (no i18n; direct localStorage + classList)
+- `components/layout/sidebar.tsx` — Gen 2 sidebar with collapsed/
+  expanded states + Tooltip rail + mobile drawer adapter. Inspired
+  by `surety/apps/web/src/components/layout/sidebar.tsx`
+  @cbf7045f, but drops surety-specific dependencies (useMe,
+  getDisplayName, getAvatarColor, CommandPalette, DbSelector,
+  GitHub icon) that have no equivalent in meowth.
+- `components/layout/app-shell.tsx` — Gen 2 AppShell with floating
+  island main panel. Inspired by
+  `surety/apps/web/src/components/layout/app-shell.tsx` @cbf7045f
+  with the same surety-specific dependencies removed.
+- `components/layout/breadcrumbs.tsx` — adapted from surety's
+  `breadcrumbs.tsx` @cbf7045f; English aria label (no 面包屑) and
+  no brand/URL coupling — the caller passes labels via props.
+- `lib/navigation.ts` — pure-data nav table for meowth's 5 product
+  pages; replaces the inline `ITEMS` array that lived in the
+  deleted `components/AppSidebar.tsx`.
+- `components/ThemeToggle.tsx` (Phase 3.14; no i18n; direct
+  localStorage + classList).
+
+### Meowth-local source-derived (formatted / coverage-annotated) — Phase 2 redesign Stage B1
+
+The following files start from a surety @cbf7045f source verbatim
+but are NOT byte-clean after meowth's biome formatter runs (single
+vs double quotes, import order). One also carries a coverage
+annotation that did not exist upstream. They keep surety's semantics
+1:1 — only formatting and coverage comments diverge.
+
+- `components/layout/sidebar-context.tsx` — derived from
+  `surety/apps/web/src/components/layout/sidebar-context.tsx`
+  @cbf7045f. Biome reformatted the import line (single quotes,
+  reordered named imports) and the throw message string.
+- `hooks/use-mobile.ts` — derived from
+  `surety/apps/web/src/hooks/use-mobile.ts` @cbf7045f. Biome
+  reformatted single/double quotes; meowth adds a
+  `/* v8 ignore start/stop */` block around `getServerSnapshot`
+  with a comment explaining why (Vite SPA never hits SSR, so the
+  branch is unreachable at L1 coverage). No runtime behavior
+  change.
 
 ### Meowth-local additions — deferred
 

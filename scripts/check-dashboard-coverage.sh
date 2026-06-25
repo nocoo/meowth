@@ -61,6 +61,7 @@ apps/dashboard/src/pages/Sessions/index.ts=barrel re-export
 apps/dashboard/src/pages/Settings/index.ts=barrel re-export
 apps/dashboard/src/pages/Setup/index.ts=barrel re-export
 apps/dashboard/src/pages/Tokens/index.ts=barrel re-export
+apps/dashboard/src/components/layout/index.ts=barrel re-export
 EOF
 )
 

@@ -1,5 +1,5 @@
 import AuthGate from '@/components/AuthGate';
-import DashboardLayout from '@/components/DashboardLayout';
+import { AppShell } from '@/components/layout';
 import AgentsPage from '@/pages/Agents';
 import OverviewPage from '@/pages/Overview';
 import SessionsListPage, { SessionDetailPage } from '@/pages/Sessions';
@@ -13,13 +13,17 @@ import { Navigate, type RouteObject, createBrowserRouter } from 'react-router';
 // redirects to /setup on missing/invalid token. /setup is
 // outside the gate so the gate never needs to short-circuit on
 // pathname (no conditional hooks).
+//
+// Phase 2 dashboard redesign Stage B1 swaps the Gen 1
+// DashboardLayout for the Gen 2 AppShell (sidebar +
+// floating-island main). /setup remains outside the shell.
 
 export const routes: RouteObject[] = [
   {
     path: '/',
     element: (
       <AuthGate>
-        <DashboardLayout />
+        <AppShell />
       </AuthGate>
     ),
     children: [
