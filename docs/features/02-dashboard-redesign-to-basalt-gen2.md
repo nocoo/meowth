@@ -85,10 +85,13 @@ apps/dashboard/src/
 | Sidebar 7 token | ✅ |
 | chart-1..24 + chart-axis / chart-muted | ✅ 完整 |
 | heatmap-{green,red,blue,orange}-1..4 | ✅ |
-| `--radius-card` / `--radius-widget` / `--radius-island` | ❌ **缺** |
-| semantic colors (success / warning / info / purple / teal) | ⚠ 只有 success + destructive,缺 warning / info / purple / teal |
-| semantic *text* tokens（low-contrast 文本） | ❌ 缺 |
-| Avatar palette（16 色,WCAG AA） | ❌ 缺 |
+| `--popover` / `--popover-foreground` | ✅ 已就位（`index.css` line 35 / 120 / 220；dark 下与 `--card` 同值 #1b1b1b，符合 B05） |
+| `--radius-card: 14px` | ✅ 已存在（`index.css` line 84） |
+| `--radius-widget: 10px` | ✅ 已存在（`index.css` line 85） |
+| `--radius-island` | ❌ **缺**（Stage A2 落 20px） |
+| semantic colors (success / warning / info / purple / teal) | ⚠ 只有 success + destructive,缺 warning / info / purple / teal（Stage A2 落） |
+| semantic *text* tokens（low-contrast 文本） | ❌ 缺（Stage A2 落） |
+| Avatar palette（16 色,WCAG AA） | ❌ 缺（Stage A2 落） |
 
 ### 3.3 MVVM 切分现状
 
@@ -101,33 +104,53 @@ meowth 现状是 vm 返回 `vm.status: { kind: 'loading' | 'error' | 'ready', da
 
 ### 3.4 当前 ui/ 原语清单 vs surety
 
-| ui/ 原语 | meowth | surety |
-|---|---|---|
-| button | ✅ | ✅ |
-| card | ✅ | ❌（不再需要,改用 `bg-secondary rounded-card`） |
-| input | ✅ | ✅ |
-| dialog | ✅ | ✅ |
-| **avatar** | ❌ | ✅ |
-| **badge** | ❌ | ✅ |
-| **collapsible** | ❌ | ✅ |
-| **dropdown-menu** | ❌ | ✅ |
-| **empty-state** | ❌ | ✅ |
-| **label** | ❌ | ✅ |
-| **notice** | ❌ | ✅ |
-| **section-divider** | ❌ | ✅ |
-| **select** | ❌ | ✅ |
-| **separator** | ❌ | ✅ |
-| **sheet** | ❌ | ✅（mobile sidebar drawer 用） |
-| **skeleton** | ❌ | ✅ |
-| **sort-header** | ❌ | ✅ |
-| **switch** | ❌ | ✅ |
-| **table** | ❌ | ✅（注意 hover/footer 用 L0 不是 L2） |
-| **textarea** | ❌ | ✅ |
-| **toggle / toggle-group** | ❌ | ✅ |
-| **tooltip** | ❌ | ✅ |
-| alert-dialog | ❌ | ✅（destructive 确认） |
+surety 实际 `ls apps/web/src/components/ui/` 输出 22 个 primitive。下表按 **B-2 Gen 2 用途** 分三组（reviewer/SDE cross-check 共识）：
 
-**缺口:18 个原语**。其中 **tooltip / sheet / skeleton / dropdown-menu / select / table** 是 Gen 2 强依赖（sidebar 折叠态 tooltip、mobile drawer、loading skeleton、token 操作菜单、period selector、session 列表）。
+#### G1 — Gen 2 layout 必需（Stage B1 commit 之前必须就位，共 8 个）
+
+| ui/ 原语 | meowth | surety 路径 | 用途 |
+|---|---|---|---|
+| **tooltip** | ❌ | `components/ui/tooltip.tsx` | sidebar 折叠态 label |
+| **sheet** | ❌ | `components/ui/sheet.tsx`（基于 `radix-ui` Dialog；不引 vaul） | mobile sidebar drawer |
+| **avatar** | ❌ | `components/ui/avatar.tsx` | sidebar 底部、用户占位 |
+| **collapsible** | ❌ | `components/ui/collapsible.tsx` | sidebar 分组折叠 |
+| **separator** | ❌ | `components/ui/separator.tsx` | section 分隔线 |
+| **badge** | ❌ | `components/ui/badge.tsx` | version pill、status badge |
+| **skeleton** | ❌ | `components/ui/skeleton.tsx` | per-page 骨架 |
+| **empty-state** | ❌ | `components/ui/empty-state.tsx` | error / empty 三态 |
+
+#### G2 — 页面迁移必需（Stage C 按页消费时引入，共 11 个）
+
+| ui/ 原语 | meowth | surety 路径 | 消费页面 |
+|---|---|---|---|
+| **table** | ❌ | `components/ui/table.tsx` | Tokens / Sessions list（注意 hover/footer 用 L0 不是 L2） |
+| **dropdown-menu** | ❌ | `components/ui/dropdown-menu.tsx` | Token 操作菜单 |
+| **select** | ❌ | `components/ui/select.tsx` | filter / period selector |
+| **label** | ❌ | `components/ui/label.tsx` | Setup / Tokens dialog 表单 label |
+| **notice** | ❌ | `components/ui/notice.tsx` | Settings / Setup 信息条 |
+| **section-divider** | ❌ | `components/ui/section-divider.tsx` | Settings 分组 |
+| **switch** | ❌ | `components/ui/switch.tsx` | Settings 开关 |
+| **textarea** | ❌ | `components/ui/textarea.tsx` | 备用（暂无固定页消费） |
+| **toggle** | ❌ | `components/ui/toggle.tsx` | period 切换 |
+| **toggle-group** | ❌ | `components/ui/toggle-group.tsx` | period 切换 |
+| **sort-header** | ❌ | `components/ui/sort-header.tsx` | Tokens / Sessions 表格排序 |
+
+#### G3 — 破坏性 confirm 用（按需引入，默认不进 A3/A4，共 1 个）
+
+| ui/ 原语 | meowth | surety 路径 | 触发条件 |
+|---|---|---|---|
+| alert-dialog | ❌ | `components/ui/alert-dialog.tsx` | 仅当某 page commit 真实需要 destructive confirm（如 Tokens revoke）才随该 commit 引入 |
+
+#### 已有原语
+
+| ui/ 原语 | meowth | surety | 处理 |
+|---|---|---|---|
+| button | ✅ | ✅ | 保留 |
+| input | ✅ | ✅ | 保留 |
+| dialog | ✅ | ✅ | **Stage A1 import rewrite：`@radix-ui/react-dialog` → `from "radix-ui"`** |
+| card | ✅ | ❌ | **业务清除 + cleanup commit 删除**（详 §6 B3 / §4.3） |
+
+**总计 G1 + G2 = 19 个新原语；G3 按需 1 个。** Stage A3 落 G1 全部 8 个；Stage A4 落 G2 全部 11 个；G3 alert-dialog 不进 Stage A 安装序列。
 
 ## 4. 重构目标蓝图（哥要的 4 个维度）
 
@@ -192,7 +215,7 @@ meowth 现状是 vm 返回 `vm.status: { kind: 'loading' | 'error' | 'ready', da
 ```
 
 **装饰元素清单**:
-- `v{APP_VERSION}` pill：`rounded-md bg-secondary px-1.5 py-0.5 text-[10px]`，APP_VERSION 从 `@meowth/shared` 拿（需要新加 `lib/version.ts`,引用 root `package.json` —— 跟 surety 一样不能 `process.env`）
+- `v{APP_VERSION}` pill：`rounded-md bg-secondary px-1.5 py-0.5 text-[10px]`。**APP_VERSION 注入方式锁定 Vite `define`**：`vite.config.ts` 加 `define: { __APP_VERSION__: JSON.stringify(pkg.version) }`，`apps/dashboard/src/lib/version.ts` 仅 re-export 该常量（配合 ambient `.d.ts` 声明 `declare const __APP_VERSION__: string`）。**不允许 dashboard 直接读 root `package.json` 或 `process.env`**；不通过 `@meowth/shared` 暴露 version（避免 release commit 必须同步 shared 包）
 - Sidebar 内 GitHub 链接：`h-8 w-8` 圆按钮（surety 放在 header,meowth 可以放 sidebar 底部 + header 都行，建议跟 surety 一致放 header）
 - Theme toggle：header 右侧
 - 折叠态 Tooltip：`side="right" sideOffset={8}`
@@ -221,6 +244,8 @@ meowth 现状是 vm 返回 `vm.status: { kind: 'loading' | 'error' | 'ready', da
 - `--radius-card: 14px` / `--radius-widget: 10px` / `--radius-island: 20px` 三 token 加进 `index.css`
 
 ### 4.4 MVVM 架构完全重构
+
+**与 surety 的形态差异（明确 deviate）**：surety 是单一 `app/dashboard.tsx` + `app/dashboard-content.tsx` 的 flat 形态（外加集中 `components/skeletons.tsx`），适合"主仪表盘 + 子 page 都很薄"的形态。meowth 有 7 个独立 page（Overview / Agents / Sessions list / Sessions detail / Tokens / Settings / Setup），各自有独立 viewmodel + 独立 skeleton，**采用 per-page 目录（Page + Content + Skeleton 三件套）便于 L1 单测聚合 + 文件就近查找**。Setup 因为是表单页无异步加载例外（详 §4.4 重构清单）。
 
 把每个 page 拆成 4 个文件（model 共享）:
 
@@ -306,7 +331,7 @@ apps/dashboard/src/hooks/
 
 apps/dashboard/src/lib/
 ├── navigation.ts              ★ B-2 要求纯数据
-└── version.ts                 ★ APP_VERSION 从 package.json 注入
+└── version.ts                 ★ re-export Vite `define` 注入的 `__APP_VERSION__`（配合 ambient `.d.ts`，**不读** root `package.json`）
 
 apps/dashboard/src/pages/{Overview,Agents,...}/
 ├── *Content.tsx               ★ 每页 1 个
@@ -318,21 +343,23 @@ apps/dashboard/public/
 
 ### 5.2 需新增的依赖
 
-| 包 | 来源 | 用途 |
-|---|---|---|
-| `@radix-ui/react-tooltip` | surety | sidebar 折叠态 |
-| `@radix-ui/react-dropdown-menu` | surety | token 操作菜单等 |
-| `@radix-ui/react-select` | surety | filter / period selector |
-| `@radix-ui/react-collapsible` | surety | sidebar 分组折叠 |
-| `@radix-ui/react-popover` | surety | dropdown 支撑 |
-| `@radix-ui/react-separator` | surety | section divider |
-| `@radix-ui/react-switch` | surety | settings 开关 |
-| `@radix-ui/react-toggle` / `-toggle-group` | surety | period selector 替代方案 |
-| `@radix-ui/react-label` | surety | input label |
-| `@radix-ui/react-avatar` | surety | sidebar 底部 |
-| `vaul` 或 `@radix-ui/react-dialog`（已有） | surety | Sheet drawer mobile |
+**策略锁定（reviewer + SDE 共识；如 @zheng-li 未反对则按此执行）**：跟 surety 一致引入 `radix-ui@1.6.0` 聚合包，新 copy 的 ui 文件保持 `from "radix-ui"` 形态（与 surety 同款），现有 `@radix-ui/react-dialog@1.1.17` 单包同步迁出。
 
-surety 用 `radix-ui` 1.6.0 这个**聚合包**,可以一次引入所有 primitive。建议跟 surety 一致。
+| 包 | 版本 | 来源 / 用途 |
+|---|---|---|
+| `radix-ui` | `1.6.0` | surety 同款聚合包；提供 G1/G2 全部 19 个原语所需的 Radix primitive（含 Dialog → Sheet 底层、Dropdown、Select、Tooltip、Collapsible、Popover、Separator、Switch、Toggle/ToggleGroup、Label、Avatar 等） |
+
+**不引入**：
+
+- `vaul` —— surety 的 `Sheet` 实际是 `radix-ui` Dialog wrapper（验证：`surety/apps/web/src/components/ui/sheet.tsx` 第 3 行 `import { Dialog as SheetPrimitive } from "radix-ui"`）；本次也走 Dialog wrapper，不引 vaul。
+- 任何 `@radix-ui/react-*` 单包（除非聚合包未覆盖；目前 1.6.0 已涵盖所需）。
+
+**Stage A1 子步骤**（落 §6 时强制）：
+
+1. `apps/dashboard/package.json` 加 `"radix-ui": "1.6.0"`；删除 `"@radix-ui/react-dialog": "1.1.17"`。
+2. `apps/dashboard/src/components/ui/dialog.tsx` 把 `from "@radix-ui/react-dialog"` 改为 `from "radix-ui"` 命名空间引用（参照 surety 同名文件形态）。
+3. `pnpm install` 同步 lockfile；G1 (fmt + lint + tsc + depcruise + source scan) 必须全绿；G2 osv 必须无新增 advisory。
+4. `pnpm dashboard:cover:check` 不下降（dialog 仅 import 路径改动，行为不变）。
 
 ### 5.3 修改文件
 
@@ -366,10 +393,10 @@ README.md                                          截图可能要换新（OG im
 
 | # | Commit | 内容 | 测试 |
 |---|---|---|---|
-| A1 | `chore(deps): add radix primitives + vaul for Gen 2 dashboard` | `apps/dashboard/package.json` 加 11 个 radix + vaul,锁版本与 surety 一致;`pnpm install` 同步 lockfile | install 通过 + pnpm dashboard:g1 绿 |
+| A1 | `chore(deps): lock radix-ui@1.6.0 aggregate; migrate dialog import` | `apps/dashboard/package.json`：加 `"radix-ui": "1.6.0"`，删 `"@radix-ui/react-dialog": "1.1.17"`；rewrite `components/ui/dialog.tsx` 的 import 为 `from "radix-ui"`（与 surety 同款）；`pnpm install` 同步 lockfile。**不引 vaul**（surety Sheet 用 radix-ui Dialog；详 §5.2）。 | install 通过 + `pnpm dashboard:g1` 全绿 + `pnpm dashboard:cover:check` 不下降 + `pnpm scan:g2` osv 无新增 advisory |
 | A2 | `feat(dashboard): add Basalt B05 radius tokens + semantic colors + avatar palette` | `index.css` 加 `--radius-{card,widget,island}` / warning/info/purple/teal / 16-slot avatar palette / semantic text tokens | L1 vitest 全绿；palette.test 扩展 1 case |
-| A3 | `feat(dashboard): copy 8 ui primitives from surety (skeleton/tooltip/sheet/avatar/badge/separator/select/dropdown-menu)` | `components/ui/` 复制 surety 同名文件,只改 import 路径,**不写业务代码** | 每个 ui 文件加最小 L1 vitest 烟雾测试（渲染 + base 类断言） |
-| A4 | `feat(dashboard): copy 8 ui primitives (collapsible/empty-state/label/notice/section-divider/switch/table/textarea/toggle)` | 同上,剩余 8 个 | 同上 |
+| A3 | `feat(dashboard): copy 8 Gen 2 layout ui primitives from surety (G1 set)` | `components/ui/` 复制 G1 全部 8 个：tooltip / sheet / avatar / collapsible / separator / badge / skeleton / empty-state（详 §3.4 G1 表）。**只改 import 路径与 cn() 别名，不写业务代码**。 | 每个 ui 文件加最小 L1 vitest 烟雾测试（渲染 + base 类断言）+ `pnpm dashboard:cover:check` 通过 |
+| A4 | `feat(dashboard): copy 11 page-migration ui primitives from surety (G2 set)` | `components/ui/` 复制 G2 全部 11 个：table / dropdown-menu / select / label / notice / section-divider / switch / textarea / toggle / toggle-group / sort-header（详 §3.4 G2 表）。同 A3 不写业务代码。G3 alert-dialog **不**进本 commit。 | 同 A3 |
 
 ### Stage B — Gen 2 layout（3 commit）
 
