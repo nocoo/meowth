@@ -66,4 +66,11 @@ describe('TokensContent (props, Stage C4)', () => {
     expect(screen.getByText('No tokens yet')).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Name' })).not.toBeInTheDocument();
   });
+
+  it('wraps the populated table in a rounded-card bg-secondary L2 surface', () => {
+    const { container } = render(<TokensContent tokens={[makeToken()]} onRevoke={noopRevoke} />);
+    const wrap = container.querySelector('.rounded-card.bg-secondary');
+    expect(wrap).not.toBeNull();
+    expect(wrap?.querySelector('[data-slot="table-container"]')).not.toBeNull();
+  });
 });

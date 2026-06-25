@@ -60,4 +60,16 @@ describe('AgentsContent (Stage C2)', () => {
     expect(screen.getByText('No agents installed')).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Type' })).not.toBeInTheDocument();
   });
+
+  it('wraps the populated table in a rounded-card bg-secondary L2 surface', () => {
+    const { container } = render(
+      <AgentsContent
+        agents={makeAgents([{ type: 'claude', installed: true, executable: '/c', version: '1' }])}
+      />,
+    );
+    // The L2 wrap is the parent of the table-container div (added by Commit 2).
+    const wrap = container.querySelector('.rounded-card.bg-secondary');
+    expect(wrap).not.toBeNull();
+    expect(wrap?.querySelector('[data-slot="table-container"]')).not.toBeNull();
+  });
 });

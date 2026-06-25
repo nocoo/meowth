@@ -17,4 +17,11 @@ describe('TokensSkeleton (Stage C4)', () => {
     const { container } = render(<TokensSkeleton />);
     expect(container.querySelectorAll('.animate-pulse').length).toBe(5 * 5);
   });
+
+  it('wraps the placeholder table in a rounded-card bg-secondary L2 surface', () => {
+    const { container } = render(<TokensSkeleton />);
+    const wrap = container.querySelector('.rounded-card.bg-secondary');
+    expect(wrap).not.toBeNull();
+    expect(wrap?.querySelector('[data-slot="table-container"]')).not.toBeNull();
+  });
 });

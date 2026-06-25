@@ -18,4 +18,11 @@ describe('SessionsListSkeleton (Stage C3a)', () => {
     const pulses = container.querySelectorAll('.animate-pulse');
     expect(pulses.length).toBe(5 * 5);
   });
+
+  it('wraps the placeholder table in a rounded-card bg-secondary L2 surface', () => {
+    const { container } = render(<SessionsListSkeleton />);
+    const wrap = container.querySelector('.rounded-card.bg-secondary');
+    expect(wrap).not.toBeNull();
+    expect(wrap?.querySelector('[data-slot="table-container"]')).not.toBeNull();
+  });
 });

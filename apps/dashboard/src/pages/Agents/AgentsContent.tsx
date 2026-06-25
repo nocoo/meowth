@@ -1,4 +1,12 @@
 import { EmptyState } from '@/components/ui/empty-state';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { Agent } from '@/models/types';
 import { Bot } from 'lucide-react';
 
@@ -7,6 +15,12 @@ import { Bot } from 'lucide-react';
 // and renders the same table semantics the page had before (table
 // + cell roles, no fake stat cards). EmptyState appears only when
 // the daemon legitimately returns zero agents.
+//
+// Bug fix Commit 2 — wraps the data table in a
+// `rounded-card bg-secondary overflow-hidden` L2 surface so the
+// table visually sits on the white/secondary tier, matching the
+// surface ladder enforced by 06 §5.1. The cell semantics (role,
+// content) are unchanged.
 
 export interface AgentsContentProps {
   agents: readonly Agent[];
@@ -23,25 +37,27 @@ export default function AgentsContent({ agents }: AgentsContentProps) {
     );
   }
   return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="text-muted-foreground text-left">
-          <th className="py-1 pr-2">Type</th>
-          <th className="py-1 pr-2">Installed</th>
-          <th className="py-1 pr-2">Executable</th>
-          <th className="py-1 pr-2">Version</th>
-        </tr>
-      </thead>
-      <tbody>
-        {agents.map((agent) => (
-          <tr key={agent.type} className="border-border border-t">
-            <td className="py-2 pr-2 font-mono">{agent.type}</td>
-            <td className="py-2 pr-2">{agent.installed ? 'yes' : 'no'}</td>
-            <td className="py-2 pr-2 font-mono text-xs">{agent.executable}</td>
-            <td className="py-2 pr-2 font-mono text-xs">{agent.version}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="rounded-card bg-secondary overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Type</TableHead>
+            <TableHead>Installed</TableHead>
+            <TableHead>Executable</TableHead>
+            <TableHead>Version</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {agents.map((agent) => (
+            <TableRow key={agent.type}>
+              <TableCell className="font-mono">{agent.type}</TableCell>
+              <TableCell>{agent.installed ? 'yes' : 'no'}</TableCell>
+              <TableCell className="font-mono text-xs">{agent.executable}</TableCell>
+              <TableCell className="font-mono text-xs">{agent.version}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

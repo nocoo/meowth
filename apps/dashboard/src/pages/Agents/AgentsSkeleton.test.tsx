@@ -16,4 +16,11 @@ describe('AgentsSkeleton (Stage C2)', () => {
     const pulses = container.querySelectorAll('.animate-pulse');
     expect(pulses.length).toBe(5 * 4);
   });
+
+  it('wraps the placeholder table in a rounded-card bg-secondary L2 surface', () => {
+    const { container } = render(<AgentsSkeleton />);
+    const wrap = container.querySelector('.rounded-card.bg-secondary');
+    expect(wrap).not.toBeNull();
+    expect(wrap?.querySelector('[data-slot="table-container"]')).not.toBeNull();
+  });
 });

@@ -1,4 +1,12 @@
 import { EmptyState } from '@/components/ui/empty-state';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { TokenView } from '@/models/types';
 import { KeyRound } from 'lucide-react';
 
@@ -8,6 +16,10 @@ import { KeyRound } from 'lucide-react';
 // see 03 §3) and a revoke handler. Renders the table when
 // non-empty, EmptyState (icon=KeyRound) when the daemon
 // legitimately reports zero tokens.
+//
+// Bug fix Commit 2 — wraps the table in a `rounded-card
+// bg-secondary overflow-hidden` L2 surface. Revoke button +
+// cell semantics unchanged.
 
 export interface TokensContentProps {
   tokens: readonly TokenView[];
@@ -25,35 +37,37 @@ export default function TokensContent({ tokens, onRevoke }: TokensContentProps) 
     );
   }
   return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="text-muted-foreground text-left">
-          <th className="py-1 pr-2">Name</th>
-          <th className="py-1 pr-2">Prefix</th>
-          <th className="py-1 pr-2">Created</th>
-          <th className="py-1 pr-2">Last used</th>
-          <th className="py-1 pr-2" />
-        </tr>
-      </thead>
-      <tbody>
-        {tokens.map((tok) => (
-          <tr key={tok.id} className="border-border border-t">
-            <td className="py-2 pr-2">{tok.name}</td>
-            <td className="py-2 pr-2 font-mono text-xs">{tok.prefix}</td>
-            <td className="py-2 pr-2 font-mono text-xs">{tok.created_at}</td>
-            <td className="py-2 pr-2 font-mono text-xs">{tok.last_used_at ?? '—'}</td>
-            <td className="py-2 pr-2 text-right">
-              <button
-                type="button"
-                onClick={() => void onRevoke(tok.id)}
-                className="border-input rounded border px-2 py-1 text-xs"
-              >
-                Revoke
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="rounded-card bg-secondary overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Prefix</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead>Last used</TableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tokens.map((tok) => (
+            <TableRow key={tok.id}>
+              <TableCell>{tok.name}</TableCell>
+              <TableCell className="font-mono text-xs">{tok.prefix}</TableCell>
+              <TableCell className="font-mono text-xs">{tok.created_at}</TableCell>
+              <TableCell className="font-mono text-xs">{tok.last_used_at ?? '—'}</TableCell>
+              <TableCell className="text-right">
+                <button
+                  type="button"
+                  onClick={() => void onRevoke(tok.id)}
+                  className="border-input rounded border px-2 py-1 text-xs"
+                >
+                  Revoke
+                </button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
