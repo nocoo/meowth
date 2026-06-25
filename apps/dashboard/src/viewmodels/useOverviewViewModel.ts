@@ -8,7 +8,7 @@ import useAuthErrorHandler from './useAuthErrorHandler';
 
 // docs/architecture/06 §7.1 — Overview viewmodel.
 
-interface OverviewData {
+export interface OverviewData {
   health: HealthzResponse | null;
   tokens: readonly TokenView[];
   sessions: readonly Session[];
