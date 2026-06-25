@@ -429,19 +429,21 @@ README.md                                          截图可能要换新（OG im
 | B3 | `refactor(dashboard): replace business <Card> usage with bg-secondary rounded-card` | 改 page 里所有 `<Card>` / 局部 Card 函数 / `<div class="border ...">` 包装为 `bg-secondary rounded-card p-4`（**只改样式,不动逻辑**）。**保留** `components/ui/card.tsx` 文件本身。 | 现有 L1/L3 测试需更新选择器（如有按 class 名查的） |
 | B4 | `chore(dashboard): drop ui/card.tsx and update _UPSTREAM.md` | 前置：`grep -r "from.*['\"]@?.*ui/card['\"]" apps/dashboard/src` 输出空（B3 已清除全部业务 import）。删 `components/ui/card.tsx`，同步 `_UPSTREAM.md` basalt 段中 card 的登记行。 | G1 + L1 + L3 全绿；`pnpm dashboard:depcruise` 不报 orphan |
 
-### Stage C — MVVM 三段式（7 commit,**每页一个 commit**）
+### Stage C — MVVM 三段式（8 commit,**每页一个 commit，每个 commit 自带测试**）
 
-每个 page 拆为 `Page + Content + Skeleton` 三文件。
+每个 page 拆为 `Page + Content + Skeleton` 三文件。**每个 C* commit 自带对应 Content / Skeleton / page-regression L1 测试，不后置**。C8 只做跨页一致性补漏 / 覆盖率整理 / e2e selector 统一更新，不作为 missing tests 的兜底。
 
-| # | Commit | 内容 |
-|---|---|---|
-| C1 | `refactor(dashboard): split Overview into Page/Content/Skeleton` | Overview 三件套 + StatCard 引入(放 components/StatCard.tsx) |
-| C2 | `refactor(dashboard): split Agents into Page/Content/Skeleton` | Agents 三件套,用 StatCard + EmptyState |
-| C3 | `refactor(dashboard): split SessionsList + SessionDetail` | Sessions 两子页面各自 3 文件 |
-| C4 | `refactor(dashboard): split Tokens (with SecretReveal modal)` | Tokens 三件套 + Table 用 surety 风格 |
-| C5 | `refactor(dashboard): rewrite Settings using basalt Switch + Notice` | Settings 不需 skeleton |
-| C6 | `refactor(dashboard): update Setup to use basalt Input/Notice (no skeleton)` | Setup 是表单页,只动样式 |
-| C7 | `test(dashboard): add per-page L1 tests for Content + Skeleton` | 每个 Content 单独可测（props 注入） + Skeleton 渲染测 |
+| # | Commit | 内容 | 测试（commit 内必须包含） |
+|---|---|---|---|
+| C1 | `refactor(dashboard): split Overview into Page/Content/Skeleton` | Overview 三件套 + `components/StatCard.tsx` 引入 | `OverviewContent.test.tsx`（props 注入）+ `OverviewSkeleton.test.tsx`（渲染断言）+ `OverviewPage.test.tsx`（三态分支） |
+| C2 | `refactor(dashboard): split Agents into Page/Content/Skeleton` | Agents 三件套，用 StatCard + EmptyState | `AgentsContent.test.tsx` + `AgentsSkeleton.test.tsx` + `AgentsPage.test.tsx` |
+| C3a | `refactor(dashboard): split SessionsListPage into Page/Content/Skeleton` | SessionsList 三件套，使用 G2 table + sort-header | `SessionsListContent.test.tsx` + `SessionsListSkeleton.test.tsx` + `SessionsListPage.test.tsx` |
+| C3b | `refactor(dashboard): split SessionDetailPage into Page/Content/Skeleton` | SessionDetail 三件套，复用 MessageText 安全渲染 | `SessionDetailContent.test.tsx` + `SessionDetailSkeleton.test.tsx` + `SessionDetailPage.test.tsx` |
+| C4 | `refactor(dashboard): split Tokens (with SecretReveal modal)` | Tokens 三件套 + Table（surety 风格，hover/footer L0）。若引 destructive confirm 同时引 G3 alert-dialog | `TokensContent.test.tsx` + `TokensSkeleton.test.tsx` + `TokensPage.test.tsx`（含 reveal/copy/done 已有 L3 路径不变） |
+| C5 | `refactor(dashboard): rewrite Settings using basalt Switch + Notice` | Settings 双件套（无 skeleton：settings 几乎瞬时） | `SettingsContent.test.tsx` + `SettingsPage.test.tsx` |
+| C6 | `refactor(dashboard): update Setup to use basalt Input/Notice (no skeleton)` | Setup 表单页只动样式，**不拆 Page/Content** | `SetupPage.test.tsx` 选择器更新 |
+| C7 | `refactor(dashboard): update e2e selectors and shared layout assertions` | dashboard-dev + dashboard-embed + dashboard-embed-mint 三 project 现有 spec 的 sidebar/header selector 集中更新（由 C1–C6 触动累积） | 三个 Playwright project 全绿 |
+| C8 | `test(dashboard): cross-page coverage consolidation + shared content fixtures` | 跨 page 共用 fixture 抽到 `__tests__/fixtures/`；补漏（如某 Content 未覆盖 empty-data 路径）；不引入新业务文件 | `pnpm dashboard:cover:check` 通过；不下降 |
 
 ### Stage D — 文档与发布（2 commit）
 
@@ -450,28 +452,65 @@ README.md                                          截图可能要换新（OG im
 | D1 | `docs(arch): rewrite 06 §4 for Gen 2 + L0..L3 + per-page 4 files` | 06 文档 §4 整段重写 |
 | D2 | `chore(release): bump to 0.3.0 + CHANGELOG` | minor 升级（因为 ui 结构破坏性变更） |
 
-**总计 16 个 commit**,但**每个 commit 都自带测试且全绿**。哥可以在任何 Stage 边界停下来,代码不会处于半残态。
+**总计 ~18 个 commit**（A 4 + B 4 + C 8 + D 2），但**每个 commit 都自带测试且全绿**。哥可以在任何 Stage 边界停下来,代码不会处于半残态。
 
 ## 7. 6DQ 质量计划
+
+**阶段边界（A/B/C/D 每段结束时）跑完整 gate 矩阵；commit 内可按风险跑 focused subset**。不允许 plan 写"不需重测"——L2 / scan 等可低频，但每个 Stage 边界必须验证。
 
 | 层 | 命令 | 通过条件 |
 |---|---|---|
 | **G1 静态** | `pnpm dashboard:g1` | 全绿(fmt + lint + tsc + depcruise + source scan) |
-| **L1 单元** | `pnpm dashboard:test:cover && pnpm dashboard:cover:check` | 覆盖率不回归;新增 per-page Content 单测;每个 ui 原语至少 1 个烟雾测 |
-| **L2 API** | `pnpm test:l2` | 无 daemon 改动,**不需重测**,但 release 前跑一遍兜底 |
-| **L3 e2e** | `pnpm --filter @meowth/dashboard e2e --project=dashboard-embed --project=dashboard-embed-mint` | 全绿;**已有 e2e 选择器可能需要更新**（sidebar 结构换了） |
-| **G2 安全** | `pnpm scan:g2` | radix 包要 osv 通过 |
+| **L1 单元 + 覆盖率 ratchet** | `pnpm dashboard:test:cover && pnpm dashboard:cover:check` | 覆盖率不回归（baseline floor 不能下降）；新增 per-page Content + Skeleton 单测；每个 ui 原语至少 1 个烟雾测；`scripts/check-dashboard-coverage.sh` 严格态通过 |
+| **L2 API（daemon-side smoke）** | `pnpm test:l2` + `pnpm test:l2:embed` | 阶段边界跑；daemon 行为不变本次不应红，但必须验证 |
+| **L3 e2e — 三 project 全跑** | `pnpm --filter @meowth/dashboard exec playwright test --project=dashboard-dev --project=dashboard-embed --project=dashboard-embed-mint` | 全绿；**含 dashboard-dev（不能只跑 embed）**；sidebar / header / setup / mint / exec 等选择器随 stage 同步更新 |
+| **G2 安全** | `pnpm scan:g2` | radix-ui@1.6.0 + 新增 ui 复制不引入新 osv advisory；gitleaks `--redact --no-banner`；govulncheck 全绿 |
+| **D1 prod/test 隔离** | `pnpm scan:d1` | 测试 fixture 不漏入生产路径（与 token 注入 / fake backend 隔离一致） |
+| **shared types no-drift** | `pnpm --filter @meowth/shared generate-types` 后 `git diff` 空 | OpenAPI 派生类型不被本次重构污染 |
+| **daemon embed smoke** | `GOOS=darwin GOARCH=arm64 pnpm daemon:build && GOOS=darwin GOARCH=amd64 pnpm daemon:build` | 内嵌 dashboard dist 编进 daemon，两 arch 都构建通过 |
 | **CI** | github actions | 10/10 全绿 |
 
-### 7.1 已知会破坏的现有测试
+### 7.1 e2e spec 预审计（Stage C 落地前必看）
+
+`apps/dashboard/e2e/` 当前 14 个 spec 分布如下；列在这里便于 review 时定位每个 Stage C commit 的更新面：
+
+| spec 文件 | project | 触动来源 | 大致更新面 |
+|---|---|---|---|
+| `e2e/dev/setup.spec.ts` 等 | dashboard-dev | Stage B Sidebar/AuthGate 改造 | `getByRole('navigation')` / sidebar item role+name selector 重新适配 |
+| `e2e/embed/setup.spec.ts` | dashboard-embed | Stage B + Stage C6 Setup 样式 | input label / button role 选择器 |
+| `e2e/embed/headers.spec.ts` | dashboard-embed | 无（CSP / nosniff 不变） | 不动 |
+| `e2e/embed/xss.spec.ts` | dashboard-embed | C3b SessionDetail 渲染管道 | session-messages testid 保持，但 layout 包裹层变化 |
+| `e2e/embed/secret-reveal.spec.ts` | dashboard-embed | C4 Tokens 拆分 + role=alert plaintext 检查 | dialog role+name / `secret-reveal-value` testid 保持 |
+| `e2e/embed/tokens.spec.ts` | dashboard-embed | C4 Tokens 拆分 + table | 表格 cell 选择器从 ul 改为 table role |
+| `e2e/embed/exec-and-session.spec.ts` | dashboard-embed | C3b + happy.jsonl 不变 | session detail layout 包裹层变化 |
+| `e2e/embed-mint/mint.spec.ts` | dashboard-embed-mint | Stage B + Setup mint mode | overview heading role+name |
+
+**约束**：尽量使用 `getByRole / getByLabel / getByTestId`，避免按 class 名查；任何受影响 spec 的最小修法在对应 C* commit 中**同 commit** 更新，不堆积到 C7。
+
+### 7.2 已知会破坏的现有测试
 
 | 文件 | 原因 | 修法 |
 |---|---|---|
-| `apps/dashboard/src/components/AppSidebar.test.tsx` | 整个组件被替换 | 删除 |
-| `apps/dashboard/src/components/DashboardLayout.test.tsx` | 整个组件被替换 | 删除,补 layout/app-shell.test.tsx |
-| `apps/dashboard/e2e/embed/setup.spec.ts` 等 | DOM 选择器（class、role）可能变 | 按需更新；建议尽量用 role+name 而非 class |
+| `apps/dashboard/src/components/AppSidebar.test.tsx` | 整个组件被替换 | Stage B1 删除 |
+| `apps/dashboard/src/components/DashboardLayout.test.tsx` | 整个组件被替换 | Stage B1 删除,补 `layout/app-shell.test.tsx` |
+| `apps/dashboard/src/components/AuthGate.test.tsx` | 401 跳转 fixture 可能受 AppShell 影响 | B1 验证是否受影响；如选择器变更需同 commit 修 |
+| `apps/dashboard/src/components/SecretReveal.test.tsx` | TokensPage 拆分后 import 路径可能变 | C4 同 commit 修 import |
+| `apps/dashboard/src/components/MessageText.test.tsx` | SessionDetail 拆分后 import 路径可能变 | C3b 同 commit 修 import |
+| `apps/dashboard/e2e/embed/*.spec.ts` 等 | DOM 选择器（class、role）可能变 | 详 §7.1 预审计，按表逐 commit 更新 |
 
-### 7.2 不打算做的事（明确范围）
+### 7.3 Sheet 可访问性测试要求（Stage B1 强制）
+
+Stage B1 引入 Sheet drawer（mobile sidebar）时，**必须**覆盖以下行为：
+
+- route change closes drawer（导航后 drawer 自动 close，避免在新页保持遮罩）
+- body scroll unlock（drawer close 后 `document.body` overflow 恢复）
+- dialog `aria-title` + `aria-description`（屏幕阅读器可识别）
+- escape key + overlay click close（两条 close 路径都生效）
+- focus return to toggle button（drawer close 后焦点回到打开按钮）
+
+测试位置：`apps/dashboard/src/components/layout/sheet.test.tsx` 或 `app-shell.test.tsx` 内 Sheet 段。
+
+### 7.4 不打算做的事（明确范围）
 
 - **不引入** Recharts/charts —— Meowth dashboard 当前没有图表需求（监控类页面后续再做）
 - **不做** mobile 完整布局适配（surety 是 mobile-first,Meowth 是本机 dashboard,主要桌面浏览器使用） —— 但 sidebar 的 Sheet 还是要做,因为 B-2 要求,不做会拖后续
@@ -483,17 +522,33 @@ README.md                                          截图可能要换新（OG im
 
 | 风险 | 概率 | 缓解 |
 |---|---|---|
-| L3 e2e 选择器集体失败 | 高 | C 阶段每个 page commit 单独跑 e2e,失败立即 fix 不堆积 |
-| 覆盖率回归 | 中 | C7 commit 专门补 Content/Skeleton 单测 |
-| radix 1.6.0 与 React 19 peer 警告 | 中 | install 前先看 `pnpm peers check`,有 warning 而非 error 即可放行 |
-| 视觉 regression 没人手 review | 中 | D 阶段 release 前手动 dev 跑一遍 + 截图存档 |
-| 16 commit 中间阶段在 main 上半残 | 低 | 每个 commit 独立全绿,半残不会进 main |
+| L3 e2e 选择器集体失败 | 高 | C 阶段每个 page commit 单独跑 Playwright（含 dashboard-dev），失败立即 fix 不堆积；§7.1 预审计已列出每个 spec 触动来源 |
+| 覆盖率回归 | 低 | 每个 C* commit 自带 Content/Skeleton/page-regression L1 测试；C8 只做跨页补漏；`pnpm dashboard:cover:check` 严格 baseline floor ratchet 拦截 |
+| radix 1.6.0 与 React 19 peer 警告 | 低 | surety 已用 radix-ui@1.6.0 + react 19.2 无 peer error；install 前 `pnpm install --frozen-lockfile` 验证，warning 允许，error 才拦 |
+| 视觉 regression 没人手 review | 中 | D 阶段 release 前手动 `dashboard:dev` + `daemon serve` 各跑一遍，截图存档到 `docs/features/02-screenshots/`（不入仓） |
+| 18 commit 中间阶段在 main 上半残 | 低 | 每个 commit 独立全绿，半残不会进 main |
+| `_UPSTREAM.md` provenance 漂移 | 中 | Stage A1 建立双来源块，A3/A4 每个 copy 同步登记；review 时 grep `_UPSTREAM.md` 行数与新增 ui 文件数一致 |
 
 回滚策略:`git revert` 单个 commit;Stage 边界**仅在本地打 lightweight tag** 作为 revert 定位锚（如 `stage-A-end` / `stage-B-end`），**不 push 到 origin**。本地 tag 仅供 SDE 自己回退使用，与远端版本管理无关。
 
 ## 9. 验证结果
 
-> 落地完成后填。
+> 落地完成后填。每个 Stage 边界勾选下表对应行（A end / B end / C end / D end）。
+
+| 检查项 | A end | B end | C end | D end |
+|---|---|---|---|---|
+| `pnpm dashboard:g1` | ☐ | ☐ | ☐ | ☐ |
+| `pnpm dashboard:test:cover && pnpm dashboard:cover:check` | ☐ | ☐ | ☐ | ☐ |
+| `pnpm test:l2 && pnpm test:l2:embed` | ☐ | ☐ | ☐ | ☐ |
+| Playwright `dashboard-dev` | ☐ | ☐ | ☐ | ☐ |
+| Playwright `dashboard-embed` | ☐ | ☐ | ☐ | ☐ |
+| Playwright `dashboard-embed-mint` | ☐ | ☐ | ☐ | ☐ |
+| `pnpm scan:g2` | ☐ | ☐ | ☐ | ☐ |
+| `pnpm scan:d1` | ☐ | ☐ | ☐ | ☐ |
+| `pnpm --filter @meowth/shared generate-types` no-drift | ☐ | ☐ | ☐ | ☐ |
+| `GOOS=darwin GOARCH={arm64,amd64} pnpm daemon:build` | ☐ | ☐ | ☐ | ☐ |
+| 视觉 review（dev + embed dashboard 截图存档） | ☐ | ☐ | ☐ | ☐ |
+| CI 全绿 | ☐ | ☐ | ☐ | ☐ |
 
 ---
 
