@@ -1,8 +1,8 @@
 # 02 · Dashboard 重构对齐 basalt Gen 2
 
-> 状态:规划中,等哥 review 通过再进 Stage 2 / Stage 3
+> 状态:Stage A / B / C 已完成实施（2026-06-25）; D1 docs sync 完成; D2 release bump 待发. C7 / C8 SKIPPED — 详 §6 顶部 banner.
 > 历史在 `git log -- docs/features/02-dashboard-redesign-to-basalt-gen2.md`
-> 配套:[docs/architecture/06](../architecture/06-dashboard-mvvm-and-basalt.md)（这个文档会被本次重构改写一节）
+> 配套:[docs/architecture/06](../architecture/06-dashboard-mvvm-and-basalt.md)（D1 同步重写了 §2 / §4 / §5.1 / §6.4 / §6.5 / §7 / §12 反映 Gen 2 落地形态; 本文档下面 §3–§5 仍是原始规划稿, §6 表格 commit subject 与实际落地 hash 一致; §6 表格中的 `sort-header` (C3a) 与 `Switch` (C5) 段最终未被实际使用——见 06 §4.1.5 / §6.4 #3）.
 
 ---
 
@@ -414,6 +414,18 @@ README.md                                          截图可能要换新（OG im
 
 ## 6. 原子提交序列
 
+> **实施状态（2026-06-25）**：Stage A / B / C 已完成实施。C7 / C8 SKIPPED — Playwright 14/14 全程通过证明无 stale selector 累积；跨页 fixture 抽取 / coverage 整理在 C1-C6 期间已逐 commit 完成，无需独立 commit。架构细节最终落地形态已同步到 [`docs/architecture/06`](../architecture/06-dashboard-mvvm-and-basalt.md) §2 / §4 / §5.1 / §6.4 / §7。Stage C 累计 commits：
+>
+> - C1 `00946d9` Overview split + introduce StatCard
+> - C2 `8075c26` Agents split (no fake stats)
+> - C3a `5c2c225` SessionsListPage split (plain G2 Table)
+> - C3b `1393aa5` SessionDetailPage split
+> - C4 `9d61440` TokensPage split + TokensCreateDialog extraction
+> - C5 `c8145e9` SettingsPage split + Notice for healthz
+> - C6 `fdcc8ee` SetupPage ErrorBanner/footnote → Notice (styling-only)
+>
+> 闭环 gate：dashboard 75 files / 438 tests; Playwright 3 projects × 14/14; `dashboard:cover:check` `ok=55 baseline_floors=3 structural_exempt=10`. 3 个剩余 baseline 都在 `lib/ansi.ts` / `viewmodels/useSessionDetailViewModel.ts` / `viewmodels/useTokensViewModel.ts`,均明确出 Stage C 范围。
+
 **分 4 大阶段、共 ~18 个原子 commit（A 4 + B 4 + C 8 + D 2）**。每段独立可 review/回滚;后段不依赖前段未落地的代码。
 
 **commit subject 约定**：所有 commit subject **不含** `A1` / `B2` / `C3a` 等本 doc 内部序号；只用标准前缀（`feat(dashboard):` / `chore(deps):` / `refactor(dashboard):` / `test(dashboard):` / `docs(arch):` 等）+ 简短描述。内部序号仅作 doc 跟踪用，便于 review 时定位本表对应行。
@@ -444,13 +456,13 @@ README.md                                          截图可能要换新（OG im
 |---|---|---|---|
 | C1 | `refactor(dashboard): split Overview into Page/Content/Skeleton` | Overview 三件套 + `components/StatCard.tsx` 引入 | `OverviewContent.test.tsx`（props 注入）+ `OverviewSkeleton.test.tsx`（渲染断言）+ `OverviewPage.test.tsx`（三态分支） |
 | C2 | `refactor(dashboard): split Agents into Page/Content/Skeleton` | Agents 三件套，用 StatCard + EmptyState | `AgentsContent.test.tsx` + `AgentsSkeleton.test.tsx` + `AgentsPage.test.tsx` |
-| C3a | `refactor(dashboard): split SessionsListPage into Page/Content/Skeleton` | SessionsList 三件套，使用 G2 table + sort-header | `SessionsListContent.test.tsx` + `SessionsListSkeleton.test.tsx` + `SessionsListPage.test.tsx` |
+| C3a | `refactor(dashboard): split SessionsListPage into Page/Content/Skeleton (plain G2 Table semantics)` | SessionsList 三件套，使用 G2 table; **实际落地**：不引入 `sort-header`（无 vm 排序状态支持，避免假交互），plain G2 table only — 详 [06](../architecture/06-dashboard-mvvm-and-basalt.md) §6.4 #3 | `SessionsListContent.test.tsx` + `SessionsListSkeleton.test.tsx` + `SessionsListPage.test.tsx` |
 | C3b | `refactor(dashboard): split SessionDetailPage into Page/Content/Skeleton` | SessionDetail 三件套，复用 MessageText 安全渲染 | `SessionDetailContent.test.tsx` + `SessionDetailSkeleton.test.tsx` + `SessionDetailPage.test.tsx` |
-| C4 | `refactor(dashboard): split Tokens (with SecretReveal modal)` | Tokens 三件套 + Table（surety 风格，hover/footer L0）。若引 destructive confirm 同时引 G3 alert-dialog | `TokensContent.test.tsx` + `TokensSkeleton.test.tsx` + `TokensPage.test.tsx`（含 reveal/copy/done 已有 L3 路径不变） |
-| C5 | `refactor(dashboard): rewrite Settings using basalt Switch + Notice` | Settings 双件套（无 skeleton：settings 几乎瞬时） | `SettingsContent.test.tsx` + `SettingsPage.test.tsx` |
-| C6 | `refactor(dashboard): update Setup to use basalt Input/Notice (no skeleton)` | Setup 表单页只动样式，**不拆 Page/Content** | `SetupPage.test.tsx` 选择器更新 |
-| C7 | `refactor(dashboard): update e2e selectors and shared layout assertions` | dashboard-dev + dashboard-embed + dashboard-embed-mint 三 project 现有 spec 的 sidebar/header selector 集中更新（由 C1–C6 触动累积） | 三个 Playwright project 全绿 |
-| C8 | `test(dashboard): cross-page coverage consolidation + shared content fixtures` | 跨 page 共用 fixture 抽到 `__tests__/fixtures/`；补漏（如某 Content 未覆盖 empty-data 路径）；不引入新业务文件 | `pnpm dashboard:cover:check` 通过；不下降 |
+| C4 | `refactor(dashboard): split TokensPage into Page/Content/Skeleton + extract CreateDialog` | Tokens 三件套 + 提取 `TokensCreateDialog`；create 是非破坏性流程，**不**引入 G3 alert-dialog；plaintext lifecycle boundary 测试 | `TokensContent.test.tsx` + `TokensSkeleton.test.tsx` + `TokensPage.test.tsx` + `TokensCreateDialog.test.tsx` |
+| C5 | `refactor(dashboard): split SettingsPage into Page/Content/Skeleton + Notice for healthz` | Settings 三件套（**实际落地有 Skeleton**：daemon 行 placeholder）；**不**引入 `Switch`（无 user-toggleable 状态）；healthz 三态 → Notice variant 映射 | `SettingsContent.test.tsx` + `SettingsSkeleton.test.tsx` + `SettingsPage.test.tsx` |
+| C6 | `style(dashboard): replace SetupPage ErrorBanner and disabled-mint footnote with semantic Notice` | Setup 表单页只动样式，**不拆 Page/Content**（pre-login 单 form 壳） | `SetupPage.test.tsx` + `SetupPage.mintDisabled.test.tsx` |
+| C7 | SKIPPED | Playwright 14/14 全程通过证明无 stale e2e selector 累积 — 详 §6 顶部 banner | n/a |
+| C8 | SKIPPED | 跨 page 共用 fixture 抽取与 coverage 整理在 C1–C6 各 commit 内已完成；剩余 3 个 baseline (`lib/ansi.ts` / `useSessionDetailViewModel.ts` / `useTokensViewModel.ts`) 明确出 Stage C 范围 | n/a |
 
 ### Stage D — 文档与发布（2 commit）
 
