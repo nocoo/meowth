@@ -37,11 +37,15 @@ describe('index.css — Stage A2 Basalt B05 tokens', () => {
       'purple-foreground',
       'teal',
       'teal-foreground',
+      'indigo',
+      'indigo-foreground',
     ])('declares --%s', (name) => expectToken(name));
   });
 
   describe('semantic text tokens (low-contrast variants)', () => {
-    it.each(['warning-text', 'info-text'])('declares --%s', (name) => expectToken(name));
+    it.each(['warning-text', 'info-text', 'destructive-text'])('declares --%s', (name) =>
+      expectToken(name),
+    );
   });
 
   describe('@theme inline color-* mappings', () => {
@@ -54,8 +58,11 @@ describe('index.css — Stage A2 Basalt B05 tokens', () => {
       'purple-foreground',
       'teal',
       'teal-foreground',
+      'indigo',
+      'indigo-foreground',
       'warning-text',
       'info-text',
+      'destructive-text',
     ])('exposes --color-%s', (name) => expectToken(`color-${name}`));
   });
 
@@ -76,12 +83,18 @@ describe('index.css — Stage A2 Basalt B05 tokens', () => {
   });
 
   describe('semantic colors must be present in both light and dark blocks', () => {
-    it.each(['warning', 'info', 'purple', 'teal', 'warning-text', 'info-text'])(
-      '--%s appears at least twice (light + dark)',
-      (name) => {
-        const matches = css.match(new RegExp(`--${name}\\s*:`, 'g')) ?? [];
-        expect(matches.length, `${name} not declared in both blocks`).toBeGreaterThanOrEqual(2);
-      },
-    );
+    it.each([
+      'warning',
+      'info',
+      'purple',
+      'teal',
+      'indigo',
+      'warning-text',
+      'info-text',
+      'destructive-text',
+    ])('--%s appears at least twice (light + dark)', (name) => {
+      const matches = css.match(new RegExp(`--${name}\\s*:`, 'g')) ?? [];
+      expect(matches.length, `${name} not declared in both blocks`).toBeGreaterThanOrEqual(2);
+    });
   });
 });

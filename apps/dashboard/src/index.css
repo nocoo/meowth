@@ -57,9 +57,12 @@
   --color-purple-foreground: hsl(var(--purple-foreground));
   --color-teal: hsl(var(--teal));
   --color-teal-foreground: hsl(var(--teal-foreground));
+  --color-indigo: hsl(var(--indigo));
+  --color-indigo-foreground: hsl(var(--indigo-foreground));
 
   --color-warning-text: hsl(var(--warning-text));
   --color-info-text: hsl(var(--info-text));
+  --color-destructive-text: hsl(var(--destructive-text));
 
   --color-avatar-1: hsl(var(--avatar-1));
   --color-avatar-2: hsl(var(--avatar-2));
@@ -186,6 +189,8 @@
   --purple-foreground: 0 0% 100%;
   --teal: 186 72% 38%;
   --teal-foreground: 0 0% 100%;
+  --indigo: 232 70% 56%;
+  --indigo-foreground: 0 0% 100%;
   --badge-red: 340 82% 55%;
   --badge-red-foreground: 0 0% 100%;
 
@@ -194,6 +199,7 @@
      stays ≥ 4.5:1. */
   --warning-text: 35 85% 32%;
   --info-text: 217 70% 38%;
+  --destructive-text: 0 72% 38%;
 
   /* Avatar palette — 16 slots, WCAG AA-compliant on light surfaces. */
   --avatar-1: 348 65% 42%;
@@ -316,6 +322,8 @@
   --purple-foreground: 270 60% 92%;
   --teal: 186 60% 35%;
   --teal-foreground: 186 60% 92%;
+  --indigo: 232 60% 50%;
+  --indigo-foreground: 232 60% 92%;
   --badge-red: 340 82% 55%;
   --badge-red-foreground: 0 0% 100%;
 
@@ -323,6 +331,7 @@
      L0/L1 dark surfaces at ≥ 4.5:1. */
   --warning-text: 45 80% 78%;
   --info-text: 217 75% 78%;
+  --destructive-text: 0 70% 78%;
 
   /* Avatar palette (dark) — every slot ≥ 5.3:1 vs paper-white text. */
   --avatar-1: 348 55% 42%;

@@ -90,11 +90,18 @@ redesign (Phase 2 feature plan
 
 ## File map
 
-### Stage A3 — Gen 2 layout primitives (G1, 8 files; pending)
+### Stage A3 — Gen 2 layout primitives (G1, 8 files; landed)
 
 | surety upstream path                                 | meowth target                                          |
 |------------------------------------------------------|--------------------------------------------------------|
-| _to be populated when Stage A3 lands_                | _to be populated when Stage A3 lands_                  |
+| apps/web/src/components/ui/tooltip.tsx               | apps/dashboard/src/components/ui/tooltip.tsx           |
+| apps/web/src/components/ui/sheet.tsx                 | apps/dashboard/src/components/ui/sheet.tsx             |
+| apps/web/src/components/ui/avatar.tsx                | apps/dashboard/src/components/ui/avatar.tsx            |
+| apps/web/src/components/ui/collapsible.tsx           | apps/dashboard/src/components/ui/collapsible.tsx       |
+| apps/web/src/components/ui/separator.tsx             | apps/dashboard/src/components/ui/separator.tsx         |
+| apps/web/src/components/ui/badge.tsx                 | apps/dashboard/src/components/ui/badge.tsx             |
+| apps/web/src/components/ui/skeleton.tsx              | apps/dashboard/src/components/ui/skeleton.tsx          |
+| apps/web/src/components/ui/empty-state.tsx           | apps/dashboard/src/components/ui/empty-state.tsx       |
 
 ### Stage A4 — page-migration primitives (G2, 11 files; pending)
 

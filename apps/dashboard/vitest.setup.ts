@@ -62,3 +62,39 @@ function ensureStorage(
 
 ensureStorage(window as Window & typeof globalThis, 'localStorage');
 ensureStorage(window as Window & typeof globalThis, 'sessionStorage');
+
+// 3) Minimal ResizeObserver / matchMedia shims for jsdom so radix-ui
+//    primitives (Tooltip, Select, Sheet etc.) can mount under test.
+//    jsdom does not implement either by default; the real browser
+//    behavior is exercised in L3 Playwright, so a no-op stub is enough
+//    here.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverShim {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  Object.defineProperty(globalThis, 'ResizeObserver', {
+    configurable: true,
+    writable: true,
+    value: ResizeObserverShim,
+  });
+}
+
+if (typeof window.matchMedia === 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: (query: string): MediaQueryList =>
+      ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList,
+  });
+}
