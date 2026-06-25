@@ -81,7 +81,7 @@ function CreateTokenDialog({ vm }: { vm: VM }) {
       aria-label="Create token"
       className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center p-6"
     >
-      <div className="bg-card text-card-foreground w-full max-w-md space-y-3 rounded-lg border p-6">
+      <div className="bg-secondary rounded-card w-full max-w-md space-y-3 p-6">
         {vm.modal.phase === 'reveal' ? (
           <RevealStep
             createdName={vm.modal.createdName}

@@ -26,7 +26,7 @@ type AuthPhase = 'probing' | 'ok' | 'unreachable';
 function DaemonUnreachable({ onRetry }: { onRetry: () => void }) {
   return (
     <main className="bg-background text-foreground flex min-h-screen items-center justify-center p-6">
-      <div className="bg-card text-card-foreground w-full max-w-md space-y-3 rounded-lg border p-6">
+      <div className="bg-secondary rounded-card w-full max-w-md space-y-3 p-6">
         <h1 className="text-xl font-semibold">Daemon unreachable</h1>
         <p className="text-muted-foreground text-sm">
           The Meowth daemon did not respond. Check that meowthd is running and reachable from this

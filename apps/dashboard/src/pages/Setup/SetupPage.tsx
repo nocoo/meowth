@@ -41,7 +41,7 @@ export default function SetupPage() {
 
   return (
     <main className="bg-background text-foreground flex min-h-screen items-center justify-center p-6">
-      <div className="bg-card text-card-foreground w-full max-w-md space-y-4 rounded-lg border p-6">
+      <div className="bg-secondary rounded-card w-full max-w-md space-y-4 p-6">
         <h1 className="text-xl font-semibold">Meowth - Setup</h1>
 
         {vm.mode === 'token' ? (
