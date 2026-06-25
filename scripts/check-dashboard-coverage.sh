@@ -71,7 +71,6 @@ EOF
 # follow-up commit.
 BASELINE_FLOORS=$(cat <<'EOF'
 apps/dashboard/src/lib/ansi.ts=87
-apps/dashboard/src/pages/Tokens/TokensPage.tsx=53
 apps/dashboard/src/viewmodels/useSessionDetailViewModel.ts=82
 apps/dashboard/src/viewmodels/useTokensViewModel.ts=82
 EOF
