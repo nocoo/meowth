@@ -72,7 +72,6 @@ EOF
 BASELINE_FLOORS=$(cat <<'EOF'
 apps/dashboard/src/lib/ansi.ts=87
 apps/dashboard/src/pages/Sessions/SessionDetailPage.tsx=84
-apps/dashboard/src/pages/Sessions/SessionsListPage.tsx=85
 apps/dashboard/src/pages/Tokens/TokensPage.tsx=53
 apps/dashboard/src/viewmodels/useSessionDetailViewModel.ts=82
 apps/dashboard/src/viewmodels/useTokensViewModel.ts=82

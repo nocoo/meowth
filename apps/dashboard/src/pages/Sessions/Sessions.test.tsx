@@ -2,7 +2,6 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { RouterProvider, createMemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SessionDetailPage from './SessionDetailPage';
-import SessionsListPage from './SessionsListPage';
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -14,47 +13,10 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-describe('SessionsListPage', () => {
-  it('renders the empty placeholder when there are no sessions', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ sessions: [] }), { status: 200 }),
-    );
-    const router = createMemoryRouter([{ path: '/sessions', element: <SessionsListPage /> }], {
-      initialEntries: ['/sessions'],
-    });
-    render(<RouterProvider router={router} />);
-    expect(screen.getByRole('heading', { level: 2, name: 'Sessions' })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('No sessions yet.')).toBeInTheDocument());
-  });
-
-  it('renders one row per session with a link to the detail page', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          sessions: [
-            {
-              id: 'sid-1',
-              backend_type: 'claude',
-              backend_session_id: 'bs',
-              status: 'completed',
-              started_at: '2026-06-22T00:00:00Z',
-              ended_at: '2026-06-22T00:01:00Z',
-              thread_name: 't',
-              model: 'opus',
-            },
-          ],
-        }),
-        { status: 200 },
-      ),
-    );
-    const router = createMemoryRouter([{ path: '/sessions', element: <SessionsListPage /> }], {
-      initialEntries: ['/sessions'],
-    });
-    render(<RouterProvider router={router} />);
-    const link = await screen.findByRole('link', { name: 'claude' });
-    expect(link.getAttribute('href')).toBe('/sessions/sid-1');
-  });
-});
+// SessionsListPage tests moved to SessionsListPage.test.tsx in
+// Phase 2 Stage C3a (vm-mocked shell + props-driven Content +
+// table-shaped Skeleton). SessionDetailPage tests remain here
+// until Stage C3b splits the detail page.
 
 describe('SessionDetailPage', () => {
   function envelope(seq: number, type: string, payload: Record<string, unknown>) {
