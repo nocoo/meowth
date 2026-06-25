@@ -98,3 +98,24 @@ if (typeof window.matchMedia === 'undefined') {
       }) as unknown as MediaQueryList,
   });
 }
+
+// jsdom does not implement Element.prototype.scrollIntoView; radix-ui
+// Select calls it on focused items when the listbox opens. A no-op
+// keeps the open path under L1.
+if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoView !== 'function') {
+  Element.prototype.scrollIntoView = function scrollIntoViewShim(): void {};
+}
+
+// jsdom's PointerEvent / hasPointerCapture stubs are also missing from
+// some Node 26 + jsdom 26 builds; radix-ui Select reaches for them when
+// the trigger is activated. No-ops are sufficient for L1 mount tests.
+if (typeof HTMLElement !== 'undefined') {
+  if (typeof HTMLElement.prototype.hasPointerCapture !== 'function') {
+    HTMLElement.prototype.hasPointerCapture = function hasPointerCaptureShim(): boolean {
+      return false;
+    };
+  }
+  if (typeof HTMLElement.prototype.releasePointerCapture !== 'function') {
+    HTMLElement.prototype.releasePointerCapture = function releasePointerCaptureShim(): void {};
+  }
+}

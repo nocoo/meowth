@@ -43,8 +43,9 @@ describe('index.css — Stage A2 Basalt B05 tokens', () => {
   });
 
   describe('semantic text tokens (low-contrast variants)', () => {
-    it.each(['warning-text', 'info-text', 'destructive-text'])('declares --%s', (name) =>
-      expectToken(name),
+    it.each(['warning-text', 'info-text', 'success-text', 'destructive-text'])(
+      'declares --%s',
+      (name) => expectToken(name),
     );
   });
 
@@ -62,6 +63,7 @@ describe('index.css — Stage A2 Basalt B05 tokens', () => {
       'indigo-foreground',
       'warning-text',
       'info-text',
+      'success-text',
       'destructive-text',
     ])('exposes --color-%s', (name) => expectToken(`color-${name}`));
   });
@@ -91,6 +93,7 @@ describe('index.css — Stage A2 Basalt B05 tokens', () => {
       'indigo',
       'warning-text',
       'info-text',
+      'success-text',
       'destructive-text',
     ])('--%s appears at least twice (light + dark)', (name) => {
       const matches = css.match(new RegExp(`--${name}\\s*:`, 'g')) ?? [];

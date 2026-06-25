@@ -103,11 +103,21 @@ redesign (Phase 2 feature plan
 | apps/web/src/components/ui/skeleton.tsx              | apps/dashboard/src/components/ui/skeleton.tsx          |
 | apps/web/src/components/ui/empty-state.tsx           | apps/dashboard/src/components/ui/empty-state.tsx       |
 
-### Stage A4 — page-migration primitives (G2, 11 files; pending)
+### Stage A4 — page-migration primitives (G2, 11 files; landed)
 
 | surety upstream path                                 | meowth target                                          |
 |------------------------------------------------------|--------------------------------------------------------|
-| _to be populated when Stage A4 lands_                | _to be populated when Stage A4 lands_                  |
+| apps/web/src/components/ui/table.tsx                 | apps/dashboard/src/components/ui/table.tsx             |
+| apps/web/src/components/ui/dropdown-menu.tsx         | apps/dashboard/src/components/ui/dropdown-menu.tsx     |
+| apps/web/src/components/ui/select.tsx                | apps/dashboard/src/components/ui/select.tsx            |
+| apps/web/src/components/ui/label.tsx                 | apps/dashboard/src/components/ui/label.tsx             |
+| apps/web/src/components/ui/notice.tsx                | apps/dashboard/src/components/ui/notice.tsx            |
+| apps/web/src/components/ui/section-divider.tsx       | apps/dashboard/src/components/ui/section-divider.tsx   |
+| apps/web/src/components/ui/switch.tsx                | apps/dashboard/src/components/ui/switch.tsx            |
+| apps/web/src/components/ui/textarea.tsx              | apps/dashboard/src/components/ui/textarea.tsx          |
+| apps/web/src/components/ui/toggle.tsx                | apps/dashboard/src/components/ui/toggle.tsx            |
+| apps/web/src/components/ui/toggle-group.tsx          | apps/dashboard/src/components/ui/toggle-group.tsx      |
+| apps/web/src/components/ui/sort-header.tsx           | apps/dashboard/src/components/ui/sort-header.tsx       |
 
 ### G3 — destructive-confirm primitives (1 file; on-demand)
 

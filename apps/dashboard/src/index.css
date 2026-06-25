@@ -62,6 +62,7 @@
 
   --color-warning-text: hsl(var(--warning-text));
   --color-info-text: hsl(var(--info-text));
+  --color-success-text: hsl(var(--success-text));
   --color-destructive-text: hsl(var(--destructive-text));
 
   --color-avatar-1: hsl(var(--avatar-1));
@@ -199,6 +200,7 @@
      stays ≥ 4.5:1. */
   --warning-text: 35 85% 32%;
   --info-text: 217 70% 38%;
+  --success-text: 142 71% 28%;
   --destructive-text: 0 72% 38%;
 
   /* Avatar palette — 16 slots, WCAG AA-compliant on light surfaces. */
@@ -331,6 +333,7 @@
      L0/L1 dark surfaces at ≥ 4.5:1. */
   --warning-text: 45 80% 78%;
   --info-text: 217 75% 78%;
+  --success-text: 142 60% 78%;
   --destructive-text: 0 70% 78%;
 
   /* Avatar palette (dark) — every slot ≥ 5.3:1 vs paper-white text. */
