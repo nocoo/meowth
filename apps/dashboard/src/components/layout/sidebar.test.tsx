@@ -29,17 +29,30 @@ describe('Sidebar (Stage B1)', () => {
     expect(active.className).toContain('bg-accent');
   });
 
+  it('keeps Sessions highlighted under /sessions/<id> via isItemActive', () => {
+    renderSidebar({ route: '/sessions/abc' });
+    const sessions = screen.getByRole('link', { name: 'Sessions' });
+    expect(sessions.className).toContain('bg-accent');
+  });
+
   it('renders an "M" Avatar fallback at the bottom (no user data)', () => {
     renderSidebar();
     expect(screen.getByText('M')).toBeInTheDocument();
   });
 
+  it('expanded user section shows the "Meowth" name and "Local daemon" subtitle', () => {
+    renderSidebar();
+    // "Meowth" also appears in the header brand + logo alt-text; the
+    // user section specifically pairs it with the "Local daemon"
+    // subtitle, so assert the subtitle here and rely on the
+    // brand/header tests above for the name.
+    expect(screen.getByText('Local daemon')).toBeInTheDocument();
+  });
+
   it('mobile mode disables the desktop chrome (no sticky h-screen, no toggle)', () => {
     renderSidebar({ mobile: true });
-    // Mobile header omits the collapse/expand button.
     expect(screen.queryByRole('button', { name: 'Collapse sidebar' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Expand sidebar' })).not.toBeInTheDocument();
-    // All 5 nav items still render.
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
   });
 
@@ -57,9 +70,6 @@ describe('Sidebar (Stage B1)', () => {
     renderSidebar();
     const pill = screen.getByTestId('sidebar-version-pill');
     expect(pill).toBeInTheDocument();
-    // Pill text is `v<APP_VERSION>`; assert leading `v` + non-empty
-    // rest. Exact version is whatever apps/dashboard/package.json
-    // declares; pinning a literal here would break on bump.
     expect(pill.textContent ?? '').toMatch(/^v\S+$/);
   });
 
@@ -68,29 +78,36 @@ describe('Sidebar (Stage B1)', () => {
     expect(screen.getByTestId('sidebar-version-pill')).toBeInTheDocument();
   });
 
-  it('collapsed mode hides the version pill (no header text shown)', async () => {
+  it('expanded mode renders group labels: Dashboard + System', () => {
+    renderSidebar();
+    expect(screen.getByTestId('sidebar-group-label-dashboard')).toHaveTextContent('Dashboard');
+    expect(screen.getByTestId('sidebar-group-label-system')).toHaveTextContent('System');
+  });
+
+  it('collapsed mode hides the version pill and group labels (icon rail only)', async () => {
     const user = userEvent.setup();
     renderSidebar();
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
     expect(screen.queryByTestId('sidebar-version-pill')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-group-label-dashboard')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sidebar-group-label-system')).not.toBeInTheDocument();
   });
 
-  it('collapsed mode renders the Tooltip rail (icon-only) and Expand button', async () => {
+  it('collapsed mode keeps the logo in place at the top (does not jump out)', async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={['/overview']}>
-        <SidebarProvider>
-          <Sidebar />
-        </SidebarProvider>
-      </MemoryRouter>,
-    );
-    // Drive into collapsed state by clicking the header toggle.
+    renderSidebar();
+    // Expanded logo is also rendered; after collapse we still expect the
+    // Meowth-named image to be in the DOM (now in the collapsed header).
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
-    // Expand button visible (no Collapse button in collapsed mode).
+    expect(screen.getByAltText('Meowth')).toBeInTheDocument();
+  });
+
+  it('collapsed mode renders the flat icon rail with all five nav items + Expand button', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
     expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Collapse sidebar' })).not.toBeInTheDocument();
-    // Nav still has 5 entries, now as icon-only Tooltip triggers
-    // (each NavLink carries aria-label= page name).
     for (const label of ['Overview', 'Agents', 'Sessions', 'Tokens', 'Settings']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
     }
@@ -98,13 +115,7 @@ describe('Sidebar (Stage B1)', () => {
 
   it('toggle button flips between Collapse and Expand labels', async () => {
     const user = userEvent.setup();
-    render(
-      <MemoryRouter initialEntries={['/overview']}>
-        <SidebarProvider>
-          <Sidebar />
-        </SidebarProvider>
-      </MemoryRouter>,
-    );
+    renderSidebar();
     expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
     expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();

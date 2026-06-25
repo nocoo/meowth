@@ -1,28 +1,42 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { NAV_ITEMS } from '@/lib/navigation';
+import { NAV_GROUPS, NAV_ITEMS, isItemActive } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/lib/version';
 import { PanelLeft } from 'lucide-react';
-import { NavLink } from 'react-router';
+import { NavLink, useLocation } from 'react-router';
 import { useSidebar } from './sidebar-context';
 
-// Meowth-local Gen 2 Sidebar. Inspired by surety's
-// components/layout/sidebar.tsx (commit cbf7045f) but adapted for
-// meowth's simpler product surface:
+// Meowth-local Gen 2 Sidebar. Visual + structural alignment with
+// surety's components/layout/sidebar.tsx (commit cbf7045f):
 //
-//   - no user data (single-user local product; no useMe/getDisplayName/
-//     getAvatarColor); the bottom Avatar always renders the static "M"
-//     letter on the L2 surface
-//   - no navigation groups / collapsible sections; nav is a flat
-//     5-item list (matches meowth's 5 product pages — see
-//     `lib/navigation.ts`)
-//   - no command palette wiring (deferred per redesign plan §7.2)
-//   - no GitHub icon / DbSelector (deferred or out of scope)
+//   - collapsed view keeps the logo in place at the top
+//     (`h-14 pl-6 pr-3 justify-start`) so the brand mark does not
+//     shift when the user toggles; the collapse/expand button sits
+//     **below** the logo as an independent `h-10 w-10` control
+//   - expanded view header uses the surety pattern (`px-3 h-14` +
+//     inner `flex w-full items-center justify-between px-3`); the
+//     logo block + brand + version pill live in a single row, the
+//     toggle is on the right
+//   - expanded nav renders NAV_GROUPS (label + grouped block) so
+//     the structure documents intent (Dashboard / System) without
+//     inventing fake business features. Collapsed nav stays a flat
+//     icon rail driven by NAV_ITEMS so the rail stays compact
+//   - bottom user section follows surety: collapsed centers an
+//     `h-9 w-9` Avatar, expanded shows the same Avatar + two-line
+//     name/subtitle. meowth has no real user data, so the labels
+//     are static ("Meowth" / "Local daemon")
 //
-// Mobile drawer presentation is provided by `app-shell.tsx` wrapping
-// this component in `<Sheet>`. `mobile` prop just disables the
-// h-screen/sticky chrome that conflicts with the Sheet container.
+// Out of scope (deferred or not applicable to meowth):
+//   - no command palette wiring
+//   - no DbSelector (single-store product)
+//   - no user dropdown menu
+//   - sidebar GitHub link lives in AppShell header, not here
+//
+// Mobile drawer presentation is provided by `app-shell.tsx`
+// wrapping this component in `<Sheet>`. `mobile` prop just
+// disables the h-screen/sticky chrome that conflicts with the
+// Sheet container and forces the expanded (full-width) layout.
 
 interface SidebarProps {
   mobile?: boolean;
@@ -30,119 +44,174 @@ interface SidebarProps {
 
 export function Sidebar({ mobile = false }: SidebarProps) {
   const { collapsed, toggle } = useSidebar();
-  const expanded = mobile ? true : !collapsed;
-  const width = mobile ? 'w-full' : expanded ? 'w-[260px]' : 'w-[68px]';
+  const { pathname } = useLocation();
+  const isCollapsed = mobile ? false : collapsed;
+
   return (
     <TooltipProvider delayDuration={0}>
       <aside
         aria-label="Primary navigation"
         className={cn(
-          'bg-background text-foreground flex flex-col gap-1 shrink-0',
-          mobile ? 'h-full' : 'sticky top-0 h-screen',
-          width,
+          'bg-background text-foreground sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden',
+          mobile && 'h-full',
+          isCollapsed ? 'w-[68px]' : 'w-[260px]',
           'transition-[width] duration-150 ease-in-out',
         )}
       >
-        <SidebarHeader expanded={expanded} mobile={mobile} toggle={toggle} />
-        <nav aria-label="Pages" className="flex flex-col gap-1 px-2">
-          {NAV_ITEMS.map((item) =>
-            expanded ? (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    'relative flex items-center gap-3 rounded-md px-3 py-2 text-sm',
-                    'before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[2px] before:-translate-y-1/2',
-                    isActive
-                      ? 'bg-accent text-foreground before:bg-primary'
-                      : 'text-muted-foreground hover:bg-accent/60 before:bg-transparent',
-                  )
-                }
-              >
-                <item.Icon className="h-4 w-4" aria-hidden="true" />
-                <span>{item.label}</span>
-              </NavLink>
-            ) : (
-              <Tooltip key={item.to}>
-                <TooltipTrigger asChild>
-                  <NavLink
-                    to={item.to}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex h-10 w-10 items-center justify-center rounded-md self-center',
-                        isActive
-                          ? 'bg-accent text-foreground'
-                          : 'text-muted-foreground hover:bg-accent/60',
-                      )
-                    }
-                    aria-label={item.label}
-                  >
-                    <item.Icon className="h-5 w-5" aria-hidden="true" />
-                  </NavLink>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
-            ),
-          )}
-        </nav>
-        <div className="mt-auto p-3">
-          <Avatar className={expanded ? '' : 'mx-auto'}>
-            <AvatarFallback>M</AvatarFallback>
-          </Avatar>
-        </div>
+        {isCollapsed ? (
+          <CollapsedView pathname={pathname} toggle={toggle} />
+        ) : (
+          <ExpandedView pathname={pathname} toggle={toggle} mobile={mobile} />
+        )}
       </aside>
     </TooltipProvider>
   );
 }
 
-interface SidebarHeaderProps {
-  expanded: boolean;
-  mobile: boolean;
-  toggle: () => void;
+function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => void }) {
+  return (
+    <div className="flex h-full w-[68px] flex-col items-center">
+      {/* Logo — stays put when the rail collapses (matches surety). */}
+      <div className="flex h-14 w-full items-center justify-start pl-6 pr-3">
+        <img src="/logo-24.png" alt="Meowth" width={24} height={24} className="shrink-0" />
+      </div>
+
+      {/* Expand toggle — sits below the logo as its own h-10 w-10 control. */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label="Expand sidebar"
+            className="text-muted-foreground hover:bg-accent hover:text-foreground mb-2 flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
+          >
+            <PanelLeft className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8}>
+          Expand sidebar
+        </TooltipContent>
+      </Tooltip>
+
+      {/* Flat icon rail — collapsed view uses NAV_ITEMS, no group labels. */}
+      <nav
+        aria-label="Pages"
+        className="flex flex-1 flex-col items-center gap-1 overflow-y-auto pt-1"
+      >
+        {NAV_ITEMS.map((item) => (
+          <Tooltip key={item.to}>
+            <TooltipTrigger asChild>
+              <NavLink
+                to={item.to}
+                aria-label={item.label}
+                className={({ isActive }) =>
+                  cn(
+                    'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
+                    isActive || isItemActive(item, pathname)
+                      ? 'bg-accent text-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                  )
+                }
+              >
+                <item.Icon className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              {item.label}
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </nav>
+
+      {/* User section (collapsed): centered avatar matches surety. */}
+      <div className="flex w-full justify-center py-3">
+        <Avatar className="h-9 w-9">
+          <AvatarFallback>M</AvatarFallback>
+        </Avatar>
+      </div>
+    </div>
+  );
 }
 
-function SidebarHeader({ expanded, mobile, toggle }: SidebarHeaderProps) {
-  if (mobile) {
-    return (
-      <div className="flex h-14 items-center gap-2 px-4">
-        <img src="/logo-24.png" alt="Meowth" width={24} height={24} />
-        <span className="text-base font-semibold">Meowth</span>
-        <VersionPill />
-      </div>
-    );
-  }
-  if (expanded) {
-    return (
-      <div className="flex h-14 items-center justify-between gap-2 px-3">
-        <div className="flex items-center gap-2">
-          <img src="/logo-24.png" alt="Meowth" width={24} height={24} />
-          <span className="text-base font-semibold">Meowth</span>
-          <VersionPill />
-        </div>
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label="Collapse sidebar"
-          className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-7 w-7 items-center justify-center rounded-md transition-colors"
-        >
-          <PanelLeft className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </div>
-    );
-  }
+function ExpandedView({
+  pathname,
+  toggle,
+  mobile,
+}: {
+  pathname: string;
+  toggle: () => void;
+  mobile: boolean;
+}) {
   return (
-    <div className="flex h-14 items-center justify-center">
-      <button
-        type="button"
-        onClick={toggle}
-        aria-label="Expand sidebar"
-        className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-10 w-10 items-center justify-center rounded-md transition-colors"
-      >
-        <PanelLeft className="h-4 w-4 rotate-180" aria-hidden="true" />
-      </button>
+    <div className="flex h-full w-full flex-col">
+      {/* Header: logo block + (desktop only) collapse toggle. */}
+      <div className="flex h-14 items-center px-3">
+        <div className="flex w-full items-center justify-between px-3">
+          <div className="flex items-center gap-3">
+            <img src="/logo-24.png" alt="Meowth" width={24} height={24} className="shrink-0" />
+            <span className="text-base font-semibold">Meowth</span>
+            <VersionPill />
+          </div>
+          {mobile ? null : (
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label="Collapse sidebar"
+              className="text-muted-foreground hover:text-foreground flex h-7 w-7 items-center justify-center rounded-md transition-colors"
+            >
+              <PanelLeft className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Grouped navigation. */}
+      <nav aria-label="Pages" className="flex-1 overflow-y-auto pt-1">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label} className="mt-2 px-3">
+            <div className="px-3 py-2">
+              <span
+                data-testid={`sidebar-group-label-${group.label.toLowerCase()}`}
+                className="text-muted-foreground/70 text-[11px] font-medium"
+              >
+                {group.label}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5 px-3">
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-normal transition-colors',
+                      isActive || isItemActive(item, pathname)
+                        ? 'bg-accent text-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                    )
+                  }
+                >
+                  <item.Icon className="h-4 w-4 shrink-0" aria-hidden="true" strokeWidth={1.5} />
+                  <span className="flex-1 text-left">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      {/* User section (expanded): avatar + name + subtitle. */}
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-9 w-9 shrink-0">
+            <AvatarFallback>M</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="text-foreground truncate text-sm font-medium">Meowth</p>
+            <p className="text-muted-foreground truncate text-xs">Local daemon</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NAV_ITEMS, activeNavItem } from './navigation';
+import { NAV_GROUPS, NAV_ITEMS, activeNavItem, isItemActive } from './navigation';
 
 describe('NAV_ITEMS / activeNavItem (Stage B1)', () => {
   it('exposes the five product pages in display order', () => {
@@ -43,5 +43,31 @@ describe('NAV_ITEMS / activeNavItem (Stage B1)', () => {
       expect(item.label.length).toBeGreaterThan(0);
       expect(typeof item.Icon).toBe('object'); // lucide icons are forwardRef objects
     }
+  });
+});
+
+describe('NAV_GROUPS / isItemActive', () => {
+  it('exposes two groups: Dashboard (4 items) and System (1 item)', () => {
+    expect(NAV_GROUPS.map((g) => g.label)).toEqual(['Dashboard', 'System']);
+    expect(NAV_GROUPS[0]?.items.map((i) => i.to)).toEqual([
+      '/overview',
+      '/agents',
+      '/sessions',
+      '/tokens',
+    ]);
+    expect(NAV_GROUPS[1]?.items.map((i) => i.to)).toEqual(['/settings']);
+  });
+
+  it('NAV_ITEMS is derived from NAV_GROUPS in declared order', () => {
+    const flat = NAV_GROUPS.flatMap((g) => g.items).map((i) => i.to);
+    expect(NAV_ITEMS.map((i) => i.to)).toEqual(flat);
+  });
+
+  it('isItemActive matches a NavItem against a pathname (preserves /sessions/:id highlight)', () => {
+    const sessions = NAV_ITEMS.find((n) => n.to === '/sessions');
+    if (!sessions) throw new Error('expected Sessions nav item');
+    expect(isItemActive(sessions, '/sessions')).toBe(true);
+    expect(isItemActive(sessions, '/sessions/abc')).toBe(true);
+    expect(isItemActive(sessions, '/agents')).toBe(false);
   });
 });
