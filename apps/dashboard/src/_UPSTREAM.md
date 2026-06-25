@@ -32,13 +32,13 @@ commit yet).
 | src/components/ui/input.tsx    | apps/dashboard/src/components/ui/input.tsx    |
 | src/components/ui/dialog.tsx   | apps/dashboard/src/components/ui/dialog.tsx   |
 
-### Source-copy verbatim — deferred (按 06 §4.1.1 末段 "按 page 需要逐个增量 copy")
+### Source-copy verbatim — superseded by surety provenance below
 
-Additional ui primitives such as `badge.tsx`, `label.tsx`,
-`separator.tsx`, `tooltip.tsx`, `dropdown-menu.tsx`, etc. are
-copied incrementally in the commit that introduces the first
-consuming page. Each copy commit must update this file with the
-new row and the basalt commit SHA at copy time.
+Gen 2 ui primitives (`badge.tsx`, `label.tsx`, `separator.tsx`,
+`tooltip.tsx`, `dropdown-menu.tsx`, etc.) are **no longer copied
+from basalt**. They are copied from surety in Stage A3/A4 of the
+dashboard redesign (see `docs/features/02-dashboard-redesign-to-basalt-gen2.md`).
+The "surety provenance" section below tracks those copies.
 
 ### Meowth-local adapted — deferred to Phase 3.14
 
@@ -70,3 +70,40 @@ We may NOT:
 - Use UI libraries that conflict with basalt's style (Radix /
   shadcn are aligned with basalt already, so they are fine when
   basalt itself uses them — `dialog.tsx` for instance).
+
+---
+
+# surety provenance
+
+Gen 2 ui primitives source-copied from surety in the dashboard
+redesign (Phase 2 feature plan
+`docs/features/02-dashboard-redesign-to-basalt-gen2.md` §5.5).
+
+| Field         | Value |
+|---------------|-------|
+| source_repo   | local: ~/workspace/personal/surety |
+| source_commit | cbf7045facc32f03bfb562d6491f6ee3003e538c |
+| copied_at     | 2026-06-25 |
+| copy_method   | manual cp (per-file; not directory vendor) |
+| license       | MIT (Copyright 2026 Zheng Li; see ~/workspace/personal/surety/LICENSE) |
+| allowed_modifications | `cn` import alias only (`@/lib/utils`, already aligned); preserve `from "radix-ui"` namespace imports verbatim; no business logic or layout changes |
+
+## File map
+
+### Stage A3 — Gen 2 layout primitives (G1, 8 files; pending)
+
+| surety upstream path                                 | meowth target                                          |
+|------------------------------------------------------|--------------------------------------------------------|
+| _to be populated when Stage A3 lands_                | _to be populated when Stage A3 lands_                  |
+
+### Stage A4 — page-migration primitives (G2, 11 files; pending)
+
+| surety upstream path                                 | meowth target                                          |
+|------------------------------------------------------|--------------------------------------------------------|
+| _to be populated when Stage A4 lands_                | _to be populated when Stage A4 lands_                  |
+
+### G3 — destructive-confirm primitives (1 file; on-demand)
+
+| surety upstream path                                 | meowth target                                          |
+|------------------------------------------------------|--------------------------------------------------------|
+| _alert-dialog.tsx, copied only when a page commit actually consumes destructive confirm_      | _-_                                                    |
