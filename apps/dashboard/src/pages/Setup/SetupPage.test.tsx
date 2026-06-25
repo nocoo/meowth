@@ -51,7 +51,11 @@ describe('SetupPage', () => {
     renderAt();
     await user.type(screen.getByPlaceholderText('mwt_...'), 'mwt_short');
     await user.click(screen.getByRole('button', { name: /Continue/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/Meowth token/i);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/Meowth token/i);
+    // C6: the error block must be the semantic Notice, not the
+    // old local ErrorBanner div.
+    expect(alert).toHaveAttribute('data-slot', 'notice');
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(screen.queryByText('overview content')).not.toBeInTheDocument();
   });

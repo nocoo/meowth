@@ -1,3 +1,4 @@
+import { Notice } from '@/components/ui/notice';
 import useSetupViewModel from '@/viewmodels/useSetupViewModel';
 import { useId, useState } from 'react';
 
@@ -8,17 +9,11 @@ import { useId, useState } from 'react';
 // by `meowthd init --skip-token`. The mode B button is disabled
 // when the dashboard is served from a different origin than the
 // daemon (Vite dev), per 04 §6.6 / 06 §9.2.
-
-function ErrorBanner({ message }: { message: string }) {
-  return (
-    <p
-      role="alert"
-      className="border-destructive/40 bg-destructive/10 text-destructive rounded border px-3 py-2 text-sm"
-    >
-      {message}
-    </p>
-  );
-}
+//
+// Phase 2 Stage C6 swaps the local ErrorBanner block + the
+// disabled-mint footnote for semantic Notices, keeping all form
+// behavior (validation, placeholders, disabled state, dev-mint
+// guard) and existing tests/selectors unchanged.
 
 export default function SetupPage() {
   const vm = useSetupViewModel();
@@ -59,7 +54,11 @@ export default function SetupPage() {
               onChange={(e) => setTokenInput(e.target.value)}
               className="border-input bg-background w-full rounded border px-3 py-2 font-mono text-sm"
             />
-            {errorMessage ? <ErrorBanner message={errorMessage} /> : null}
+            {errorMessage ? (
+              <Notice variant="destructive" role="alert">
+                {errorMessage}
+              </Notice>
+            ) : null}
             <div className="flex items-center justify-end gap-2">
               <button
                 type="submit"
@@ -95,7 +94,11 @@ export default function SetupPage() {
               onChange={(e) => setCodeInput(e.target.value)}
               className="border-input bg-background w-full rounded border px-3 py-2 font-mono text-sm"
             />
-            {errorMessage ? <ErrorBanner message={errorMessage} /> : null}
+            {errorMessage ? (
+              <Notice variant="destructive" role="alert">
+                {errorMessage}
+              </Notice>
+            ) : null}
             <div className="flex items-center justify-end gap-2">
               <button
                 type="submit"
@@ -106,7 +109,7 @@ export default function SetupPage() {
               </button>
             </div>
             {vm.mintDisabled && vm.mintDisabledReason ? (
-              <p className="text-muted-foreground text-xs">{vm.mintDisabledReason}</p>
+              <Notice variant="info">{vm.mintDisabledReason}</Notice>
             ) : null}
             <div className="border-border border-t pt-3 text-sm">
               <button
