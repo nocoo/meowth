@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import tailwind from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
@@ -17,7 +18,21 @@ import { defineConfig } from 'vite';
 // Host headers by default (403 Blocked); the Caddy upstream forwards
 // the original Host so we whitelist meowth-vite.dev.hexly.ai.
 // HMR runs over wss through Caddy's TLS termination at port 443.
+
+// docs/features/02 §4.2 / Stage B2 — APP_VERSION injection.
+// Read dashboard's own package.json at build time so `__APP_VERSION__`
+// in `lib/version.ts` reflects the published dashboard version.
+// Source code never imports the package.json directly (which would
+// pull a JSON module into the runtime bundle); the constant is
+// substituted by Vite via `define`.
+const PKG = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')) as {
+  version: string;
+};
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(PKG.version),
+  },
   plugins: [react(), tailwind()],
   resolve: {
     alias: {

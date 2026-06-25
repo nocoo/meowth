@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NAV_ITEMS } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
+import { APP_VERSION } from '@/lib/version';
 import { PanelLeft } from 'lucide-react';
 import { NavLink } from 'react-router';
 import { useSidebar } from './sidebar-context';
@@ -109,6 +110,7 @@ function SidebarHeader({ expanded, mobile, toggle }: SidebarHeaderProps) {
       <div className="flex h-14 items-center gap-2 px-4">
         <img src="/logo-24.png" alt="Meowth" width={24} height={24} />
         <span className="text-base font-semibold">Meowth</span>
+        <VersionPill />
       </div>
     );
   }
@@ -118,6 +120,7 @@ function SidebarHeader({ expanded, mobile, toggle }: SidebarHeaderProps) {
         <div className="flex items-center gap-2">
           <img src="/logo-24.png" alt="Meowth" width={24} height={24} />
           <span className="text-base font-semibold">Meowth</span>
+          <VersionPill />
         </div>
         <button
           type="button"
@@ -141,5 +144,16 @@ function SidebarHeader({ expanded, mobile, toggle }: SidebarHeaderProps) {
         <PanelLeft className="h-4 w-4 rotate-180" aria-hidden="true" />
       </button>
     </div>
+  );
+}
+
+function VersionPill() {
+  return (
+    <span
+      data-testid="sidebar-version-pill"
+      className="bg-secondary text-muted-foreground rounded-md px-1.5 py-0.5 font-mono text-[10px]"
+    >
+      v{APP_VERSION}
+    </span>
   );
 }

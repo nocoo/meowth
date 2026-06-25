@@ -1,3 +1,4 @@
+import { APP_VERSION } from '@/lib/version';
 import { pingHealthz } from '@/models/health';
 import { useCallback, useEffect, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
@@ -5,6 +6,13 @@ import useAuthErrorHandler from './useAuthErrorHandler';
 // docs/architecture/06 §7.5 — Settings viewmodel (read-only v1).
 // Wires only the healthz probe. No daemon config (bind / mode /
 // log level) is exposed because no /v1/settings endpoint exists.
+//
+// Phase 2 dashboard redesign Stage B2 migrates the dashboard
+// version source from `import.meta.env['VITE_VERSION']` to the
+// single `APP_VERSION` constant exported by `@/lib/version`,
+// which is substituted from `apps/dashboard/package.json` at Vite
+// build time via `define`. No process.env / import.meta.env /
+// runtime JSON read.
 
 export type SettingsStatus =
   | { kind: 'loading' }
@@ -14,15 +22,11 @@ export type SettingsStatus =
 export interface SettingsViewModel {
   status: SettingsStatus;
   /**
-   * Build-time dashboard version exposed via Vite env. Falls back
-   * to 'dev' when the env var is not set.
+   * Dashboard version (build-time, from `@/lib/version`).
    */
   version: string;
   refresh(): void;
 }
-
-// biome-ignore lint/complexity/useLiteralKeys: import.meta.env access uses bracket form to satisfy TS noPropertyAccessFromIndexSignature
-const DASHBOARD_VERSION = (import.meta.env['VITE_VERSION'] as string | undefined) ?? 'dev';
 
 export default function useSettingsViewModel(): SettingsViewModel {
   const handleAuthError = useAuthErrorHandler();
@@ -55,5 +59,5 @@ export default function useSettingsViewModel(): SettingsViewModel {
     setNonce((n) => n + 1);
   }, []);
 
-  return { status, version: DASHBOARD_VERSION, refresh };
+  return { status, version: APP_VERSION, refresh };
 }

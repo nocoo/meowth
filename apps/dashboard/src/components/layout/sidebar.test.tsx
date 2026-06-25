@@ -53,6 +53,28 @@ describe('Sidebar (Stage B1)', () => {
     expect(screen.getByRole('complementary', { name: 'Primary navigation' })).toBeInTheDocument();
   });
 
+  it('expanded mode renders the version pill (v<APP_VERSION>)', () => {
+    renderSidebar();
+    const pill = screen.getByTestId('sidebar-version-pill');
+    expect(pill).toBeInTheDocument();
+    // Pill text is `v<APP_VERSION>`; assert leading `v` + non-empty
+    // rest. Exact version is whatever apps/dashboard/package.json
+    // declares; pinning a literal here would break on bump.
+    expect(pill.textContent ?? '').toMatch(/^v\S+$/);
+  });
+
+  it('mobile mode also renders the version pill', () => {
+    renderSidebar({ mobile: true });
+    expect(screen.getByTestId('sidebar-version-pill')).toBeInTheDocument();
+  });
+
+  it('collapsed mode hides the version pill (no header text shown)', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    expect(screen.queryByTestId('sidebar-version-pill')).not.toBeInTheDocument();
+  });
+
   it('collapsed mode renders the Tooltip rail (icon-only) and Expand button', async () => {
     const user = userEvent.setup();
     render(

@@ -53,8 +53,10 @@ def main() -> None:
 
     PUBLIC.mkdir(parents=True, exist_ok=True)
 
-    # In-app references (sidebar, small/large display).
-    for size in (24, 80):
+    # In-app references (sidebar small icon, large display, and the
+    # 192px standard PWA / share-card asset added in Phase 2
+    # redesign Stage B2 even though no live consumer ships yet).
+    for size in (24, 80, 192):
         out = PUBLIC / f"logo-{size}.png"
         resize_square(img, size).save(out, "PNG")
         print(f"  {out.relative_to(ROOT)} ({size}x{size})")
