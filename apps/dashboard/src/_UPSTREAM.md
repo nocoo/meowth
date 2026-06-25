@@ -28,9 +28,14 @@ commit yet).
 | src/lib/utils.ts               | apps/dashboard/src/lib/utils.ts               |
 | src/lib/palette.ts             | apps/dashboard/src/lib/palette.ts             |
 | src/components/ui/button.tsx   | apps/dashboard/src/components/ui/button.tsx   |
-| src/components/ui/card.tsx     | apps/dashboard/src/components/ui/card.tsx     |
 | src/components/ui/input.tsx    | apps/dashboard/src/components/ui/input.tsx    |
 | src/components/ui/dialog.tsx   | apps/dashboard/src/components/ui/dialog.tsx   |
+
+Phase 2 dashboard redesign Stage B4 removed
+`src/components/ui/card.tsx` (originally copied in Phase 3.13).
+Business `<Card>` usage was migrated to direct
+`bg-secondary rounded-card` styling in Stage B3; B4 grep proved
+no remaining import / JSX reference, so the file was deleted.
 
 ### Source-copy verbatim — superseded by surety provenance below
 
