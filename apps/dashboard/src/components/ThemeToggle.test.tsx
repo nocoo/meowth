@@ -100,4 +100,29 @@ describe('ThemeToggle interaction', () => {
     fireEvent.click(screen.getByRole('button'));
     expect(screen.getByRole('button', { name: 'Switch to light theme' })).toBeInTheDocument();
   });
+
+  it('uses the surety-aligned ghost button class set (h-8 w-8 rounded-lg, no border)', () => {
+    installMatchMedia({ prefersDark: false });
+    render(<ThemeToggle />);
+    const button = screen.getByRole('button');
+    const cls = button.className;
+    expect(cls).toContain('h-8');
+    expect(cls).toContain('w-8');
+    expect(cls).toContain('rounded-lg');
+    expect(cls).toContain('text-muted-foreground');
+    expect(cls).toContain('hover:bg-accent');
+    // Old Gen-1 visual is gone: no border-input + bg-background combo.
+    expect(cls).not.toContain('border-input');
+    expect(cls).not.toContain('bg-background');
+  });
+
+  it('renders an h-4 w-4 icon inside the button', () => {
+    installMatchMedia({ prefersDark: false });
+    const { container } = render(<ThemeToggle />);
+    const icon = container.querySelector('button svg');
+    expect(icon).not.toBeNull();
+    const iconClass = icon?.getAttribute('class') ?? '';
+    expect(iconClass).toContain('h-4');
+    expect(iconClass).toContain('w-4');
+  });
 });

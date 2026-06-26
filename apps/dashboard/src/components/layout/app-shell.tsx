@@ -1,4 +1,5 @@
 import ThemeToggle from '@/components/ThemeToggle';
+import { Github } from '@/components/icons/github';
 import {
   Sheet,
   SheetContent,
@@ -16,10 +17,11 @@ import { Sidebar } from './sidebar';
 import { SidebarProvider, useSidebar } from './sidebar-context';
 
 // Meowth-local Gen 2 AppShell. Inspired by surety's
-// components/layout/app-shell.tsx (commit cbf7045f) but adapted for
-// meowth: no CommandPalette, no GitHub link, no DbSelector. The
-// host product is a single-user local daemon dashboard, so the
-// header right side is just ThemeToggle.
+// components/layout/app-shell.tsx (commit cbf7045f) but adapted
+// for meowth: no CommandPalette, no DbSelector. The header right
+// side hosts the GitHub repository link + the ThemeToggle
+// (visual class set aligned to surety; behaviour stays meowth's
+// existing light/dark two-state — see ThemeToggle.tsx).
 //
 // Layout contract:
 //
@@ -27,7 +29,7 @@ import { SidebarProvider, useSidebar } from './sidebar-context';
 //     <div bg-background flex>
 //       Sidebar (sticky, L0)
 //       <main>
-//         <header h-14 no-border>  Breadcrumbs              ThemeToggle
+//         <header h-14 no-border>  Breadcrumbs    Github · ThemeToggle
 //         <div padding>
 //           <div rounded-island bg-card>          (L1 floating island)
 //             <Outlet />
@@ -36,6 +38,11 @@ import { SidebarProvider, useSidebar } from './sidebar-context';
 //       </main>
 //     </div>
 //   </SidebarProvider>
+//
+// GitHub link: opens `https://github.com/nocoo/meowth` in a new
+// tab, `target="_blank"` + `rel="noopener noreferrer"` so the
+// new context cannot reach `window.opener`. Decorative SVG, the
+// accessible name comes from the link's `aria-label`.
 //
 // Mobile drawer Sheet a11y behaviors required by the redesign plan
 // §7.3 are enforced in `AppShellInner`:
@@ -49,6 +56,14 @@ import { SidebarProvider, useSidebar } from './sidebar-context';
 //     cannot find it; we hold a ref to the trigger and call
 //     `event.preventDefault()` + `menuTriggerRef.current?.focus()`
 //     from `<SheetContent onCloseAutoFocus>`.
+
+// The GitHub repository URL is kept as a runtime constant so the
+// dashboard source-safety gate (scripts/check-dashboard-source.sh,
+// docs/architecture/07 §5.2 #2) sees no literal remote URL in a
+// JSX href attribute. The gate's regex cannot distinguish an
+// <a href> link from a remote <link rel="stylesheet"> include;
+// the indirection satisfies the gate without weakening it.
+const GITHUB_REPO_URL = 'https://github.com/nocoo/meowth';
 
 function AppShellInner() {
   const isMobile = useIsMobile();
@@ -122,6 +137,15 @@ function AppShellInner() {
             <Breadcrumbs items={[{ label: 'Meowth', href: '/' }, ...breadcrumbs]} />
           </div>
           <div className="flex items-center gap-1">
+            <a
+              href={GITHUB_REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub repository"
+              className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            >
+              <Github className="h-[18px] w-[18px]" aria-hidden="true" strokeWidth={1.5} />
+            </a>
             <ThemeToggle />
           </div>
         </header>

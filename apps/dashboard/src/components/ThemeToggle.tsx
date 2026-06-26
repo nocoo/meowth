@@ -2,8 +2,7 @@ import { cn } from '@/lib/utils';
 import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-// docs/architecture/06 §4.1.2: meowth-local ThemeToggle (not a
-// verbatim copy of basalt). Behaviour:
+// docs/architecture/06 §4.1.4: meowth-local ThemeToggle. Behaviour:
 //
 //   - On mount: if localStorage `meowth_theme` is `dark` or
 //     `light`, that wins. Otherwise the system preference
@@ -12,8 +11,14 @@ import { useEffect, useState } from 'react';
 //     `document.documentElement.classList.toggle('dark')`.
 //   - Malformed stored values are ignored — system preference
 //     applies and the bad value is removed on the next toggle.
+//   - Visual class set mirrors surety's ghost-style header
+//     action (`h-8 w-8 rounded-lg text-muted-foreground hover:
+//     bg-accent hover:text-foreground`) so the button visually
+//     matches the GitHub link in AppShell. Behaviour (two-state
+//     light/dark, `meowth_theme` storage key, system preference
+//     fallback) is unchanged.
 //
-// No i18n / cmdk / LanguageToggle dependencies, per 06 §4.1.2.
+// No i18n / cmdk / LanguageToggle dependencies.
 
 const STORAGE_KEY = 'meowth_theme';
 
@@ -85,11 +90,11 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       aria-label={label}
       title={label}
       className={cn(
-        'inline-flex h-9 w-9 items-center justify-center rounded-md border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground',
+        'text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
         className,
       )}
     >
-      <Icon className="h-4 w-4" aria-hidden="true" />
+      <Icon className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
     </button>
   );
 }

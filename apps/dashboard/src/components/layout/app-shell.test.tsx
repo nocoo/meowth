@@ -78,6 +78,34 @@ describe('AppShell (Stage B1) — desktop layout', () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
     expect(screen.queryByRole('button', { name: 'Open navigation' })).not.toBeInTheDocument();
   });
+
+  it('header right exposes the GitHub repo link (target=_blank, secure rel, decorative svg)', () => {
+    render(<ShellWithChildPage child={<div>x</div>} />);
+    const link = screen.getByRole('link', { name: 'GitHub repository' });
+    expect(link.getAttribute('href')).toBe('https://github.com/nocoo/meowth');
+    expect(link.getAttribute('target')).toBe('_blank');
+    // rel must include both noopener and noreferrer so the new
+    // context cannot reach window.opener.
+    const rel = link.getAttribute('rel') ?? '';
+    expect(rel).toContain('noopener');
+    expect(rel).toContain('noreferrer');
+    // Inline svg uses h-[18px] w-[18px] (surety idiom) and is
+    // decorative — aria-hidden=true.
+    const svg = link.querySelector('svg');
+    expect(svg).not.toBeNull();
+    expect(svg?.getAttribute('aria-hidden')).toBe('true');
+    expect(svg?.getAttribute('class') ?? '').toContain('h-[18px]');
+    expect(svg?.getAttribute('class') ?? '').toContain('w-[18px]');
+  });
+
+  it('header right also renders the ThemeToggle button next to the GitHub link', () => {
+    render(<ShellWithChildPage child={<div>x</div>} />);
+    // Initial state in jsdom (no prefers-dark) starts in light mode,
+    // so the toggle advertises "Switch to dark theme".
+    expect(
+      screen.getByRole('button', { name: /Switch to (dark|light) theme/ }),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
