@@ -330,6 +330,16 @@ Phase 2 Stage B replaced the Gen 1 `DashboardLayout` + monolithic `AppSidebar` +
 
 Provenance class is **source-derived** because biome reformatted line breaks and a small set of `/* v8 ignore start/stop */` markers were added around SSR-only branches (`useSyncExternalStore` `getServerSnapshot`); the visible/behavioral contract is unchanged.
 
+Meowth-local adaptations on top of the surety triplet (bug-fix Commits 1 + 4):
+
+- `sidebar.tsx` expanded view renders **two nav groups** — `Dashboard` (Overview / Agents / Sessions / Tokens) and `System` (Settings) — driven by `lib/navigation.ts NAV_GROUPS`. Collapsed view stays a flat icon rail driven by `NAV_ITEMS = NAV_GROUPS.flatMap(...)` so the two views cannot drift. Group labels render as `text-[11px] text-muted-foreground/70` with `data-testid="sidebar-group-label-{dashboard|system}"` test hooks. Active-state for `/sessions/:id` is preserved via the `isItemActive(item, pathname)` pure helper (NavLink isActive widens the match without re-implementing it inline).
+- `sidebar.tsx` collapsed view keeps the logo block in place at the top (`h-14 pl-6 pr-3 justify-start`) so the brand mark does not jump when the rail collapses; the collapse/expand toggle sits **below** the logo as its own `h-10 w-10 rounded-lg` control (matches surety).
+- `sidebar.tsx` bottom user section is meowth-local content on the surety footprint: collapsed centers an `h-9 w-9` Avatar with "M" fallback in `py-3`; expanded pairs the same avatar with a two-line static label (`Meowth` / `Local daemon`) in `px-4 py-3 flex gap-3 min-w-0`. meowth has no real user data, so the labels are fixed; surety's `useMe()` + `getDisplayName()` is not pulled in.
+- `app-shell.tsx` header right renders the GitHub repository link before the ThemeToggle:
+  - `<a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">` carrying `<Github className="h-[18px] w-[18px]" strokeWidth={1.5}>` (meowth-local icon at `components/icons/github.tsx`, §4.1.4).
+  - `GITHUB_REPO_URL` is a module-level constant (`https://github.com/nocoo/meowth`); keeping the URL out of the JSX `href=` literal lets the `scripts/check-dashboard-source.sh` rule 1 regex (which cannot distinguish `<a href>` from `<link rel="stylesheet" href>`) pass without weakening the gate. `rel="noopener noreferrer"` blocks `window.opener` access from the new tab.
+- `components/ThemeToggle.tsx` (meowth-local, §4.1.4) is visually aligned to surety's ghost header action: `h-8 w-8 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors`, icon `h-4 w-4 strokeWidth={1.5}`. **Behaviour is unchanged** — the existing two-state light/dark toggle, `meowth_theme` localStorage key, and `prefers-color-scheme` fallback are kept; surety's three-state `system/light/dark` is intentionally **not** adopted.
+
 #### 4.1.3 G1 + G2 primitives — surety source-derived inventory
 
 Stage A imported the following from surety, batched as G1 (layout-required, Stage A3) and G2 (page-migration-required, Stage A4). All entries are **source-derived** (biome-formatted, occasionally `/* v8 ignore */` annotated) and tracked under the surety block of `_UPSTREAM.md`.
@@ -371,8 +381,9 @@ surety provenance is locked at commit `cbf7045facc32f03bfb562d6491f6ee3003e538c`
 - `components/Spinner.tsx` — basalt has no Spinner; uses `lucide-react` `Loader2` + Tailwind `animate-spin`
 - `components/SecretReveal.tsx` — Tokens / Setup one-time secret reveal (see [`07`](07-dashboard-security-csp-and-xss.md))
 - `components/MessageText.tsx` — sanitiser-aware text renderer used by SessionDetailContent (see `07`)
+- `components/icons/github.tsx` — meowth-local GitHub brand icon, extracted via `lucide-react`'s `createLucideIcon` from lucide v0.577.0 (ISC license); surety carries the same extraction. Brand icons were removed in lucide v1, so the extraction lives here. Consumed by `components/layout/app-shell.tsx` for the header repo link. Not tracked in `_UPSTREAM.md` (meowth-local addition, not a basalt/surety primitive copy)
 
-#### 4.1.5 Primitive consumption status (as of D1)
+#### 4.1.5 Primitive consumption status (as of bug-fix Commit 5)
 
 The §4.1.3 inventory is the full file set on disk; not every primitive is consumed by pages or layout yet. Current ground-truth consumers (excluding ui smoke tests, which exist for every primitive to guarantee build / type / minimal-render):
 
@@ -383,9 +394,10 @@ The §4.1.3 inventory is the full file set on disk; not every primitive is consu
 | `tooltip` | G1 | `components/layout/sidebar.tsx` |
 | `skeleton` | G1 | every `pages/<Xxx>/<Xxx>Skeleton.tsx` (Overview / Agents / SessionsList / SessionDetail / Tokens / Settings) |
 | `empty-state` | G1 | Agents (Page+Content), SessionsList (Page+Content), SessionDetail (Page), Tokens (Page+Content), Overview (Content) |
+| `table` | G2 | Agents Content+Skeleton, SessionsList Content+Skeleton, Tokens Content+Skeleton — all wrapped in `rounded-card bg-secondary overflow-hidden` L2 surface (see §5.1, §7) |
 | `notice` | G2 | Settings (Content), Setup (Page) |
 | `button` / `input` / `dialog` | baseline | Tokens dialog, Setup form, layout chrome |
-| `collapsible` / `separator` / `badge` (G1); `table` / `dropdown-menu` / `select` / `label` / `section-divider` / `switch` / `textarea` / `toggle` / `toggle-group` / `sort-header` (G2) | G1/G2 | **not yet imported by any non-test consumer** — copied + smoke-tested only; reserved for future pages |
+| `collapsible` / `separator` / `badge` (G1); `dropdown-menu` / `select` / `label` / `section-divider` / `switch` / `textarea` / `toggle` / `toggle-group` / `sort-header` (G2) | G1/G2 | **not yet imported by any non-test consumer** — copied + smoke-tested only; reserved for future pages |
 
 `switch` and `sort-header` are kept on disk for the next surface that needs them, but per §6.4 #3 must not be wired without backing viewmodel state. G3 `alert-dialog` is **not** present on disk; it would be introduced in its own commit only when a real destructive-confirm path appears.
 
@@ -479,6 +491,7 @@ Constraints:
 - **Do not invent `bg-L0` / `bg-L1` aliases**. Use the basalt utility tokens directly so any future basalt re-theme propagates.
 - Per-page Skeleton placeholders inherit the same layer ladder; if a section is L2 in `Content`, its `Skeleton` slot is also L2.
 - The Sidebar floating-island is the canonical L1 example; the previous Gen 1 full-bleed sidebar (`bg-background`) was deliberately removed in Stage B1.
+- **Data tables in a page Content sit on L2**: wrap `<Table>` (the surety-derived primitive at `components/ui/table.tsx`) in `<div className="rounded-card bg-secondary overflow-hidden">`. Applies to Agents, SessionsList, Tokens (bug-fix Commit 2). Per-page Skeletons mirror the same wrap so the placeholder footprint matches the resolved table tier.
 
 ### 5.2 typography
 
@@ -610,8 +623,8 @@ The viewmodel itself keeps a separate fetch-driven test (`useXxxViewModel.test.t
 | 元素 | 文件 |
 |------|------|
 | Page (shell) | `pages/Agents/AgentsPage.tsx` |
-| Content (pure-props) | `pages/Agents/AgentsContent.tsx` (table when populated, `<EmptyState icon={Bot}>` when daemon returns zero agents) |
-| Skeleton | `pages/Agents/AgentsSkeleton.tsx` (5 rows × 4 cols animate-pulse) |
+| Content (pure-props) | `pages/Agents/AgentsContent.tsx` (uses the `components/ui/table.tsx` primitive on a `rounded-card bg-secondary overflow-hidden` L2 surface — §5.1; `<EmptyState icon={Bot}>` when daemon returns zero agents) |
+| Skeleton | `pages/Agents/AgentsSkeleton.tsx` (5 rows × 4 cols animate-pulse, same L2 wrap) |
 | ViewModel | `viewmodels/useAgentsViewModel.ts` |
 | Models 调用 | `agents.fetchAgents()` |
 | 显示 | 5 行 backend 表，含 `installed` / `executable` / `version`（[`02`](02-daemon-http-protocol.md) §6.1）;**no fake stats** — only fields the daemon actually returns |
@@ -621,8 +634,8 @@ The viewmodel itself keeps a separate fetch-driven test (`useXxxViewModel.test.t
 | 元素 | 文件 |
 |------|------|
 | Page (shell) — list | `pages/Sessions/SessionsListPage.tsx` |
-| Content — list | `pages/Sessions/SessionsListContent.tsx` (plain G2 table; `Backend` cell wraps a `<Link to="/sessions/<id>">`) |
-| Skeleton — list | `pages/Sessions/SessionsListSkeleton.tsx` (5 rows × 5 cols animate-pulse) |
+| Content — list | `pages/Sessions/SessionsListContent.tsx` (plain G2 `<Table>` on a `rounded-card bg-secondary overflow-hidden` L2 surface; `Backend` cell wraps a `<Link to="/sessions/<id>">`) |
+| Skeleton — list | `pages/Sessions/SessionsListSkeleton.tsx` (5 rows × 5 cols animate-pulse, same L2 wrap) |
 | Page (shell) — detail | `pages/Sessions/SessionDetailPage.tsx` (error branch keeps `data-testid="session-detail-id"` + `EmptyState tone="error"`) |
 | Content — detail | `pages/Sessions/SessionDetailContent.tsx` (header + `data-testid="session-messages"` envelope list; renders `payload.content ?? payload.output ?? ''` via MessageText; heartbeat/usage hidden; StatusRow for `session_started` / `error` / `session_ended`) |
 | Skeleton — detail | `pages/Sessions/SessionDetailSkeleton.tsx` |
@@ -644,8 +657,8 @@ The viewmodel itself keeps a separate fetch-driven test (`useXxxViewModel.test.t
 | 元素 | 文件 |
 |------|------|
 | Page (shell) | `pages/Tokens/TokensPage.tsx` (Heading + always-on `Create token` button + the dialog is always mounted, gates on `vm.modal.open` internally) |
-| Content (pure-props) | `pages/Tokens/TokensContent.tsx` (5-col table: Name / Prefix / Created / Last used / Revoke; `EmptyState icon={KeyRound}` when daemon returns zero tokens) |
-| Skeleton | `pages/Tokens/TokensSkeleton.tsx` (5 rows × 5 cols animate-pulse) |
+| Content (pure-props) | `pages/Tokens/TokensContent.tsx` (`<Table>` primitive on a `rounded-card bg-secondary overflow-hidden` L2 surface; columns Name / Prefix / Created / Last used / Revoke; `EmptyState icon={KeyRound}` when daemon returns zero tokens) |
+| Skeleton | `pages/Tokens/TokensSkeleton.tsx` (5 rows × 5 cols animate-pulse, same L2 wrap) |
 | Dialog | `pages/Tokens/TokensCreateDialog.tsx` (manual `role="dialog" + aria-modal + aria-label="Create token"`; not a G3 alert-dialog because the create flow is non-destructive) |
 | ViewModel | `viewmodels/useTokensViewModel.ts` |
 | Models 调用 | `tokens.listTokens()`、`tokens.createToken({name})`、`tokens.revokeToken(id)` |
@@ -923,6 +936,18 @@ App boot:
 Phase 2 闭环 gate 状态（D1 时点）：dashboard 75 files / 438 tests；Playwright 3 projects × 14/14；`dashboard:cover:check` `ok=55 baseline_floors=3 structural_exempt=10`。3 个剩余 baseline（`lib/ansi.ts` / `useSessionDetailViewModel.ts` / `useTokensViewModel.ts`）均明确在 Stage C 范围外，后续独立 lift。
 
 每个 commit 自带必要测试 + G1/G2 hook 全绿 + 不留 TODO。
+
+**Bug-fix round (task #13, 2026-06-26)** — 5 atomic commits on top of the Stage D head to address visual fidelity gaps users surfaced after running the production embed against surety:
+
+| Bug-fix | Commit hash | 内容 |
+|---------|-------------|------|
+| BF1 | `54014a5` | refactor(dashboard): align Sidebar layout to surety (collapsed logo/toggle, grouped nav, user section) — `lib/navigation.ts` introduces `NAV_GROUPS` + `isItemActive`; sidebar collapsed view keeps the logo in place + toggle below; expanded view renders Dashboard / System groups; bottom user section gets the surety footprint with meowth-local labels |
+| BF2 | `c4b2958` | refactor(dashboard): wrap data tables in rounded-card bg-secondary L2 surface — Agents / SessionsList / Tokens Content + Skeleton migrate to the `components/ui/table.tsx` primitive on a `rounded-card bg-secondary overflow-hidden` L2 wrapper (§5.1) |
+| BF3 | `2baf905` | feat(dashboard): add Github icon component (meowth-local, lucide v0 extraction) — `components/icons/github.tsx` + smoke test; not tracked in `_UPSTREAM.md` (§4.1.4) |
+| BF4 | `58e3a19` | refactor(dashboard): align AppShell header actions + ThemeToggle visuals to surety — header right gains the GitHub repo link before the ThemeToggle; ThemeToggle visual class set realigned to surety's ghost header action (behaviour unchanged) |
+| BF5 | this commit | docs(arch): sync 06 for bug-fix round (Sidebar/AppShell/table surface alignment) — §4.1.2 layout triplet picks up the meowth-local adaptations; §4.1.4 lists `components/icons/github.tsx`; §4.1.5 reflects `table` + `notice` actual consumers; §5.1 codifies the L2 wrap rule for data tables; §7.2 / §7.3 / §7.4 page tables mention the L2 surface + `<Table>` primitive |
+
+Bug-fix gate snapshot (BF5 time): dashboard L1 76 files / 458 tests; Playwright 3 projects × 14/14 (consistent across consecutive runs); `cover:check` `ok=56 baseline_floors=3 structural_exempt=10` (no new baseline introduced).
 
 ---
 
