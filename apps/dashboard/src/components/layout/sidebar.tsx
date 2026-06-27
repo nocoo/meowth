@@ -71,8 +71,15 @@ export function Sidebar({ mobile = false }: SidebarProps) {
 function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => void }) {
   return (
     <div className="flex h-full w-[68px] flex-col items-center">
-      {/* Logo — stays put when the rail collapses (matches surety). */}
-      <div className="flex h-14 w-full items-center justify-start pl-6 pr-3">
+      {/* Logo — centered on the 68px rail so it shares the same
+          vertical centerline as the toggle, nav icons, and bottom
+          avatar (all of which sit at x=34 thanks to the parent's
+          `items-center`). surety uses pl-6 pr-3 justify-start
+          here, which pushes the 24px brand mark to x=36 and looks
+          ~2px off-axis vs the rest of the rail; meowth's user
+          feedback flagged this, so we keep the surety footprint
+          (h-14 row, 24px asset) but center the asset. */}
+      <div className="flex h-14 w-full items-center justify-center">
         <img src="/logo-24.png" alt="Meowth" width={24} height={24} className="shrink-0" />
       </div>
 
