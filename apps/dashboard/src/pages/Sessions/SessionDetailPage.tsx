@@ -1,3 +1,4 @@
+import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
 import useSessionDetailViewModel from '@/viewmodels/useSessionDetailViewModel';
 import { AlertCircle } from 'lucide-react';
@@ -16,6 +17,7 @@ export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const sessionId = id ?? '';
   const vm = useSessionDetailViewModel(sessionId);
+  useRegisterRefresh(vm.refresh);
 
   return (
     <section aria-labelledby="session-detail-heading" className="space-y-3">

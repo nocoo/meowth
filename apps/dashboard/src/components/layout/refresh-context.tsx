@@ -34,6 +34,7 @@ interface RefreshContextValue {
 }
 
 const RefreshContext = createContext<RefreshContextValue | null>(null);
+export { RefreshContext };
 
 export function RefreshProvider({ children }: { children: ReactNode }) {
   const [handler, setHandler] = useState<RefreshHandler | null>(null);

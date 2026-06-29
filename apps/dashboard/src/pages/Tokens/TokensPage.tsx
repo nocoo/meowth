@@ -1,3 +1,4 @@
+import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
 import useTokensViewModel from '@/viewmodels/useTokensViewModel';
 import { AlertCircle } from 'lucide-react';
@@ -16,6 +17,7 @@ import TokensSkeleton from './TokensSkeleton';
 
 export default function TokensPage() {
   const vm = useTokensViewModel();
+  useRegisterRefresh(vm.refresh);
 
   return (
     <section aria-labelledby="tokens-heading" className="space-y-3">

@@ -1,3 +1,4 @@
+import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
 import useOverviewViewModel from '@/viewmodels/useOverviewViewModel';
 import { AlertCircle } from 'lucide-react';
@@ -11,6 +12,7 @@ import OverviewSkeleton from './OverviewSkeleton';
 
 export default function OverviewPage() {
   const vm = useOverviewViewModel();
+  useRegisterRefresh(vm.refresh);
 
   return (
     <section aria-labelledby="overview-heading" className="space-y-4">

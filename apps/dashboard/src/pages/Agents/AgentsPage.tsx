@@ -1,3 +1,4 @@
+import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
 import useAgentsViewModel from '@/viewmodels/useAgentsViewModel';
 import { AlertCircle } from 'lucide-react';
@@ -11,6 +12,7 @@ import AgentsSkeleton from './AgentsSkeleton';
 
 export default function AgentsPage() {
   const vm = useAgentsViewModel();
+  useRegisterRefresh(vm.refresh);
 
   return (
     <section aria-labelledby="agents-heading" className="space-y-2">

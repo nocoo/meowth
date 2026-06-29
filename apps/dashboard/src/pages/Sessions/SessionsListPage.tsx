@@ -1,3 +1,4 @@
+import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
 import useSessionsViewModel from '@/viewmodels/useSessionsViewModel';
 import { AlertCircle } from 'lucide-react';
@@ -12,6 +13,7 @@ import SessionsListSkeleton from './SessionsListSkeleton';
 
 export default function SessionsListPage() {
   const vm = useSessionsViewModel();
+  useRegisterRefresh(vm.refresh);
 
   return (
     <section aria-labelledby="sessions-heading" className="space-y-2">

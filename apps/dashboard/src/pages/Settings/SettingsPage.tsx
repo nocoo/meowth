@@ -1,3 +1,4 @@
+import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import useSettingsViewModel from '@/viewmodels/useSettingsViewModel';
 import SettingsContent from './SettingsContent';
 import SettingsSkeleton from './SettingsSkeleton';
@@ -11,6 +12,7 @@ import SettingsSkeleton from './SettingsSkeleton';
 
 export default function SettingsPage() {
   const vm = useSettingsViewModel();
+  useRegisterRefresh(vm.refresh);
 
   return (
     <section aria-labelledby="settings-heading" className="space-y-3">
