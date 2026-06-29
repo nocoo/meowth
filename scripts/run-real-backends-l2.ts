@@ -41,6 +41,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
+import { buildMeowthd } from './lib/build-meowthd';
 
 const SUPPORTED_TYPES = ['claude', 'copilot', 'codex', 'hermes', 'pi'] as const;
 type BackendType = (typeof SUPPORTED_TYPES)[number];
@@ -51,7 +52,7 @@ const TEST_ROOT = MEOWTH_TEST_HOME ?? join(homedir(), '.meowth-test');
 const OUTPUT_DIR = join(REPO_ROOT, 'scripts', 'run-l2-output');
 const LOG_PATH = join(OUTPUT_DIR, 'run-real-backends-l2.log');
 
-const meowthd = join(REPO_ROOT, 'daemon', 'cmd', 'meowthd');
+let meowthdBinary = '';
 
 const stdoutWrite = (m: string): void => {
   process.stdout.write(m);
@@ -66,9 +67,7 @@ function log(line: string): void {
 
 // Gate: require the env flag to opt in.
 if (process.env.MEOWTH_REAL_BACKENDS_L2 !== '1') {
-  stdoutWrite(
-    'L2/REAL ⊘ skipped (set MEOWTH_REAL_BACKENDS_L2=1 to run against installed CLIs)\n',
-  );
+  stdoutWrite('L2/REAL ⊘ skipped (set MEOWTH_REAL_BACKENDS_L2=1 to run against installed CLIs)\n');
   process.exit(0);
 }
 
@@ -126,8 +125,7 @@ function mkRunHome(): string {
 }
 
 function initRootBearer(runHome: string): string {
-  const out = execFileSync('go', ['run', meowthd, 'init'], {
-    cwd: join(REPO_ROOT, 'daemon'),
+  const out = execFileSync(meowthdBinary, ['init'], {
     encoding: 'utf8',
     env: { ...process.env, MEOWTH_TEST: '1', MEOWTH_TEST_HOME: runHome },
   });
@@ -141,15 +139,18 @@ function initRootBearer(runHome: string): string {
 async function spawnServe(runHome: string): Promise<{ child: ChildProcess; addr: string }> {
   // Production factory: do NOT set MEOWTH_BACKEND_FACTORY=fake;
   // MEOWTH_TEST=1 only switches the home root.
-  const child = spawn('go', ['run', meowthd, 'serve', '--listen-addr=127.0.0.1:0'], {
-    cwd: join(REPO_ROOT, 'daemon'),
+  const child = spawn(meowthdBinary, ['serve', '--listen-addr=127.0.0.1:0'], {
     env: { ...process.env, MEOWTH_TEST: '1', MEOWTH_TEST_HOME: runHome },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   liveChildren.push(child);
   if (!child.stdout || !child.stderr) throw new Error('serve missing stdio');
-  child.stderr.pipe(createWriteStream(join(OUTPUT_DIR, 'real-backends.stderr.log'), { flags: 'a' }));
-  child.stdout.pipe(createWriteStream(join(OUTPUT_DIR, 'real-backends.stdout.log'), { flags: 'a' }));
+  child.stderr.pipe(
+    createWriteStream(join(OUTPUT_DIR, 'real-backends.stderr.log'), { flags: 'a' }),
+  );
+  child.stdout.pipe(
+    createWriteStream(join(OUTPUT_DIR, 'real-backends.stdout.log'), { flags: 'a' }),
+  );
   const rl = createInterface({ input: child.stdout });
   const deadline = delay(15_000).then(() => {
     throw new Error('timeout waiting for listening line');
@@ -280,6 +281,7 @@ async function runForType(type: BackendType): Promise<void> {
 
 async function main(): Promise<void> {
   execFileSync('pnpm', ['daemon:build'], { stdio: 'inherit', cwd: REPO_ROOT });
+  meowthdBinary = buildMeowthd('meowthd-real-backends-l2');
   for (const type of SUPPORTED_TYPES) {
     await runForType(type);
   }

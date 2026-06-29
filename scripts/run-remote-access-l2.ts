@@ -44,6 +44,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
+import { buildMeowthd } from './lib/build-meowthd';
 
 const REPO_ROOT = process.cwd();
 const { MEOWTH_TEST_HOME } = process.env;
@@ -64,7 +65,10 @@ function log(line: string): void {
 
 const testRootPreexisting = existsSync(TEST_ROOT);
 mkdirSync(OUTPUT_DIR, { recursive: true });
-writeFileSync(LOG_PATH, `# remote_access L2 matrix run\n# test root: ${TEST_ROOT} (preexisting=${String(testRootPreexisting)})\n`);
+writeFileSync(
+  LOG_PATH,
+  `# remote_access L2 matrix run\n# test root: ${TEST_ROOT} (preexisting=${String(testRootPreexisting)})\n`,
+);
 
 const createdRunHomes: string[] = [];
 const liveChildren: ChildProcess[] = [];
@@ -94,7 +98,7 @@ function cleanup(): void {
 }
 process.on('exit', cleanup);
 
-const meowthd = join(REPO_ROOT, 'daemon', 'cmd', 'meowthd');
+let meowthdBinary = '';
 
 function mkRunHome(): string {
   mkdirSync(TEST_ROOT, { recursive: true });
@@ -113,8 +117,7 @@ function writeConfig(runHome: string, body: string): void {
 // daemon must actually start; failure cases skip this and rely
 // on validation refusing to touch the store.
 function seedInitializedHome(runHome: string, body: string): void {
-  execFileSync('go', ['run', meowthd, 'init'], {
-    cwd: join(REPO_ROOT, 'daemon'),
+  execFileSync(meowthdBinary, ['init'], {
     env: { ...process.env, MEOWTH_TEST: '1', MEOWTH_TEST_HOME: runHome },
     stdio: 'pipe',
   });
@@ -143,8 +146,7 @@ async function runServe(
   runHome: string,
   extraArgs: string[] = [],
 ): Promise<FailResult | SuccessResult> {
-  const child = spawn('go', ['run', meowthd, 'serve', ...extraArgs], {
-    cwd: join(REPO_ROOT, 'daemon'),
+  const child = spawn(meowthdBinary, ['serve', ...extraArgs], {
     env: { ...process.env, MEOWTH_TEST: '1', MEOWTH_TEST_HOME: runHome },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -180,7 +182,9 @@ async function runServe(
   const exited = (once(child, 'exit') as Promise<[number | null, NodeJS.Signals | null]>).then(
     ([code]) => ({ kind: 'exited' as const, code }),
   );
-  const timedOut = delay(15_000, undefined, { ref: false }).then(() => ({ kind: 'timeout' as const }));
+  const timedOut = delay(15_000, undefined, { ref: false }).then(() => ({
+    kind: 'timeout' as const,
+  }));
 
   const winner = await Promise.race([listening, exited, timedOut]);
 
@@ -271,7 +275,8 @@ pushCase({
     const rh = mkRunHome();
     seedInitializedHome(rh, '# no [remote_access] block\n');
     const r = await runServe(rh, ['--listen-addr=127.0.0.1:0']);
-    if (r.kind !== 'success') throw new Error(`expected success, got fail (code=${r.exitCode}); stderr=${r.stderr}`);
+    if (r.kind !== 'success')
+      throw new Error(`expected success, got fail (code=${r.exitCode}); stderr=${r.stderr}`);
     await assertHealthz(r.addr);
     await killChild(r.child);
   },
@@ -294,7 +299,8 @@ acknowledged_by = ""
 `,
     );
     const r = await runServe(rh, ['--listen-addr=127.0.0.1:0']);
-    if (r.kind !== 'success') throw new Error(`expected success, got fail (code=${r.exitCode}); stderr=${r.stderr}`);
+    if (r.kind !== 'success')
+      throw new Error(`expected success, got fail (code=${r.exitCode}); stderr=${r.stderr}`);
     await assertHealthz(r.addr);
     await killChild(r.child);
   },
@@ -303,7 +309,12 @@ acknowledged_by = ""
 // Helper for D-code failures: writes the given config, asserts
 // serve exits non-zero and that the stderr contains the wanted
 // code marker.
-function failureCase(label: string, body: string, want: { code: string; fragment?: string }, args: string[] = []): Case {
+function failureCase(
+  label: string,
+  body: string,
+  want: { code: string; fragment?: string },
+  args: string[] = [],
+): Case {
   return {
     label,
     expectSuccess: false,
@@ -459,16 +470,17 @@ async function step(label: string, fn: () => Promise<void>): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  // Build daemon binary once so each case's spawn() reuses the
-  // cached compile. Not strictly required (go run handles it) but
-  // avoids serialising 8 separate go-build runs on cold module
-  // caches.
+  // Build daemon binary once and exec it directly so Kill() reaches
+  // the actual meowthd process rather than a `go run` wrapper.
   execFileSync('pnpm', ['daemon:build'], { stdio: 'inherit', cwd: REPO_ROOT });
+  meowthdBinary = buildMeowthd('meowthd-remote-access-l2');
 
   for (const c of cases) {
     await step(c.label, c.build);
   }
-  stdoutWrite(`L2/RA ⊘ D6 covered in L1 only (black-box cannot inject net.InterfaceAddrs without a real Tailscale environment)\n`);
+  stdoutWrite(
+    `L2/RA ⊘ D6 covered in L1 only (black-box cannot inject net.InterfaceAddrs without a real Tailscale environment)\n`,
+  );
 
   stdoutWrite(`L2/RA: OK (${String(passes)} cases)\n`);
   log('DONE OK');

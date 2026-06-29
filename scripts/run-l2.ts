@@ -49,6 +49,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
+import { buildMeowthd } from './lib/build-meowthd';
 
 const REPO_ROOT = process.cwd();
 const { MEOWTH_TEST_HOME } = process.env;
@@ -148,7 +149,7 @@ function cleanup(): void {
 }
 process.on('exit', cleanup);
 
-const meowthd = join(REPO_ROOT, 'daemon', 'cmd', 'meowthd');
+let meowthdBinary = '';
 
 type FetchResult = { status: number; body: unknown; headers: Headers };
 
@@ -218,11 +219,11 @@ async function main(): Promise<void> {
 
   await step('build daemon binary', () => {
     execFileSync('pnpm', ['daemon:build'], { stdio: 'inherit', cwd: REPO_ROOT });
+    meowthdBinary = buildMeowthd('meowthd-l2');
   });
 
   await step('meowthd init (path A) seeds DB + root token', () => {
-    const r = execFileSync('go', ['run', meowthd, 'init'], {
-      cwd: join(REPO_ROOT, 'daemon'),
+    const r = execFileSync(meowthdBinary, ['init'], {
       encoding: 'utf8',
       env: {
         ...process.env,
@@ -241,8 +242,7 @@ async function main(): Promise<void> {
   });
 
   await step('spawn meowthd serve --listen-addr=127.0.0.1:0', async () => {
-    serveChild = spawn('go', ['run', meowthd, 'serve', '--listen-addr=127.0.0.1:0'], {
-      cwd: join(REPO_ROOT, 'daemon'),
+    serveChild = spawn(meowthdBinary, ['serve', '--listen-addr=127.0.0.1:0'], {
       env: {
         ...process.env,
         MEOWTH_TEST: '1',

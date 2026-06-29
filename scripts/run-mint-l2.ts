@@ -45,6 +45,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
+import { buildMeowthd } from './lib/build-meowthd';
 
 const REPO_ROOT = process.cwd();
 const { MEOWTH_TEST_HOME } = process.env;
@@ -53,7 +54,7 @@ const OUTPUT_DIR = join(REPO_ROOT, 'scripts', 'run-l2-output');
 const LOG_PATH = join(OUTPUT_DIR, 'run-mint-l2.log');
 
 const PREFIX_LEN = 9;
-const meowthd = join(REPO_ROOT, 'daemon', 'cmd', 'meowthd');
+let meowthdBinary = '';
 
 const stdoutWrite = (m: string): void => {
   process.stdout.write(m);
@@ -128,8 +129,7 @@ function mkRunHome(): string {
 }
 
 function initSkipToken(runHome: string): string {
-  const r = execFileSync('go', ['run', meowthd, 'init', '--skip-token'], {
-    cwd: join(REPO_ROOT, 'daemon'),
+  const r = execFileSync(meowthdBinary, ['init', '--skip-token'], {
     encoding: 'utf8',
     env: { ...process.env, MEOWTH_TEST: '1', MEOWTH_TEST_HOME: runHome },
   });
@@ -141,8 +141,7 @@ function initSkipToken(runHome: string): string {
 }
 
 function initPathA(runHome: string): string {
-  const r = execFileSync('go', ['run', meowthd, 'init'], {
-    cwd: join(REPO_ROOT, 'daemon'),
+  const r = execFileSync(meowthdBinary, ['init'], {
     encoding: 'utf8',
     env: { ...process.env, MEOWTH_TEST: '1', MEOWTH_TEST_HOME: runHome },
   });
@@ -163,8 +162,7 @@ type SuccessResult = {
 };
 
 async function startServe(runHome: string): Promise<SuccessResult | FailResult> {
-  const child = spawn('go', ['run', meowthd, 'serve', '--listen-addr=127.0.0.1:0'], {
-    cwd: join(REPO_ROOT, 'daemon'),
+  const child = spawn(meowthdBinary, ['serve', '--listen-addr=127.0.0.1:0'], {
     env: { ...process.env, MEOWTH_TEST: '1', MEOWTH_TEST_HOME: runHome },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -199,7 +197,9 @@ async function startServe(runHome: string): Promise<SuccessResult | FailResult> 
   const exited = (once(child, 'exit') as Promise<[number | null, NodeJS.Signals | null]>).then(
     ([code]) => ({ kind: 'exited' as const, code }),
   );
-  const timedOut = delay(20_000, undefined, { ref: false }).then(() => ({ kind: 'timeout' as const }));
+  const timedOut = delay(20_000, undefined, { ref: false }).then(() => ({
+    kind: 'timeout' as const,
+  }));
   const winner = await Promise.race([listening, exited, timedOut]);
 
   if (winner.kind === 'listening') {
@@ -214,7 +214,12 @@ async function startServe(runHome: string): Promise<SuccessResult | FailResult> 
     await once(child, 'exit');
     return { kind: 'fail', exitCode: -1, stdout: stdoutBuf, stderr: stderrBuf };
   }
-  return { kind: 'fail', exitCode: winner.kind === 'exited' ? (winner.code ?? -1) : -1, stdout: stdoutBuf, stderr: stderrBuf };
+  return {
+    kind: 'fail',
+    exitCode: winner.kind === 'exited' ? (winner.code ?? -1) : -1,
+    stdout: stdoutBuf,
+    stderr: stderrBuf,
+  };
 }
 
 async function stopServe(child: ChildProcess): Promise<void> {
@@ -336,8 +341,10 @@ acknowledged_by = "mint-l2"
 }
 
 async function main(): Promise<void> {
-  // Build once so each spawn reuses the cached compile.
+  // Build daemon binary once and exec it directly (no `go run`
+  // wrapper) so Kill() reaches the actual meowthd process.
   execFileSync('pnpm', ['daemon:build'], { stdio: 'inherit', cwd: REPO_ROOT });
+  meowthdBinary = buildMeowthd('meowthd-mint-l2');
 
   // ---------- M1 + M2 ----------
   await step('M1+M2 path B happy + replay = 404 (no secret leak)', async () => {
@@ -349,12 +356,21 @@ async function main(): Promise<void> {
     try {
       await pollHealthz(`http://${r.addr}`);
       // M1 — mint succeeds
-      const mint1 = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', { body: { setup_code: setupCode } });
+      const mint1 = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', {
+        body: { setup_code: setupCode },
+      });
       if (mint1.status !== 201) {
-        throw new Error(`M1 mint status=${mint1.status} body=${JSON.stringify(stripSecret(mint1.body))}`);
+        throw new Error(
+          `M1 mint status=${mint1.status} body=${JSON.stringify(stripSecret(mint1.body))}`,
+        );
       }
       expectNosniff(mint1, 'M1 /bootstrap/mint 201');
-      const minted = mint1.body as { id?: string; secret?: string; prefix?: string; created_via?: string };
+      const minted = mint1.body as {
+        id?: string;
+        secret?: string;
+        prefix?: string;
+        created_via?: string;
+      };
       if (!minted.secret || !minted.secret.startsWith('mwt_') || minted.secret.length !== 43) {
         throw new Error('M1 secret missing or malformed');
       }
@@ -367,7 +383,9 @@ async function main(): Promise<void> {
       log(`mintedSecret=${redact(minted.secret)} mintedID=${minted.id ?? ''}`);
 
       // Bearer works against /v1/tokens
-      const list = await jsonReq(`http://${r.addr}`, 'GET', '/v1/tokens', { bearer: minted.secret });
+      const list = await jsonReq(`http://${r.addr}`, 'GET', '/v1/tokens', {
+        bearer: minted.secret,
+      });
       if (list.status !== 200) {
         throw new Error(`/v1/tokens with new bearer: status=${list.status}`);
       }
@@ -375,7 +393,9 @@ async function main(): Promise<void> {
       assertNoSecretLeak(list.body);
 
       // M2 — replay returns 404 + no secret
-      const mint2 = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', { body: { setup_code: setupCode } });
+      const mint2 = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', {
+        body: { setup_code: setupCode },
+      });
       if (mint2.status !== 404) {
         throw new Error(`M2 replay status=${mint2.status}, want 404`);
       }
@@ -449,7 +469,9 @@ async function main(): Promise<void> {
       if (r.kind !== 'success') throw new Error(`M5 first serve failed: ${r.stderr}`);
       try {
         await pollHealthz(`http://${r.addr}`);
-        const mint = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', { body: { setup_code: setupCode } });
+        const mint = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', {
+          body: { setup_code: setupCode },
+        });
         if (mint.status !== 201) throw new Error(`M5 first mint status=${mint.status}`);
       } finally {
         await stopServe(r.child);
@@ -460,7 +482,9 @@ async function main(): Promise<void> {
     if (r2.kind !== 'success') throw new Error(`M5 restart serve failed: ${r2.stderr}`);
     try {
       await pollHealthz(`http://${r2.addr}`);
-      const mint = await jsonReq(`http://${r2.addr}`, 'POST', '/bootstrap/mint', { body: { setup_code: setupCode } });
+      const mint = await jsonReq(`http://${r2.addr}`, 'POST', '/bootstrap/mint', {
+        body: { setup_code: setupCode },
+      });
       if (mint.status !== 404) {
         throw new Error(`M5 post-restart mint status=${mint.status}, want 404`);
       }
@@ -485,10 +509,14 @@ async function main(): Promise<void> {
       await pollHealthz(`http://${r.addr}`);
       const wrong = 'mws_' + 'B'.repeat(39);
       for (let i = 0; i < 5; i++) {
-        const m = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', { body: { setup_code: wrong } });
+        const m = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', {
+          body: { setup_code: wrong },
+        });
         if (m.status !== 404) throw new Error(`M6 wrong[${i}] status=${m.status}`);
       }
-      const final = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', { body: { setup_code: setupCode } });
+      const final = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', {
+        body: { setup_code: setupCode },
+      });
       if (final.status !== 404) {
         throw new Error(`M6 post-lockout correct code: status=${final.status}, want 404`);
       }

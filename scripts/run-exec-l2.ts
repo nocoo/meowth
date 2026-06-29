@@ -45,6 +45,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
+import { buildMeowthd } from './lib/build-meowthd';
 
 const REPO_ROOT = process.cwd();
 const { MEOWTH_TEST_HOME } = process.env;
@@ -52,7 +53,7 @@ const TEST_ROOT = MEOWTH_TEST_HOME ?? join(homedir(), '.meowth-test');
 const OUTPUT_DIR = join(REPO_ROOT, 'scripts', 'run-l2-output');
 const LOG_PATH = join(OUTPUT_DIR, 'run-exec-l2.log');
 
-const meowthd = join(REPO_ROOT, 'daemon', 'cmd', 'meowthd');
+let meowthdBinary = '';
 
 const stdoutWrite = (m: string): void => {
   process.stdout.write(m);
@@ -181,8 +182,11 @@ async function step(label: string, fn: () => Promise<void>): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  // Build daemon binary once so spawn() reuses the cached compile.
+  // Build daemon binary once and exec it directly so Kill() reaches
+  // the meowthd process (not a `go run` wrapper) — orphan procs were
+  // accumulating across L2 runs.
   execFileSync('pnpm', ['daemon:build'], { stdio: 'inherit', cwd: REPO_ROOT });
+  meowthdBinary = buildMeowthd('meowthd-exec-l2');
 
   // Provision an isolated test home + bearer (`init` writes a root
   // token to stdout). Then spawn `meowthd serve` against it with
@@ -194,8 +198,7 @@ async function main(): Promise<void> {
 
   let rootBearer = '';
   await step('init: mint root token (path A)', () => {
-    const out = execFileSync('go', ['run', meowthd, 'init'], {
-      cwd: join(REPO_ROOT, 'daemon'),
+    const out = execFileSync(meowthdBinary, ['init'], {
       encoding: 'utf8',
       env: { ...process.env, MEOWTH_TEST: '1', MEOWTH_TEST_HOME: runHome },
     });
@@ -209,8 +212,7 @@ async function main(): Promise<void> {
 
   let baseURL = '';
   await step('spawn meowthd serve (fake factory)', async () => {
-    serveChild = spawn('go', ['run', meowthd, 'serve', '--listen-addr=127.0.0.1:0'], {
-      cwd: join(REPO_ROOT, 'daemon'),
+    serveChild = spawn(meowthdBinary, ['serve', '--listen-addr=127.0.0.1:0'], {
       env: {
         ...process.env,
         MEOWTH_TEST: '1',
@@ -329,7 +331,9 @@ async function main(): Promise<void> {
 
   // ---------- E6 ----------
   await step('E6 GET /v1/sessions/{id} → single row', async () => {
-    const r = await jsonRequest(baseURL, 'GET', `/v1/sessions/${sessionID}`, { bearer: rootBearer });
+    const r = await jsonRequest(baseURL, 'GET', `/v1/sessions/${sessionID}`, {
+      bearer: rootBearer,
+    });
     if (r.status !== 200) throw new Error(`status=${r.status}`);
     expectNosniff(r, 'E6');
     const body = r.body as { id: string; status: string };
@@ -339,7 +343,9 @@ async function main(): Promise<void> {
 
   // ---------- E7 ----------
   await step('E7 GET /v1/sessions/{id}/messages → snapshot + after_seq', async () => {
-    const r = await jsonRequest(baseURL, 'GET', `/v1/sessions/${sessionID}/messages`, { bearer: rootBearer });
+    const r = await jsonRequest(baseURL, 'GET', `/v1/sessions/${sessionID}/messages`, {
+      bearer: rootBearer,
+    });
     if (r.status !== 200) throw new Error(`status=${r.status}`);
     expectNosniff(r, 'E7');
     const body = r.body as { events: unknown[]; has_more: boolean };
@@ -377,9 +383,14 @@ async function main(): Promise<void> {
 
   // ---------- E10 ----------
   await step('E10 cancel unknown session → 404 session_not_found', async () => {
-    const r = await jsonRequest(baseURL, 'POST', '/v1/sessions/01900000-0000-7000-8000-000000000000/cancel', {
-      bearer: rootBearer,
-    });
+    const r = await jsonRequest(
+      baseURL,
+      'POST',
+      '/v1/sessions/01900000-0000-7000-8000-000000000000/cancel',
+      {
+        bearer: rootBearer,
+      },
+    );
     if (r.status !== 404) throw new Error(`status=${r.status}`);
     expectNosniff(r, 'E10');
     const body = r.body as { type?: string };

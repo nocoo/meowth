@@ -18,12 +18,11 @@
  * Playwright via playwright.config.ts → webServer.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync, unlinkSync, existsSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
+import { buildMeowthd } from './lib/build-meowthd';
 
-const REPO_ROOT = resolve(__dirname, '..');
-const DAEMON_DIR = join(REPO_ROOT, 'daemon');
 const TOKEN_FILE = join(tmpdir(), 'meowth-e2e-dev-token');
 const HOME_MARKER = join(tmpdir(), 'meowth-e2e-dev-home-path');
 
@@ -86,9 +85,13 @@ process.on('SIGHUP', () => {
 
 let serveRef: ReturnType<typeof spawn> | undefined;
 
+// Build meowthd once and exec it directly so a SIGTERM from
+// Playwright reaches the actual daemon rather than a `go run`
+// wrapper (which leaks orphan procs on macOS).
+const meowthdBinary = buildMeowthd('meowthd-e2e-dev');
+
 // Step 1: mint a root token via `meowthd init` (path A).
-const initResult = spawnSync('go', ['run', './cmd/meowthd', 'init'], {
-  cwd: DAEMON_DIR,
+const initResult = spawnSync(meowthdBinary, ['init'], {
   env: { ...process.env, MEOWTH_TEST_HOME: home, MEOWTH_TEST: '1' },
   encoding: 'utf8',
   stdio: ['ignore', 'pipe', 'inherit'],
@@ -111,15 +114,10 @@ writeFileSync(TOKEN_FILE, firstLine, { encoding: 'utf8', mode: 0o600 });
 log(`token written to ${TOKEN_FILE} (file mode 0o600)`);
 
 // Step 2: serve. webServer waits for port 7040 to accept.
-const serve = spawn(
-  'go',
-  ['run', './cmd/meowthd', 'serve', '--listen-addr', '127.0.0.1:7040'],
-  {
-    cwd: DAEMON_DIR,
-    env: { ...process.env, MEOWTH_TEST_HOME: home, MEOWTH_TEST: '1' },
-    stdio: ['ignore', 'inherit', 'inherit'],
-  },
-);
+const serve = spawn(meowthdBinary, ['serve', '--listen-addr', '127.0.0.1:7040'], {
+  env: { ...process.env, MEOWTH_TEST_HOME: home, MEOWTH_TEST: '1' },
+  stdio: ['ignore', 'inherit', 'inherit'],
+});
 serveRef = serve;
 
 serve.on('exit', (code, signal) => {
