@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,13 +11,41 @@ import (
 	"time"
 )
 
-// runMeowthd invokes `go run ./cmd/meowthd <args...>` against the
-// daemon module so the tests exercise the same binary path Phase 2 L2
-// (scripts/run-l2.ts) uses. Returns stdout, stderr, exit code.
+// meowthdBinary is the path to the meowthd binary built once by
+// TestMain and shared by every test. Using a pre-built binary instead
+// of `go run` avoids the `go run` wrapper-process problem where Kill()
+// only reaches the wrapper, leaving the meowthd grandchild as an
+// orphan (see docs/architecture/08-6dq-hooks-wiring.md and
+// pgrep -f 'meowthd serve --listen-addr' incidents in dev logs).
+var meowthdBinary string
+
+func TestMain(m *testing.M) {
+	tmp, err := os.MkdirTemp("", "meowthd-test-bin-")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "TestMain: mkdtemp: %v\n", err)
+		os.Exit(1)
+	}
+	bin := filepath.Join(tmp, "meowthd")
+	build := exec.Command("go", "build", "-o", bin, ".") //nolint:gosec // test builds the binary it owns
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		_ = os.RemoveAll(tmp)
+		fmt.Fprintf(os.Stderr, "TestMain: build meowthd: %v\n", err)
+		os.Exit(1)
+	}
+	meowthdBinary = bin
+	code := m.Run()
+	_ = os.RemoveAll(tmp)
+	os.Exit(code)
+}
+
+// runMeowthd executes the pre-built meowthd binary with the given
+// args and env, waits for it to exit, and returns stdout, stderr,
+// exit code. Used by tests that expect a short-lived run (init,
+// --help, flag rejection, etc).
 func runMeowthd(t *testing.T, env []string, args ...string) (string, string, int) {
 	t.Helper()
-	// Tests live in daemon/cmd/meowthd; binary is built from "." here.
-	cmd := exec.Command("go", append([]string{"run", "."}, args...)...) //nolint:gosec // test invokes the daemon binary it owns under t.TempDir()
+	cmd := exec.Command(meowthdBinary, args...) //nolint:gosec // path is built by TestMain into a temp dir
 	cmd.Env = append(os.Environ(), env...)
 	var stdoutBuf, stderrBuf strings.Builder
 	cmd.Stdout = &stdoutBuf
@@ -26,15 +55,14 @@ func runMeowthd(t *testing.T, env []string, args ...string) (string, string, int
 	if ee, ok := err.(*exec.ExitError); ok {
 		code = ee.ExitCode()
 	} else if err != nil {
-		t.Fatalf("go run: %v\nstderr=%s", err, stderrBuf.String())
+		t.Fatalf("exec meowthd: %v\nstderr=%s", err, stderrBuf.String())
 	}
 	return stdoutBuf.String(), stderrBuf.String(), code
 }
 
 func TestNoArgPrintsVersionProbe(t *testing.T) {
 	// Phase 2 L2 harness depends on `^meowthd ` matching the first
-	// stdout line of `go run ./cmd/meowthd` with no args. Lock this
-	// contract from drift.
+	// stdout line of meowthd with no args. Lock this contract from drift.
 	stdout, _, code := runMeowthd(t, nil)
 	if code != 0 {
 		t.Fatalf("exit = %d, want 0", code)
@@ -186,10 +214,12 @@ func TestBootstrapTokenRejectsPositionalArgs(t *testing.T) {
 // serveRunMeowthd spawns `meowthd serve ...` and waits one second
 // for the child to either print `listening:` or fail. Returns the
 // captured stdout / stderr / exit code; on long-running success the
-// child is SIGKILLed before return.
+// child is SIGKILLed before return. Kill() reaches the actual
+// meowthd process (not a `go run` wrapper) so no orphan is left
+// behind.
 func serveRunMeowthd(t *testing.T, env []string, args ...string) (string, string, int) {
 	t.Helper()
-	cmd := exec.Command("go", append([]string{"run", "."}, args...)...) //nolint:gosec // tests own this binary
+	cmd := exec.Command(meowthdBinary, args...) //nolint:gosec // path is built by TestMain into a temp dir
 	cmd.Env = append(os.Environ(), env...)
 	var stdoutBuf, stderrBuf strings.Builder
 	cmd.Stdout = &stdoutBuf
