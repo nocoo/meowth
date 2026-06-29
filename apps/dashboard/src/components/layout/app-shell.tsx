@@ -13,6 +13,8 @@ import { Menu } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { Breadcrumbs } from './breadcrumbs';
+import RefreshButton from './refresh-button';
+import { RefreshProvider } from './refresh-context';
 import { Sidebar } from './sidebar';
 import { SidebarProvider, useSidebar } from './sidebar-context';
 
@@ -137,6 +139,7 @@ function AppShellInner() {
             <Breadcrumbs items={[{ label: 'Meowth', href: '/' }, ...breadcrumbs]} />
           </div>
           <div className="flex items-center gap-1">
+            <RefreshButton />
             <a
               href={GITHUB_REPO_URL}
               target="_blank"
@@ -163,7 +166,9 @@ function AppShellInner() {
 export function AppShell() {
   return (
     <SidebarProvider>
-      <AppShellInner />
+      <RefreshProvider>
+        <AppShellInner />
+      </RefreshProvider>
     </SidebarProvider>
   );
 }
