@@ -163,7 +163,12 @@ func extractXSSPayload(prompt string) (string, bool) {
 // Execute satisfies agent.Backend. The returned *agent.Session has
 // buffered Messages + Result channels; the producer goroutine
 // closes both when done.
-func (f *Fake) Execute(ctx context.Context, prompt string, _ agent.ExecOptions) (*agent.Session, error) {
+func (f *Fake) Execute(ctx context.Context, prompt string, opts agent.ExecOptions) (*agent.Session, error) {
+	if recorderEnabled() {
+		if err := recordExec(prompt, opts.ResumeSessionID); err != nil {
+			return nil, fmt.Errorf("testbackend recorder: %w", err)
+		}
+	}
 	entries, err := loadFixture(f.Scenario)
 	if err != nil {
 		return nil, err
