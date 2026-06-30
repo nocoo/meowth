@@ -9,7 +9,13 @@
  *   3. Write token to a deterministic temp file the Playwright
  *      spec reads (path printed once on stdout for the user)
  *   4. `meowthd serve --bind 127.0.0.1:7040` → blocks until
- *      SIGINT / SIGTERM
+ *      SIGINT / SIGTERM. The serve process additionally sets
+ *      `MEOWTH_BACKEND_FACTORY=fake` so /v1/agents reports all
+ *      five backends as installed and exec on any of them replays
+ *      the testbackend fixtures. This lets the dev L3 project
+ *      cover Chat (task #22) without depending on real CLI
+ *      binaries; the existing auth/setup specs are unaffected
+ *      since they never hit the agent exec endpoints.
  *
  * On shutdown the token file and the tmp MEOWTH_HOME are removed.
  * The token NEVER lands in the repo; it lives only in OS temp.
@@ -115,7 +121,16 @@ log(`token written to ${TOKEN_FILE} (file mode 0o600)`);
 
 // Step 2: serve. webServer waits for port 7040 to accept.
 const serve = spawn(meowthdBinary, ['serve', '--listen-addr', '127.0.0.1:7040'], {
-  env: { ...process.env, MEOWTH_TEST_HOME: home, MEOWTH_TEST: '1' },
+  env: {
+    ...process.env,
+    MEOWTH_TEST_HOME: home,
+    MEOWTH_TEST: '1',
+    // task #22: enable the testbackend factory so dev L3 specs can
+    // exercise /v1/agents/{type}/exec without depending on real
+    // CLI binaries. `init` above intentionally does NOT carry this
+    // env because the factory is only consumed by serve.
+    MEOWTH_BACKEND_FACTORY: 'fake',
+  },
   stdio: ['ignore', 'inherit', 'inherit'],
 });
 serveRef = serve;
