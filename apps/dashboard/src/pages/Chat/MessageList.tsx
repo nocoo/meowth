@@ -32,6 +32,24 @@ export default function MessageList({ turns }: MessageListProps) {
         // window is displayed.
         const capped = overflow ? turn.envelopes.slice(0, MAX_ENVELOPES_PER_TURN) : turn.envelopes;
         const groups = groupEnvelopes(capped);
+        // §4.4 streaming state: while the LAST turn is streaming but
+        // no visible assistant content has arrived yet, show a
+        // restrained pending cursor. `groups` is already the
+        // visible-content projection (groupEnvelopes drops
+        // session_started / heartbeat / message.kind=status), so an
+        // empty groups list during streaming is exactly "submitted,
+        // nothing rendered yet" — the cold-start window where slow
+        // backends (copilot ~10s, hermes ~70s) would otherwise look
+        // dead. The first text/tool/thinking/error/log envelope
+        // populates `groups` and the pending bubble disappears.
+        //
+        // The `ti === turns.length - 1` guard enforces the render
+        // contract locally: only the final turn can show pending,
+        // even if an earlier (defensively) still-streaming turn
+        // somehow reaches the list — the viewmodel keeps only the
+        // last turn streaming, but MessageList does not rely on that.
+        const isLastTurn = ti === turns.length - 1;
+        const showPending = isLastTurn && turn.status === 'streaming' && groups.length === 0;
         return (
           <article
             // The turn list is append-only within a chat; the
@@ -58,9 +76,22 @@ export default function MessageList({ turns }: MessageListProps) {
                 envelope={env}
               />
             ))}
+            {showPending ? <PendingBubble /> : null}
           </article>
         );
       })}
+    </div>
+  );
+}
+
+function PendingBubble() {
+  return (
+    <div
+      data-bubble-kind="streaming-pending"
+      className="bg-card text-muted-foreground rounded-md p-2 text-sm"
+      aria-label="Waiting for response"
+    >
+      <span className="inline-block animate-pulse">…</span>
     </div>
   );
 }

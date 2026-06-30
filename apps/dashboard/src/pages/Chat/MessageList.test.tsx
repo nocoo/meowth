@@ -134,3 +134,74 @@ describe('MessageList', () => {
     expect(screen.getByText('view in Sessions detail')).toBeInTheDocument();
   });
 });
+
+describe('MessageList streaming pending indicator (§4.4)', () => {
+  function streamingTurn(envelopes: Envelope[] = []): ChatTurn {
+    return makeTurn({ status: 'streaming', endedAt: null, envelopes });
+  }
+
+  it('shows the pending bubble while streaming with no envelopes yet', () => {
+    const { container } = renderList([streamingTurn([])]);
+    expect(container.querySelector('[data-bubble-kind="streaming-pending"]')).not.toBeNull();
+  });
+
+  it('shows the pending bubble while streaming with only invisible envelopes', () => {
+    const turn = streamingTurn([
+      makeEnvelope({ type: 'session_started', seq: 0 }),
+      makeEnvelope({ type: 'heartbeat', seq: 1 }),
+      makeEnvelope({
+        type: 'message',
+        seq: 2,
+        payload: { kind: 'status', backend_session_id: 'cache' },
+      }),
+    ]);
+    const { container } = renderList([turn]);
+    expect(container.querySelector('[data-bubble-kind="streaming-pending"]')).not.toBeNull();
+  });
+
+  it('hides the pending bubble once a visible text envelope arrives', () => {
+    const turn = streamingTurn([
+      makeEnvelope({ type: 'session_started', seq: 0 }),
+      makeEnvelope({ type: 'message', seq: 1, payload: { kind: 'text', content: 'hi' } }),
+    ]);
+    const { container } = renderList([turn]);
+    expect(container.querySelector('[data-bubble-kind="streaming-pending"]')).toBeNull();
+    expect(container.querySelector('[data-bubble-kind="text"]')).not.toBeNull();
+  });
+
+  it('hides the pending bubble once a visible tool-use envelope arrives', () => {
+    const turn = streamingTurn([
+      makeEnvelope({
+        type: 'message',
+        seq: 0,
+        payload: { kind: 'tool-use', tool: 'Read', input: { path: '/x' } },
+      }),
+    ]);
+    const { container } = renderList([turn]);
+    expect(container.querySelector('[data-bubble-kind="streaming-pending"]')).toBeNull();
+  });
+
+  it('never shows the pending bubble for a non-streaming (completed) turn', () => {
+    const turn = makeTurn({ status: 'completed', envelopes: [] });
+    const { container } = renderList([turn]);
+    expect(container.querySelector('[data-bubble-kind="streaming-pending"]')).toBeNull();
+  });
+
+  it('only the LAST turn can show pending — an earlier streaming-empty turn does not', () => {
+    // Defensive: even if a non-last turn is (incorrectly) still
+    // streaming with no visible content, MessageList must not render
+    // pending for it once a later turn exists. Only one pending
+    // bubble at most, and only for the final turn.
+    const stale = streamingTurn([]); // earlier turn, still streaming
+    const later = makeTurn({ status: 'completed', userPrompt: 'next', envelopes: [] });
+    const { container } = renderList([stale, later]);
+    expect(container.querySelectorAll('[data-bubble-kind="streaming-pending"]')).toHaveLength(0);
+  });
+
+  it('shows pending for the last turn when it is the streaming one after a completed turn', () => {
+    const done = makeTurn({ status: 'completed', userPrompt: 'first', envelopes: [] });
+    const active = streamingTurn([]); // last turn, streaming, empty
+    const { container } = renderList([done, active]);
+    expect(container.querySelectorAll('[data-bubble-kind="streaming-pending"]')).toHaveLength(1);
+  });
+});
