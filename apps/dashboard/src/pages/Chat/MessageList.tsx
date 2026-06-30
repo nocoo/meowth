@@ -2,6 +2,7 @@ import MessageText from '@/components/MessageText';
 import type { ChatTurn } from '@/models/chat';
 import { Link } from 'react-router';
 import MessageBubble from './MessageBubble';
+import { groupEnvelopes } from './messageGroups';
 
 // docs/features/03 §5.3 — single-turn envelope cap. V1 stops
 // appending after 1000 envelopes per turn and surfaces a banner;
@@ -24,7 +25,13 @@ export default function MessageList({ turns }: MessageListProps) {
     <div className="space-y-3">
       {turns.map((turn, ti) => {
         const overflow = turn.envelopes.length > MAX_ENVELOPES_PER_TURN;
-        const visible = overflow ? turn.envelopes.slice(0, MAX_ENVELOPES_PER_TURN) : turn.envelopes;
+        // Apply the §5.3 hard cap on the RAW envelopes first, then
+        // coalesce consecutive text for rendering (§5.1). The cap
+        // counts raw envelopes so a chatty per-token backend can't
+        // dodge it by merging; grouping only changes how the capped
+        // window is displayed.
+        const capped = overflow ? turn.envelopes.slice(0, MAX_ENVELOPES_PER_TURN) : turn.envelopes;
+        const groups = groupEnvelopes(capped);
         return (
           <article
             // The turn list is append-only within a chat; the
@@ -40,12 +47,13 @@ export default function MessageList({ turns }: MessageListProps) {
               <MessageText content={turn.userPrompt} />
             </div>
             {overflow ? <CapBanner sessionId={turn.sessionId} /> : null}
-            {visible.map((env, i) => (
+            {groups.map((env, i) => (
               <MessageBubble
                 // Envelope `seq` is monotonic per session; the
                 // index suffix only matters for the single
                 // zero-seq case (session_started at seq=0 is
-                // unique anyway).
+                // unique anyway) and for merged text runs that
+                // reuse their first envelope's seq.
                 key={`${env.seq}-${i}`}
                 envelope={env}
               />

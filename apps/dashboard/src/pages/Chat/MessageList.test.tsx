@@ -76,13 +76,19 @@ describe('MessageList', () => {
     expect(articles[2]).toHaveTextContent('third prompt');
   });
 
-  it('caps at 1000 envelopes per turn and surfaces a banner linking the Sessions detail', () => {
+  it('caps at 1000 RAW envelopes per turn and surfaces a banner linking the Sessions detail', () => {
+    // Interleave text + tool-use so coalescing cannot collapse the
+    // window into a single bubble; this lets us prove the cap acts
+    // on RAW envelopes (1001 → 1000 kept) independently of §5.1
+    // text grouping. Even indices are text, odd are tool-use.
     const envelopes: Envelope[] = Array.from({ length: 1001 }, (_, i) =>
-      makeEnvelope({
-        type: 'message',
-        seq: i,
-        payload: { kind: 'text', content: `msg ${i}` },
-      }),
+      i % 2 === 0
+        ? makeEnvelope({ type: 'message', seq: i, payload: { kind: 'text', content: `t${i}` } })
+        : makeEnvelope({
+            type: 'message',
+            seq: i,
+            payload: { kind: 'tool-use', tool: 'Read', input: { i } },
+          }),
     );
     const turn = makeTurn({ sessionId: 'sid-cap', envelopes });
     const { container } = renderList([turn]);
@@ -92,7 +98,25 @@ describe('MessageList', () => {
     expect(banner).toHaveTextContent('Cumulative envelope cap');
     const link = screen.getByRole('link', { name: 'view in Sessions detail' });
     expect(link).toHaveAttribute('href', '/sessions/sid-cap');
-    expect(container.querySelectorAll('[data-bubble-kind="text"]')).toHaveLength(1000);
+    // 1000 kept raw envelopes: 500 text (each isolated by a tool-use
+    // boundary, so no coalescing) + 500 tool-use. The dropped 1001st
+    // is a text envelope (even index 1000).
+    expect(container.querySelectorAll('[data-bubble-kind="text"]')).toHaveLength(500);
+    expect(container.querySelectorAll('[data-bubble-kind="tool-use"]')).toHaveLength(500);
+  });
+
+  it('coalesces consecutive text envelopes into one bubble (§5.1)', () => {
+    const turn = makeTurn({
+      sessionId: 'sid-merge',
+      envelopes: [
+        makeEnvelope({ type: 'message', seq: 1, payload: { kind: 'text', content: 'Hel' } }),
+        makeEnvelope({ type: 'message', seq: 2, payload: { kind: 'text', content: 'lo ' } }),
+        makeEnvelope({ type: 'message', seq: 3, payload: { kind: 'text', content: 'world' } }),
+      ],
+    });
+    const { container } = renderList([turn]);
+    expect(container.querySelectorAll('[data-bubble-kind="text"]')).toHaveLength(1);
+    expect(screen.getByText('Hello world')).toBeInTheDocument();
   });
 
   it('cap banner renders without a Link when turn.sessionId is null', () => {
