@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { NAV_GROUPS, NAV_ITEMS, activeNavItem, isItemActive } from './navigation';
 
 describe('NAV_ITEMS / activeNavItem (Stage B1)', () => {
-  it('exposes the five product pages in display order', () => {
+  it('exposes the six product pages in display order', () => {
     expect(NAV_ITEMS.map((n) => n.to)).toEqual([
       '/overview',
       '/agents',
+      '/chat',
       '/sessions',
       '/tokens',
       '/settings',
@@ -23,8 +24,8 @@ describe('NAV_ITEMS / activeNavItem (Stage B1)', () => {
     expect(sessions?.matches('/sessions-other')).toBe(false);
   });
 
-  it('Overview / Agents / Tokens / Settings match exact paths only', () => {
-    for (const path of ['/overview', '/agents', '/tokens', '/settings']) {
+  it('Overview / Agents / Chat / Tokens / Settings match exact paths only', () => {
+    for (const path of ['/overview', '/agents', '/chat', '/tokens', '/settings']) {
       const item = NAV_ITEMS.find((n) => n.to === path);
       expect(item?.matches(path)).toBe(true);
       expect(item?.matches(`${path}/x`)).toBe(false);
@@ -33,6 +34,7 @@ describe('NAV_ITEMS / activeNavItem (Stage B1)', () => {
 
   it('activeNavItem picks the page that owns the current pathname', () => {
     expect(activeNavItem('/overview')?.to).toBe('/overview');
+    expect(activeNavItem('/chat')?.to).toBe('/chat');
     expect(activeNavItem('/sessions/abc')?.to).toBe('/sessions');
     expect(activeNavItem('/unknown')).toBeUndefined();
   });
@@ -47,11 +49,12 @@ describe('NAV_ITEMS / activeNavItem (Stage B1)', () => {
 });
 
 describe('NAV_GROUPS / isItemActive', () => {
-  it('exposes two groups: Dashboard (4 items) and System (1 item)', () => {
+  it('exposes two groups: Dashboard (5 items) and System (1 item)', () => {
     expect(NAV_GROUPS.map((g) => g.label)).toEqual(['Dashboard', 'System']);
     expect(NAV_GROUPS[0]?.items.map((i) => i.to)).toEqual([
       '/overview',
       '/agents',
+      '/chat',
       '/sessions',
       '/tokens',
     ]);

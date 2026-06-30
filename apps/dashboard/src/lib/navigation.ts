@@ -1,4 +1,11 @@
-import { Bot, KeyRound, LayoutDashboard, ListTree, Settings as SettingsIcon } from 'lucide-react';
+import {
+  Bot,
+  KeyRound,
+  LayoutDashboard,
+  ListTree,
+  MessageSquare,
+  Settings as SettingsIcon,
+} from 'lucide-react';
 import type { ComponentType, SVGProps } from 'react';
 
 // Pure-data navigation table for the Gen 2 sidebar. Driven by
@@ -45,6 +52,12 @@ const AGENTS: NavItem = {
   Icon: Bot,
   matches: (p) => p === '/agents',
 };
+const CHAT: NavItem = {
+  to: '/chat',
+  label: 'Chat',
+  Icon: MessageSquare,
+  matches: (p) => p === '/chat',
+};
 const SESSIONS: NavItem = {
   to: '/sessions',
   label: 'Sessions',
@@ -70,7 +83,7 @@ const SETTINGS: NavItem = {
 // when an actual product surface (not just a single page) needs
 // its own visual section.
 export const NAV_GROUPS: readonly NavGroup[] = [
-  { label: 'Dashboard', items: [OVERVIEW, AGENTS, SESSIONS, TOKENS] },
+  { label: 'Dashboard', items: [OVERVIEW, AGENTS, CHAT, SESSIONS, TOKENS] },
   { label: 'System', items: [SETTINGS] },
 ];
 

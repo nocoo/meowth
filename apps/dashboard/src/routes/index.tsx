@@ -1,6 +1,7 @@
 import AuthGate from '@/components/AuthGate';
 import { AppShell } from '@/components/layout';
 import AgentsPage from '@/pages/Agents';
+import ChatPage from '@/pages/Chat';
 import OverviewPage from '@/pages/Overview';
 import SessionsListPage, { SessionDetailPage } from '@/pages/Sessions';
 import SettingsPage from '@/pages/Settings';
@@ -30,6 +31,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="/overview" replace /> },
       { path: 'overview', element: <OverviewPage /> },
       { path: 'agents', element: <AgentsPage /> },
+      { path: 'chat', element: <ChatPage /> },
       { path: 'sessions', element: <SessionsListPage /> },
       { path: 'sessions/:id', element: <SessionDetailPage /> },
       { path: 'tokens', element: <TokensPage /> },
