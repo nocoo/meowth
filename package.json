@@ -56,6 +56,6 @@
     "lint-staged": "15.5.2",
     "tsx": "4.22.4",
     "turbo": "^2.3.3",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
