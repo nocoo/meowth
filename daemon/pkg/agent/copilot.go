@@ -232,7 +232,7 @@ func (b *copilotBackend) Execute(ctx context.Context, prompt string, opts ExecOp
 
 	b.cfg.Logger.Info("copilot started", "pid", cmd.Process.Pid, "cwd", opts.Cwd, "model", opts.Model)
 
-	pipe := newMessagePipe(runCtx)
+	pipe := newMessagePipe()
 	msgCh := pipe.C()
 	resCh := make(chan Result, 1)
 

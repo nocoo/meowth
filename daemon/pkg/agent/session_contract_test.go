@@ -189,7 +189,7 @@ func TestSessionResultDeliversExactlyOneValueThenClosed(t *testing.T) {
 // the consumer starts reading (no silent drops).
 func TestMessagePipeSendIsNonBlockingAndLossless(t *testing.T) {
 	t.Parallel()
-	pipe := newMessagePipe(context.Background())
+	pipe := newMessagePipe()
 
 	done := make(chan struct{})
 	go func() {
@@ -214,58 +214,22 @@ func TestMessagePipeSendIsNonBlockingAndLossless(t *testing.T) {
 	}
 }
 
-// TestMessagePipeAbandonsOnContextCancel ensures the relay does not
-// leak forever when the consumer stops reading (HTTP client gone /
-// pump cancelled) while the producer is still open.
-func TestMessagePipeAbandonsOnContextCancel(t *testing.T) {
+// TestMessagePipeCloseDrainsAll pins that Close delivers every
+// queued message to a late consumer (success-path durability).
+func TestMessagePipeCloseDrainsAll(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	pipe := newMessagePipe(ctx)
-	for i := 0; i < 100; i++ {
-		pipe.Send(Message{Type: MessageText, Content: "x"})
-	}
-	// No consumer + cancel while still open → abandon blocked deliver.
-	cancel()
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		// Give the relay a moment to observe cancel on blocked send.
-		time.Sleep(50 * time.Millisecond)
-		// Producer eventually closes; channel must still terminate.
-		pipe.Close()
-		for range pipe.C() {
-		}
-	}()
-	select {
-	case <-done:
-	case <-time.After(2 * time.Second):
-		t.Fatal("messagePipe did not close after context cancel")
-	}
-}
-
-// TestMessagePipeCloseDrainsAfterCancel pins the success-path race:
-// backends defer cancel() immediately after pipe.Close(). Close must
-// still deliver every queued message even though ctx is already done.
-func TestMessagePipeCloseDrainsAfterCancel(t *testing.T) {
-	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	pipe := newMessagePipe(ctx)
+	pipe := newMessagePipe()
 	const n = 200
 	for i := 0; i < n; i++ {
 		pipe.Send(Message{Type: MessageText, Content: "m"})
 	}
-	// Simulate backend cleanup: Close then cancel (defer order may
-	// cancel while drain is in flight).
 	pipe.Close()
-	cancel()
-
 	got := 0
 	for range pipe.C() {
 		got++
 	}
 	if got != n {
-		t.Fatalf("Close drain lost messages after cancel: got %d want %d", got, n)
+		t.Fatalf("Close drain lost messages: got %d want %d", got, n)
 	}
 }
 
