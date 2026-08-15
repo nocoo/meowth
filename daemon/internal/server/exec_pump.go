@@ -122,16 +122,23 @@ func pumpAgentSession(ctx context.Context, cfg pumpConfig) pumpResult {
 	for {
 		select {
 		case <-ctx.Done():
-			// Client disconnect / cancel-endpoint fired. Keep
-			// draining Messages on a detached deadline so the
-			// backend's lossless messagePipe relay is not left
-			// blocked on a missing consumer, then wait briefly
-			// for Result so session_ended carries real
-			// Output/Usage when available.
-			drainCtx, cancelDrain := context.WithTimeout(context.Background(), 2*time.Second)
-			_ = drainRemainingMessages(drainCtx, cfg, builder, &lastEmit, &backendSessionID, logger)
-			res, ok := waitForResultOrTimeout(drainCtx, cfg.Session.Result)
-			cancelDrain()
+			// Client disconnect / cancel-endpoint fired.
+			// Detach a drain of Messages so the backend
+			// messagePipe relay always has a consumer until
+			// Close (otherwise the lossless relay blocks
+			// forever with no reader). Persist what we can
+			// within a short deadline; leftover events are
+			// still received and discarded so the pipe unblocks.
+			persistCtx, cancelPersist := context.WithTimeout(context.Background(), 2*time.Second)
+			_ = drainRemainingMessages(persistCtx, cfg, builder, &lastEmit, &backendSessionID, logger)
+			cancelPersist()
+			go func() {
+				for range cfg.Session.Messages {
+				}
+			}()
+			resCtx, cancelRes := context.WithTimeout(context.Background(), 2*time.Second)
+			res, ok := waitForResultOrTimeout(resCtx, cfg.Session.Result)
+			cancelRes()
 			if ok {
 				gotResult = res
 			} else {
