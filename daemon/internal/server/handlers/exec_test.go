@@ -98,6 +98,79 @@ func TestExecRejectsEmptyPrompt(t *testing.T) {
 	}
 }
 
+func TestExecRejectsWhitespaceOnlyPrompt(t *testing.T) {
+	h, runner := newExecFixture(t)
+	rr := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/v1/agents/claude/exec", bytes.NewBufferString(`{"prompt":"   \n\t"}`))
+	r.Header.Set("Content-Type", "application/json")
+	chiRouterWithExec(h).ServeHTTP(rr, r)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", rr.Code)
+	}
+	var p problem.Body
+	if err := json.Unmarshal(rr.Body.Bytes(), &p); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if !strings.Contains(p.Detail, "non-whitespace") {
+		t.Fatalf("detail = %q, want non-whitespace wording", p.Detail)
+	}
+	if runner.called {
+		t.Fatal("runner must not run for whitespace-only prompt")
+	}
+}
+
+func TestExecAcceptsPromptAboveFormer16kCap(t *testing.T) {
+	// Field-level 16384 cap was Meowth-owned and not backed by HTTP body
+	// limit (1 MiB) or capable backends. A prompt just over the old cap
+	// must reach the fake backend.
+	h, runner := newExecFixture(t)
+	prompt := strings.Repeat("a", 16385)
+	body, err := json.Marshal(map[string]string{"prompt": prompt})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	rr := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/v1/agents/claude/exec", bytes.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	chiRouterWithExec(h).ServeHTTP(rr, r)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", rr.Code, rr.Body.String())
+	}
+	if !runner.called {
+		t.Fatal("runner was not invoked for oversized-but-under-body-limit prompt")
+	}
+}
+
+func TestExecRejectsNegativeTimeoutMS(t *testing.T) {
+	h, runner := newExecFixture(t)
+	rr := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/v1/agents/claude/exec",
+		bytes.NewBufferString(`{"prompt":"hi","timeout_ms":-1}`))
+	r.Header.Set("Content-Type", "application/json")
+	chiRouterWithExec(h).ServeHTTP(rr, r)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", rr.Code)
+	}
+	if runner.called {
+		t.Fatal("runner must not run for negative timeout_ms")
+	}
+}
+
+func TestExecRejectsNegativeMaxTurns(t *testing.T) {
+	h, runner := newExecFixture(t)
+	rr := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/v1/agents/claude/exec",
+		bytes.NewBufferString(`{"prompt":"hi","max_turns":-3}`))
+	r.Header.Set("Content-Type", "application/json")
+	chiRouterWithExec(h).ServeHTTP(rr, r)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", rr.Code)
+	}
+	if runner.called {
+		t.Fatal("runner must not run for negative max_turns")
+	}
+}
+
 func TestExecRejectsUnknownField(t *testing.T) {
 	h, _ := newExecFixture(t)
 	rr := httptest.NewRecorder()

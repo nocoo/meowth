@@ -479,21 +479,31 @@ components:
         prompt:
           type: string
           minLength: 1
-          maxLength: 16384
+          description: >
+            At least one non-whitespace character after trim. No field-level
+            upper bound; the request is still subject to the 1 MiB HTTP body
+            limit. Model context limits are backend-owned.
         cwd:
           type: string
+          description: Absolute path to an existing directory when set.
         model:
           type: string
         system_prompt:
           type: string
+          description: >
+            Optional system text. Honored by claude/codex/pi; ignored by
+            hermes and copilot. Shares the 1 MiB body budget with prompt.
         thread_name:
           type: string
         max_turns:
           type: integer
+          minimum: 0
         timeout_ms:
           type: integer
+          minimum: 0
         semantic_inactivity_timeout_ms:
           type: integer
+          minimum: 0
         resume_session_id:
           type: string
         custom_args:

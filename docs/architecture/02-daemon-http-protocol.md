@@ -91,8 +91,8 @@
 
 ```json
 {
-  "prompt": "string, required, 1..16384 chars",
-  "cwd": "string, optional, absolute path",
+  "prompt": "string, required, at least one non-whitespace character",
+  "cwd": "string, optional, absolute path to an existing directory",
   "model": "string, optional",
   "system_prompt": "string, optional",
   "thread_name": "string, optional",
@@ -106,16 +106,23 @@
 }
 ```
 
+**Prompt size contract (local proxy philosophy)**:
+
+- There is **no field-level upper bound** on `prompt` or `system_prompt`.
+- The only request-size ceiling is the shared HTTP **body_limit of 1 MiB** (§12 / §10.2 `payload_too_large`).
+- Model context windows, compaction, and provider token limits are **backend-owned**; Meowth does not compute them.
+- Backend-specific transport limits (e.g. argv `ARG_MAX` for pi/copilot) must not be re-imposed as a common field cap; surface them as backend errors when hit.
+
 **映射到 `agent.ExecOptions`**（[`01`](01-agent-sdk-pump-from-multica.md) §2 锚定的接口，pkg/agent vendored verbatim）：
 
 | Wire 字段 | `ExecOptions` 字段 | 备注 |
 |----------|--------------------|------|
-| `cwd` | `Cwd` | |
+| `cwd` | `Cwd` | optional; when set must be absolute + existing directory |
 | `model` | `Model` | |
-| `system_prompt` | `SystemPrompt` | hermes ACP 故意忽略（上游既有行为） |
+| `system_prompt` | `SystemPrompt` | honored by claude / codex / pi; **ignored** by hermes ACP and copilot (upstream) |
 | `thread_name` | `ThreadName` | |
-| `max_turns` | `MaxTurns` | 0 = 不设上限 |
-| `timeout_ms` | `Timeout` (`time.Duration`) | wire 用 ms 整数，daemon 转 `time.Duration` |
+| `max_turns` | `MaxTurns` | 0 = 不设上限; must be ≥ 0 |
+| `timeout_ms` | `Timeout` (`time.Duration`) | wire 用 ms 整数; must be ≥ 0 and convertible without int64 overflow; 0 = unset |
 | `semantic_inactivity_timeout_ms` | `SemanticInactivityTimeout` | 同上 |
 | `resume_session_id` | `ResumeSessionID` | |
 | `custom_args` | `CustomArgs` | 用户 per-run CLI 参数 |
@@ -541,7 +548,7 @@ Content-Type: application/problem+json; charset=utf-8
   "type": "/problems/invalid_request",
   "title": "Invalid request",
   "status": 400,
-  "detail": "prompt must be 1..16384 chars",
+  "detail": "prompt must contain at least one non-whitespace character",
   "instance": "/v1/agents/claude/exec"
 }
 ```

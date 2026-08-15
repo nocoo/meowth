@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,6 +24,10 @@ import (
 	"github.com/nocoo/meowth/daemon/internal/store"
 	"github.com/nocoo/meowth/daemon/pkg/agent"
 )
+
+// maxTimeoutMS is the largest millisecond value that converts to a
+// positive time.Duration without overflowing int64 nanoseconds.
+const maxTimeoutMS = math.MaxInt64 / int64(time.Millisecond)
 
 // ExecRunner is the interface the exec handler delegates the pump
 // to. server.New supplies an implementation that calls the
@@ -108,11 +113,15 @@ func (h *AgentExecHandler) Exec(w http.ResponseWriter, r *http.Request) {
 		_ = problem.Write(w, http.StatusBadRequest, problem.KindInvalidRequest, "trailing data after JSON body", r.URL.Path)
 		return
 	}
-	if l := len(strings.TrimSpace(req.Prompt)); l < 1 || l > 16384 {
-		_ = problem.Write(w, http.StatusBadRequest, problem.KindInvalidRequest, "prompt must be 1..16384 chars", r.URL.Path)
+	if strings.TrimSpace(req.Prompt) == "" {
+		_ = problem.Write(w, http.StatusBadRequest, problem.KindInvalidRequest, "prompt must contain at least one non-whitespace character", r.URL.Path)
 		return
 	}
 	if err := validateExecCwd(req.Cwd); err != nil {
+		_ = problem.Write(w, http.StatusBadRequest, problem.KindInvalidRequest, err.Error(), r.URL.Path)
+		return
+	}
+	if err := validateExecTimeouts(req.TimeoutMS, req.SemanticInactivityTimeoutMS, req.MaxTurns); err != nil {
 		_ = problem.Write(w, http.StatusBadRequest, problem.KindInvalidRequest, err.Error(), r.URL.Path)
 		return
 	}
@@ -178,8 +187,8 @@ func (h *AgentExecHandler) Exec(w http.ResponseWriter, r *http.Request) {
 		SystemPrompt:              req.SystemPrompt,
 		ThreadName:                req.ThreadName,
 		MaxTurns:                  req.MaxTurns,
-		Timeout:                   time.Duration(req.TimeoutMS) * time.Millisecond,
-		SemanticInactivityTimeout: time.Duration(req.SemanticInactivityTimeoutMS) * time.Millisecond,
+		Timeout:                   msToDuration(req.TimeoutMS),
+		SemanticInactivityTimeout: msToDuration(req.SemanticInactivityTimeoutMS),
 		ResumeSessionID:           req.ResumeSessionID,
 		CustomArgs:                req.CustomArgs,
 		McpConfig:                 req.McpConfig,
@@ -194,6 +203,11 @@ func (h *AgentExecHandler) Exec(w http.ResponseWriter, r *http.Request) {
 			EndedAt: h.now(),
 			Error:   "backend.Execute: " + err.Error(),
 		})
+		if isClientBackendInputError(err) {
+			logger.Warn("exec: backend.Execute rejected client input", "err", err, "type", backendType)
+			_ = problem.Write(w, http.StatusBadRequest, problem.KindInvalidRequest, err.Error(), r.URL.Path)
+			return
+		}
 		logger.Error("exec: backend.Execute failed", "err", err, "type", backendType)
 		_ = problem.Write(w, http.StatusInternalServerError, problem.KindInternal, "internal", r.URL.Path)
 		return
@@ -291,4 +305,48 @@ func validateExecCwd(cwd string) error {
 		return fmt.Errorf("cwd is not a directory: %s", cwd)
 	}
 	return nil
+}
+
+// validateExecTimeouts rejects negative or overflow-prone duration /
+// turn counts. 0 means "unset" (backend default / unlimited) and is
+// allowed. Overflowed ms→Duration multiplications would otherwise
+// wrap to a non-positive duration and silently disable the deadline.
+func validateExecTimeouts(timeoutMS, semanticInactivityMS int64, maxTurns int) error {
+	if timeoutMS < 0 {
+		return fmt.Errorf("timeout_ms must be >= 0")
+	}
+	if timeoutMS > maxTimeoutMS {
+		return fmt.Errorf("timeout_ms exceeds maximum convertible duration")
+	}
+	if semanticInactivityMS < 0 {
+		return fmt.Errorf("semantic_inactivity_timeout_ms must be >= 0")
+	}
+	if semanticInactivityMS > maxTimeoutMS {
+		return fmt.Errorf("semantic_inactivity_timeout_ms exceeds maximum convertible duration")
+	}
+	if maxTurns < 0 {
+		return fmt.Errorf("max_turns must be >= 0")
+	}
+	return nil
+}
+
+func msToDuration(ms int64) time.Duration {
+	if ms <= 0 {
+		return 0
+	}
+	return time.Duration(ms) * time.Millisecond
+}
+
+// isClientBackendInputError reports whether Execute failed because of
+// caller-controlled inputs (cwd race, argv overflow) rather than an
+// internal daemon fault. These map to 400, not opaque 500.
+func isClientBackendInputError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "argument list too long") ||
+		strings.Contains(msg, "no such file or directory") && strings.Contains(msg, "chdir") ||
+		strings.Contains(msg, "not a directory") ||
+		strings.Contains(msg, "chdir ")
 }
