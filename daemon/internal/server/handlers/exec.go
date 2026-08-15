@@ -9,6 +9,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -108,6 +110,10 @@ func (h *AgentExecHandler) Exec(w http.ResponseWriter, r *http.Request) {
 	}
 	if l := len(strings.TrimSpace(req.Prompt)); l < 1 || l > 16384 {
 		_ = problem.Write(w, http.StatusBadRequest, problem.KindInvalidRequest, "prompt must be 1..16384 chars", r.URL.Path)
+		return
+	}
+	if err := validateExecCwd(req.Cwd); err != nil {
+		_ = problem.Write(w, http.StatusBadRequest, problem.KindInvalidRequest, err.Error(), r.URL.Path)
 		return
 	}
 
@@ -261,4 +267,28 @@ func (h *AgentExecHandler) now() time.Time {
 		return h.Now()
 	}
 	return time.Now().UTC()
+}
+
+// validateExecCwd enforces docs/architecture/02 §4.2: optional cwd must
+// be an absolute path to an existing directory. Empty means "inherit
+// daemon cwd". Rejecting here keeps chdir failures from becoming opaque
+// 500s after backend.Execute starts the child.
+func validateExecCwd(cwd string) error {
+	if cwd == "" {
+		return nil
+	}
+	if !filepath.IsAbs(cwd) {
+		return fmt.Errorf("cwd must be an absolute path")
+	}
+	info, err := os.Stat(cwd)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("cwd does not exist: %s", cwd)
+		}
+		return fmt.Errorf("cwd is not accessible: %s", cwd)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("cwd is not a directory: %s", cwd)
+	}
+	return nil
 }

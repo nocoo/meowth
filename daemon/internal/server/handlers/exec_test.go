@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -116,6 +118,93 @@ func TestExecRejectsTrailingJSON(t *testing.T) {
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", rr.Code)
 	}
+}
+
+func TestExecRejectsBadCwd(t *testing.T) {
+	// docs/architecture/02 §4.2 + §4.3: bad cwd is client input error →
+	// 400 invalid_request, not a 500 from chdir inside backend.Execute.
+	cases := []struct {
+		name       string
+		cwd        string
+		wantDetail string
+	}{
+		{
+			name:       "relative",
+			cwd:        "not/a/real/path",
+			wantDetail: "cwd must be an absolute path",
+		},
+		{
+			name:       "missing",
+			cwd:        filepath.Join(t.TempDir(), "does-not-exist"),
+			wantDetail: "cwd does not exist:",
+		},
+		{
+			name:       "file_not_dir",
+			cwd:        writeTempFile(t),
+			wantDetail: "cwd is not a directory:",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h, runner := newExecFixture(t)
+			body, err := json.Marshal(map[string]string{"prompt": "hi", "cwd": tc.cwd})
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			rr := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodPost, "/v1/agents/claude/exec", bytes.NewReader(body))
+			r.Header.Set("Content-Type", "application/json")
+			chiRouterWithExec(h).ServeHTTP(rr, r)
+			if rr.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400 (body=%s)", rr.Code, rr.Body.String())
+			}
+			var p problem.Body
+			if err := json.Unmarshal(rr.Body.Bytes(), &p); err != nil {
+				t.Fatalf("decode: %v", err)
+			}
+			if p.Type != string(problem.KindInvalidRequest) {
+				t.Fatalf("type = %q, want %q", p.Type, problem.KindInvalidRequest)
+			}
+			if !strings.Contains(p.Detail, tc.wantDetail) {
+				t.Fatalf("detail = %q, want substring %q", p.Detail, tc.wantDetail)
+			}
+			if runner.called {
+				t.Fatal("runner must not run for bad cwd")
+			}
+		})
+	}
+}
+
+func TestExecAcceptsExistingAbsoluteCwd(t *testing.T) {
+	h, runner := newExecFixture(t)
+	dir := t.TempDir()
+	body, err := json.Marshal(map[string]string{"prompt": "hi", "cwd": dir})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	rr := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/v1/agents/claude/exec", bytes.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	chiRouterWithExec(h).ServeHTTP(rr, r)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", rr.Code, rr.Body.String())
+	}
+	if !runner.called {
+		t.Fatal("runner was not invoked")
+	}
+}
+
+func writeTempFile(t *testing.T) string {
+	t.Helper()
+	f, err := os.CreateTemp(t.TempDir(), "not-a-dir-*")
+	if err != nil {
+		t.Fatalf("CreateTemp: %v", err)
+	}
+	path := f.Name()
+	if err := f.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	return path
 }
 
 func TestExecHappyPathWritesSessionStartedAndPersists(t *testing.T) {
