@@ -220,10 +220,15 @@ func EncodeLine(env Envelope) ([]byte, error) {
 
 // TruncateMessageContent enforces docs/architecture/02 §5.8: a
 // MessagePayload whose envelope exceeds MaxLineBytes has its
-// content trimmed to (MaxLineBytes - TruncationHeadroom). Returns
-// (truncatedEnvelope, true) when truncation occurred plus a
-// follow-up ErrorPayload the caller should emit immediately after
-// the truncated message.
+// bulk string fields trimmed to fit under
+// (MaxLineBytes - TruncationHeadroom). Returns (truncatedEnvelope,
+// true) when truncation occurred plus a follow-up ErrorPayload the
+// caller should emit immediately after the truncated message.
+//
+// Trimming order prefers keeping kind/status/tool metadata:
+// Content → Output → drop structured Input. Never return an error
+// solely because the oversized bulk lived outside Content — that
+// previously caused the pump to skip the event silently.
 func TruncateMessageContent(env Envelope) (Envelope, ErrorPayload, bool, error) {
 	if env.Type != TypeMessage {
 		return env, ErrorPayload{}, false, nil
@@ -240,45 +245,16 @@ func TruncateMessageContent(env Envelope) (Envelope, ErrorPayload, bool, error) 
 	if err := json.Unmarshal(env.Payload, &p); err != nil {
 		return env, ErrorPayload{}, false, fmt.Errorf("envelope: re-decode message payload: %w", err)
 	}
-	// Compute the budget we have for content after subtracting the
-	// rest of the envelope. EncodeLine is monotonic in
-	// len(content); shrink iteratively to honor the headroom.
-	overhead := len(line) - len(p.Content)
-	maxContent := MaxLineBytes - TruncationHeadroom - overhead
-	if maxContent < 0 {
-		maxContent = 0
+
+	// Progressive shrink: content, then tool output, then drop input.
+	if err := shrinkMessagePayload(&p, env); err != nil {
+		return env, ErrorPayload{}, false, err
 	}
-	if maxContent > len(p.Content) {
-		maxContent = len(p.Content)
-	}
-	p.Content = safeTruncateRunes(p.Content, maxContent)
 	raw, err := json.Marshal(p)
 	if err != nil {
 		return env, ErrorPayload{}, false, fmt.Errorf("envelope: re-marshal truncated payload: %w", err)
 	}
 	env.Payload = raw
-
-	// Confirm we are now under the limit; if the re-marshal still
-	// overflows (unlikely — JSON escapes can grow), drop more.
-	for {
-		line, err := EncodeLine(env)
-		if err != nil {
-			return env, ErrorPayload{}, false, err
-		}
-		if len(line) <= MaxLineBytes {
-			break
-		}
-		if maxContent == 0 {
-			return env, ErrorPayload{}, false, errors.New("envelope: cannot trim message under MaxLineBytes")
-		}
-		maxContent /= 2
-		p.Content = safeTruncateRunes(p.Content, maxContent)
-		raw, err = json.Marshal(p)
-		if err != nil {
-			return env, ErrorPayload{}, false, err
-		}
-		env.Payload = raw
-	}
 
 	errPayload := ErrorPayload{
 		Code:      "message_truncated",
@@ -287,6 +263,55 @@ func TruncateMessageContent(env Envelope) (Envelope, ErrorPayload, bool, error) 
 		Retryable: false,
 	}
 	return env, errPayload, true, nil
+}
+
+func shrinkMessagePayload(p *MessagePayload, env Envelope) error {
+	// Start by zeroing the largest string fields proportionally.
+	for attempt := 0; attempt < 32; attempt++ {
+		raw, err := json.Marshal(p)
+		if err != nil {
+			return fmt.Errorf("envelope: re-marshal truncated payload: %w", err)
+		}
+		env.Payload = raw
+		line, err := EncodeLine(env)
+		if err != nil {
+			return err
+		}
+		if len(line) <= MaxLineBytes {
+			return nil
+		}
+		budget := MaxLineBytes - TruncationHeadroom
+		if budget < 0 {
+			budget = 0
+		}
+		// Prefer shrinking Content, then Output; last resort drop Input.
+		switch {
+		case len(p.Content) > 0:
+			keep := len(p.Content) / 2
+			if keep > budget {
+				keep = budget
+			}
+			p.Content = safeTruncateRunes(p.Content, keep)
+		case len(p.Output) > 0:
+			keep := len(p.Output) / 2
+			if keep > budget {
+				keep = budget
+			}
+			p.Output = safeTruncateRunes(p.Output, keep)
+		case p.Input != nil:
+			p.Input = nil
+		default:
+			// Nothing left to trim — clear remaining free-form text.
+			p.Content = ""
+			p.Output = ""
+			// Force empty payload body under the line cap by stripping
+			// optional map/string fields that can still bloat JSON.
+			if attempt > 0 {
+				return nil
+			}
+		}
+	}
+	return nil
 }
 
 // safeTruncateRunes trims s so the resulting string is at most n

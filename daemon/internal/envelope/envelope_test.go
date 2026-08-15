@@ -162,6 +162,48 @@ func TestTruncateLeavesShortMessageAlone(t *testing.T) {
 	}
 }
 
+func TestTruncateOversizedToolOutput(t *testing.T) {
+	// tool-result bulk lives in Output, not Content. Truncation must
+	// still succeed and keep the event instead of erroring out.
+	b := NewBuilder("sess-tool-out")
+	big := strings.Repeat("o", MaxLineBytes+2048)
+	env, err := b.Message(time.Now(), MessagePayload{
+		Kind:   "tool-result",
+		Tool:   "bash",
+		Output: big,
+	})
+	if err != nil {
+		t.Fatalf("Message: %v", err)
+	}
+	out, errPayload, truncated, err := TruncateMessageContent(env)
+	if err != nil {
+		t.Fatalf("TruncateMessageContent: %v", err)
+	}
+	if !truncated {
+		t.Fatal("expected truncated=true for oversized tool output")
+	}
+	line, err := EncodeLine(out)
+	if err != nil {
+		t.Fatalf("re-encode: %v", err)
+	}
+	if len(line) > MaxLineBytes {
+		t.Fatalf("after truncate len=%d, want ≤ %d", len(line), MaxLineBytes)
+	}
+	if errPayload.Code != "message_truncated" {
+		t.Fatalf("errPayload.code = %q", errPayload.Code)
+	}
+	var p MessagePayload
+	if err := json.Unmarshal(out.Payload, &p); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if p.Kind != "tool-result" || p.Tool != "bash" {
+		t.Fatalf("metadata lost: kind=%q tool=%q", p.Kind, p.Tool)
+	}
+	if len(p.Output) >= len(big) {
+		t.Fatalf("output was not truncated: %d", len(p.Output))
+	}
+}
+
 func TestStatusFromAgentResult(t *testing.T) {
 	for _, s := range []string{"completed", "failed", "aborted", "timeout", "cancelled"} {
 		if got := StatusFromAgentResult(s); got != s {
