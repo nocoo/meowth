@@ -577,7 +577,8 @@ func (b *codexBackend) Execute(ctx context.Context, prompt string, opts ExecOpti
 
 	b.cfg.Logger.Info("codex started app-server", "pid", cmd.Process.Pid, "cwd", opts.Cwd)
 
-	msgCh := make(chan Message, 256)
+	pipe := newMessagePipe()
+	msgCh := pipe.C()
 	resCh := make(chan Result, 1)
 	semanticActivityCh := make(chan string, 256)
 
@@ -601,7 +602,7 @@ func (b *codexBackend) Execute(ctx context.Context, prompt string, opts ExecOpti
 				output.WriteString(msg.Content)
 				outputMu.Unlock()
 			}
-			trySend(msgCh, msg)
+			pipe.Send(msg)
 			trySendString(semanticActivityCh, describeCodexSemanticActivity(msg))
 		},
 		onSemanticActivity: func(description string) {
@@ -658,7 +659,7 @@ func (b *codexBackend) Execute(ctx context.Context, prompt string, opts ExecOpti
 	// readerDone closes → lifecycle goroutine collects final output and sends Result.
 	go func() {
 		defer cancel()
-		defer close(msgCh)
+		defer pipe.Close()
 		defer close(resCh)
 		defer drainAndWait()
 

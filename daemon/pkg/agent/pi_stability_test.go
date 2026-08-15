@@ -156,14 +156,14 @@ func TestPiStability_CtxCancelDeliversTerminalResult(t *testing.T) {
 }
 
 // TestPiStability_HighVolumeMessagesDoesNotBlockBackend covers the
-// counterpart to TestTrySendDropsWhenChannelFull at the integration
-// level: a fake Pi that bursts more events than the Messages
-// channel's 256-slot buffer can hold, with no concurrent consumer.
-// trySend's non-blocking semantic should let the backend's scanner
-// keep advancing (dropping the excess), reach agent_end, write
-// Result, and close both channels. Without the contract holding, the
-// backend goroutine would park on a full Messages send and the test
-// would time out.
+// counterpart to TestMessagePipeSendIsNonBlockingAndLossless at the
+// integration level: a fake Pi that bursts more events than a small
+// channel buffer could hold, with no concurrent consumer.
+// messagePipe.Send must let the backend's scanner keep advancing
+// (queueing excess in memory), reach agent_end, write Result, and
+// close both channels. Without the contract holding, the backend
+// goroutine would park on a full Messages send and the test would
+// time out.
 //
 // The test deliberately drains Messages *after* the backend has
 // finished writing, to make the high-volume condition real. Reading
@@ -207,18 +207,23 @@ func TestPiStability_HighVolumeMessagesDoesNotBlockBackend(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Now drain. Backend must have already written Result (because
-	// trySend dropped overflow rather than blocking) and closed both
-	// channels.
+	// messagePipe queued overflow rather than blocking the scanner)
+	// and closed both channels. All 1000 text deltas must survive.
 	drained := make(chan struct{})
+	var n int
 	go func() {
 		defer close(drained)
 		for range session.Messages {
+			n++
 		}
 	}()
 	select {
 	case <-drained:
 	case <-time.After(10 * time.Second):
 		t.Fatal("Messages channel never closed under high-volume burst; backend likely blocked on a full msgCh send")
+	}
+	if n < 1000 {
+		t.Fatalf("expected >=1000 messages after lossless burst, got %d", n)
 	}
 
 	select {

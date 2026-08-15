@@ -78,10 +78,10 @@ func runContext(ctx context.Context, timeout time.Duration) (context.Context, co
 //     buffered Result is what makes the drain-then-read pattern safe.
 type Session struct {
 	// Messages streams events as the agent works. The channel is
-	// closed when the agent finishes. The send side is non-blocking
-	// (see trySend in claude.go) — when Messages is full, individual
-	// events are dropped to keep the backend from stalling on a slow
-	// consumer; the final state always lands via Result.
+	// closed when the agent finishes. Producers enqueue via
+	// messagePipe so Send never drops events and never blocks the
+	// protocol scanner on a slow consumer; a relay drains the queue
+	// onto this channel. The final state always lands via Result.
 	Messages <-chan Message
 	// Result delivers exactly one value — the final outcome — and is
 	// then closed. Buffered (cap 1) so the backend can publish the

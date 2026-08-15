@@ -183,61 +183,33 @@ func TestSessionResultDeliversExactlyOneValueThenClosed(t *testing.T) {
 	}
 }
 
-// TestTrySendDropsWhenChannelFull pins the non-blocking send semantic
-// that keeps the backend goroutine from stalling on a slow Messages
-// consumer. The contract is documented in claude.go:535 and the
-// agent.Session godoc, but until now there was no unit test catching
-// a regression to a blocking send.
-//
-// The flow: fill a small channel to capacity, then trySend once more.
-// The second send must return immediately, leaving the channel at
-// capacity and the extra event dropped. We bound the call with a
-// goroutine + timer to make a hang an explicit test failure rather
-// than a silent hang of the whole test binary.
-func TestTrySendDropsWhenChannelFull(t *testing.T) {
+// TestMessagePipeSendIsNonBlockingAndLossless pins the production
+// delivery contract: Send must return immediately even with no
+// consumer, and every enqueued message must still be delivered once
+// the consumer starts reading (no silent drops).
+func TestMessagePipeSendIsNonBlockingAndLossless(t *testing.T) {
 	t.Parallel()
-	ch := make(chan Message, 1)
-	ch <- Message{Type: MessageText, Content: "first"}
+	pipe := newMessagePipe()
 
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		trySend(ch, Message{Type: MessageText, Content: "second (should be dropped)"})
+		for i := 0; i < 500; i++ {
+			pipe.Send(Message{Type: MessageText, Content: "m"})
+		}
 	}()
 	select {
 	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("trySend blocked on a full channel; non-blocking contract broken")
+	case <-time.After(2 * time.Second):
+		t.Fatal("messagePipe.Send blocked under burst with no consumer")
 	}
 
-	if len(ch) != 1 {
-		t.Fatalf("expected channel to remain at cap (1 buffered), got len=%d", len(ch))
+	pipe.Close()
+	n := 0
+	for range pipe.C() {
+		n++
 	}
-	got := <-ch
-	if got.Content != "first" {
-		t.Fatalf("dropped wrong message; expected the existing one to survive, got %+v", got)
-	}
-}
-
-// TestTrySendDoesNotBlockOnUnbufferedChannelWithNoReader covers the
-// second failure mode the production callers depend on: an unbuffered
-// channel with no goroutine parked on receive. trySend must skip the
-// send via the select-default branch rather than panicking or
-// blocking. This is the worst-case scenario for backend stability —
-// a misconfigured consumer that never reads — and trySend has to
-// degrade gracefully.
-func TestTrySendDoesNotBlockOnUnbufferedChannelWithNoReader(t *testing.T) {
-	t.Parallel()
-	ch := make(chan Message) // unbuffered, no reader
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		trySend(ch, Message{Type: MessageText, Content: "no one listening"})
-	}()
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("trySend blocked on an unbuffered channel with no reader; non-blocking contract broken")
+	if n != 500 {
+		t.Fatalf("lossless delivery failed: got %d messages, want 500", n)
 	}
 }

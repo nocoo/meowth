@@ -127,7 +127,8 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 
 	b.cfg.Logger.Info("hermes acp started", "pid", cmd.Process.Pid, "cwd", opts.Cwd)
 
-	msgCh := make(chan Message, 256)
+	pipe := newMessagePipe()
+	msgCh := pipe.C()
 	resCh := make(chan Result, 1)
 
 	var outputMu sync.Mutex
@@ -158,7 +159,7 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 				output.WriteString(msg.Content)
 				outputMu.Unlock()
 			}
-			trySend(msgCh, msg)
+			pipe.Send(msg)
 		},
 		onPromptDone: func(result hermesPromptResult) {
 			if !streamingCurrentTurn.Load() {
@@ -190,7 +191,7 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 	// Drive the ACP session lifecycle in a goroutine.
 	go func() {
 		defer cancel()
-		defer close(msgCh)
+		defer pipe.Close()
 		defer close(resCh)
 		defer func() {
 			_ = stdin.Close()

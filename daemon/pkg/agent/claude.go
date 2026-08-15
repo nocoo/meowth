@@ -96,7 +96,8 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 	// cmd.Start() succeeded — transfer temp file ownership to the goroutine.
 	mcpFileCleanup = nil
 
-	msgCh := make(chan Message, 256)
+	pipe := newMessagePipe()
+	msgCh := pipe.C()
 	resCh := make(chan Result, 1)
 
 	// writeClaudeInput runs in its own goroutine so it cannot deadlock
@@ -124,7 +125,7 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 
 	go func() {
 		defer cancel()
-		defer close(msgCh)
+		defer pipe.Close()
 		defer close(resCh)
 		if mcpConfigPath != "" {
 			defer func() { _ = os.Remove(mcpConfigPath) }()
@@ -161,16 +162,16 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 
 			switch msg.Type {
 			case "assistant":
-				b.handleAssistant(msg, msgCh, &output, usage)
+				b.handleAssistant(msg, pipe.Send, &output, usage)
 			case "user":
-				if b.handleUser(msg, msgCh) {
+				if b.handleUser(msg, pipe.Send) {
 					sawAsyncLaunch = true
 				}
 			case "system":
 				if msg.SessionID != "" {
 					sessionID = msg.SessionID
 				}
-				trySend(msgCh, Message{Type: MessageStatus, Status: "running", SessionID: sessionID})
+				pipe.Send(Message{Type: MessageStatus, Status: "running", SessionID: sessionID})
 			case "result":
 				sessionID = msg.SessionID
 				if msg.ResultText != "" {
@@ -187,7 +188,7 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 				closeStdin()
 			case "log":
 				if msg.Log != nil {
-					trySend(msgCh, Message{
+					pipe.Send(Message{
 						Type:    MessageLog,
 						Level:   msg.Log.Level,
 						Content: msg.Log.Message,
@@ -262,7 +263,7 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 	return &Session{Messages: msgCh, Result: resCh}, nil
 }
 
-func (b *claudeBackend) handleAssistant(msg claudeSDKMessage, ch chan<- Message, output *strings.Builder, usage map[string]TokenUsage) {
+func (b *claudeBackend) handleAssistant(msg claudeSDKMessage, send func(Message), output *strings.Builder, usage map[string]TokenUsage) {
 	var content claudeMessageContent
 	if err := json.Unmarshal(msg.Message, &content); err != nil {
 		return
@@ -283,18 +284,18 @@ func (b *claudeBackend) handleAssistant(msg claudeSDKMessage, ch chan<- Message,
 		case "text":
 			if block.Text != "" {
 				output.WriteString(block.Text)
-				trySend(ch, Message{Type: MessageText, Content: block.Text})
+				send(Message{Type: MessageText, Content: block.Text})
 			}
 		case "thinking":
 			if block.Text != "" {
-				trySend(ch, Message{Type: MessageThinking, Content: block.Text})
+				send(Message{Type: MessageThinking, Content: block.Text})
 			}
 		case "tool_use":
 			var input map[string]any
 			if block.Input != nil {
 				_ = json.Unmarshal(block.Input, &input)
 			}
-			trySend(ch, Message{
+			send(Message{
 				Type:   MessageToolUse,
 				Tool:   block.Name,
 				CallID: block.ID,
@@ -304,7 +305,7 @@ func (b *claudeBackend) handleAssistant(msg claudeSDKMessage, ch chan<- Message,
 	}
 }
 
-func (b *claudeBackend) handleUser(msg claudeSDKMessage, ch chan<- Message) bool {
+func (b *claudeBackend) handleUser(msg claudeSDKMessage, send func(Message)) bool {
 	var content claudeMessageContent
 	if err := json.Unmarshal(msg.Message, &content); err != nil {
 		return false
@@ -320,7 +321,7 @@ func (b *claudeBackend) handleUser(msg claudeSDKMessage, ch chan<- Message) bool
 					sawAsyncLaunch = true
 				}
 			}
-			trySend(ch, Message{
+			send(Message{
 				Type:   MessageToolResult,
 				CallID: block.ToolUseID,
 				Output: resultStr,
@@ -532,12 +533,12 @@ type claudeControlRequestPayload struct {
 
 // ── Shared helpers ──
 
+// trySend is retained only for legacy unit helpers that still take a
+// raw channel. Production backends use messagePipe.Send (lossless).
 func trySend(ch chan<- Message, msg Message) {
 	select {
 	case ch <- msg:
 	default:
-		// Channel full — drop message. Final output is accumulated separately
-		// in Result.Output, so only streaming consumers are affected.
 	}
 }
 

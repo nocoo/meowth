@@ -207,7 +207,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 
 	cmd := exec.CommandContext(runCtx, argv0, cmdArgs...)
 	hideAgentWindow(cmd)
-	b.cfg.Logger.Info("agent command", "exec", argv0, "args", cmdArgs)
+	logAgentCommandRedacted(b.cfg.Logger, argv0, cmdArgs, true)
 	cmd.WaitDelay = 10 * time.Second
 	if opts.Cwd != "" {
 		cmd.Dir = opts.Cwd
@@ -236,13 +236,14 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 	if err := cmd.Start(); err != nil {
 		_ = stdin.Close()
 		cancel()
-		return nil, fmt.Errorf("start pi: %w", err)
+		return nil, wrapStartError("pi", err)
 	}
 	_ = stdin.Close()
 
 	b.cfg.Logger.Info("pi started", "pid", cmd.Process.Pid, "cwd", opts.Cwd, "model", opts.Model)
 
-	msgCh := make(chan Message, 256)
+	pipe := newMessagePipe()
+	msgCh := pipe.C()
 	resCh := make(chan Result, 1)
 
 	// Close stdout when the context is cancelled so scanner.Scan() unblocks.
@@ -253,7 +254,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 
 	go func() {
 		defer cancel()
-		defer close(msgCh)
+		defer pipe.Close()
 		defer close(resCh)
 
 		startTime := time.Now()
@@ -280,7 +281,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 
 			switch evt.Type {
 			case "agent_start":
-				trySend(msgCh, Message{Type: MessageStatus, Status: "running"})
+				pipe.Send(Message{Type: MessageStatus, Status: "running"})
 
 			case "message_update":
 				if evt.AssistantMessageEvent == nil {
@@ -290,11 +291,11 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 				case "text_delta":
 					if d := drainPiTextBuffer(&textBuffer, evt.AssistantMessageEvent.Delta); d != "" {
 						output.WriteString(d)
-						trySend(msgCh, Message{Type: MessageText, Content: d})
+						pipe.Send(Message{Type: MessageText, Content: d})
 					}
 				case "thinking_delta":
 					if d := evt.AssistantMessageEvent.Delta; d != "" {
-						trySend(msgCh, Message{Type: MessageThinking, Content: d})
+						pipe.Send(Message{Type: MessageThinking, Content: d})
 					}
 				}
 
@@ -303,7 +304,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 				if len(evt.Args) > 0 {
 					_ = json.Unmarshal(evt.Args, &params)
 				}
-				trySend(msgCh, Message{
+				pipe.Send(Message{
 					Type:   MessageToolUse,
 					Tool:   evt.ToolName,
 					CallID: evt.ToolCallID,
@@ -311,7 +312,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 				})
 
 			case "tool_execution_end":
-				trySend(msgCh, Message{
+				pipe.Send(Message{
 					Type:   MessageToolResult,
 					CallID: evt.ToolCallID,
 					Output: decodePiResult(evt.Result),
@@ -336,7 +337,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 						usage[model] = u
 					}
 					if errText := piMessageErrorText(msg); errText != "" {
-						trySend(msgCh, Message{Type: MessageError, Content: errText})
+						pipe.Send(Message{Type: MessageError, Content: errText})
 						if finalStatus == "completed" {
 							finalStatus = "failed"
 							finalError = errText
@@ -356,7 +357,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 				// response from Pi's raven provider.
 				if msg := decodePiMessage(evt.Message); msg != nil {
 					if errText := piMessageErrorText(msg); errText != "" {
-						trySend(msgCh, Message{Type: MessageError, Content: errText})
+						pipe.Send(Message{Type: MessageError, Content: errText})
 						if finalStatus == "completed" {
 							finalStatus = "failed"
 							finalError = errText
@@ -366,7 +367,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 
 			case "error":
 				errText := decodePiString(evt.Message)
-				trySend(msgCh, Message{Type: MessageError, Content: errText})
+				pipe.Send(Message{Type: MessageError, Content: errText})
 				if finalStatus == "completed" {
 					finalStatus = "failed"
 					finalError = errText
@@ -385,7 +386,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 		}
 		if d := flushPiTextBuffer(&textBuffer); d != "" {
 			output.WriteString(d)
-			trySend(msgCh, Message{Type: MessageText, Content: d})
+			pipe.Send(Message{Type: MessageText, Content: d})
 		}
 
 		waitErr := cmd.Wait()

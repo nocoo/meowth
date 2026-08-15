@@ -210,7 +210,7 @@ func (b *copilotBackend) Execute(ctx context.Context, prompt string, opts ExecOp
 
 	cmd := exec.CommandContext(runCtx, argv0, cmdArgs...)
 	hideAgentWindow(cmd)
-	b.cfg.Logger.Info("agent command", "exec", argv0, "args", cmdArgs)
+	logAgentCommandRedacted(b.cfg.Logger, argv0, cmdArgs, true)
 	cmd.WaitDelay = 10 * time.Second
 	if opts.Cwd != "" {
 		cmd.Dir = opts.Cwd
@@ -227,17 +227,18 @@ func (b *copilotBackend) Execute(ctx context.Context, prompt string, opts ExecOp
 
 	if err := cmd.Start(); err != nil {
 		cancel()
-		return nil, fmt.Errorf("start copilot: %w", err)
+		return nil, wrapStartError("copilot", err)
 	}
 
 	b.cfg.Logger.Info("copilot started", "pid", cmd.Process.Pid, "cwd", opts.Cwd, "model", opts.Model)
 
-	msgCh := make(chan Message, 256)
+	pipe := newMessagePipe()
+	msgCh := pipe.C()
 	resCh := make(chan Result, 1)
 
 	go func() {
 		defer cancel()
-		defer close(msgCh)
+		defer pipe.Close()
 		defer close(resCh)
 
 		startTime := time.Now()
@@ -268,7 +269,7 @@ func (b *copilotBackend) Execute(ctx context.Context, prompt string, opts ExecOp
 			}
 
 			for _, m := range handleCopilotEvent(evt, st) {
-				trySend(msgCh, m)
+				pipe.Send(m)
 			}
 		}
 		if err := scanner.Err(); err != nil {
