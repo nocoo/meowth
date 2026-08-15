@@ -96,7 +96,7 @@ func (b *claudeBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 	// cmd.Start() succeeded — transfer temp file ownership to the goroutine.
 	mcpFileCleanup = nil
 
-	pipe := newMessagePipe()
+	pipe := newMessagePipe(runCtx)
 	msgCh := pipe.C()
 	resCh := make(chan Result, 1)
 

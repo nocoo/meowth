@@ -8,20 +8,43 @@ import (
 	"syscall"
 )
 
+// argvPromptMode selects how a backend embeds the user prompt in argv.
+type argvPromptMode int
+
+const (
+	// argvPromptLast is used by pi: the prompt is the final positional arg.
+	argvPromptLast argvPromptMode = iota
+	// argvPromptFlagP is used by copilot: `-p <prompt>` early in argv.
+	argvPromptFlagP
+)
+
 // logAgentCommandRedacted logs the invocation without echoing prompt-
-// bearing argv tails. argv transports (pi, copilot) put the user prompt
-// in args; logging them would leak full task text into meowthd logs.
-func logAgentCommandRedacted(logger *slog.Logger, execPath string, args []string, promptInArgv bool) {
+// bearing argv values. argv transports put the user prompt in args;
+// logging them would leak full task text into meowthd logs.
+func logAgentCommandRedacted(logger *slog.Logger, execPath string, args []string, mode argvPromptMode) {
 	if logger == nil {
 		return
 	}
-	if !promptInArgv || len(args) == 0 {
-		logger.Info("agent command", "exec", execPath, "args", args)
-		return
+	safe := redactArgvPrompts(args, mode)
+	logger.Info("agent command", "exec", execPath, "args", safe)
+}
+
+func redactArgvPrompts(args []string, mode argvPromptMode) []string {
+	if len(args) == 0 {
+		return args
 	}
 	safe := append([]string(nil), args...)
-	safe[len(safe)-1] = fmt.Sprintf("<prompt %d bytes>", len(args[len(args)-1]))
-	logger.Info("agent command", "exec", execPath, "args", safe)
+	switch mode {
+	case argvPromptFlagP:
+		for i := 0; i+1 < len(safe); i++ {
+			if safe[i] == "-p" || safe[i] == "--prompt" {
+				safe[i+1] = fmt.Sprintf("<prompt %d bytes>", len(args[i+1]))
+			}
+		}
+	default: // argvPromptLast
+		safe[len(safe)-1] = fmt.Sprintf("<prompt %d bytes>", len(args[len(args)-1]))
+	}
+	return safe
 }
 
 func wrapStartError(backend string, err error) error {

@@ -577,7 +577,7 @@ func (b *codexBackend) Execute(ctx context.Context, prompt string, opts ExecOpti
 
 	b.cfg.Logger.Info("codex started app-server", "pid", cmd.Process.Pid, "cwd", opts.Cwd)
 
-	pipe := newMessagePipe()
+	pipe := newMessagePipe(runCtx)
 	msgCh := pipe.C()
 	resCh := make(chan Result, 1)
 	semanticActivityCh := make(chan string, 256)

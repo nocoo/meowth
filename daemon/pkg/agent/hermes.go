@@ -127,7 +127,7 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 
 	b.cfg.Logger.Info("hermes acp started", "pid", cmd.Process.Pid, "cwd", opts.Cwd)
 
-	pipe := newMessagePipe()
+	pipe := newMessagePipe(runCtx)
 	msgCh := pipe.C()
 	resCh := make(chan Result, 1)
 

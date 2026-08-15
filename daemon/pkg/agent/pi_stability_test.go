@@ -139,6 +139,9 @@ func TestPiStability_CtxCancelDeliversTerminalResult(t *testing.T) {
 		t.Fatal("Messages channel never closed after ctx cancel; backend goroutine likely leaked")
 	}
 
+	// Messages may close as soon as the pipe observes cancel (consumer
+	// abandon path), while Result still waits on cmd.Wait / WaitDelay.
+	// Budget matches the Messages drain above.
 	select {
 	case res, ok := <-session.Result:
 		if !ok {
@@ -150,8 +153,8 @@ func TestPiStability_CtxCancelDeliversTerminalResult(t *testing.T) {
 		if res.Status == "" {
 			t.Fatal("cancelled run must report a non-empty terminal Status")
 		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("Result not delivered within 5s of cancel; backend may have leaked goroutine")
+	case <-time.After(20 * time.Second):
+		t.Fatal("Result not delivered within 20s of cancel; backend may have leaked goroutine")
 	}
 }
 
