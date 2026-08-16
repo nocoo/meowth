@@ -4,6 +4,61 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-08-17
+
+Dashboard Chat module for multi-turn dialogue with local agents,
+plus protocol hardening for a local-agent proxy: drop the arbitrary
+16k prompt field cap, validate cwd/timeouts, and stop silently
+dropping agent stream events. Minor bump for the new Chat surface
+and the public request-contract change (prompt size).
+
+### Added
+
+- Dashboard **Chat** page (`/chat`) with AgentPicker, ChatComposer,
+  MessageList/MessageBubble, and `useChatViewModel` multi-turn flow
+  over `POST /v1/agents/{type}/exec` + `resume_session_id`.
+- Header **Refresh** button via RefreshContext, wired on every page.
+- `docs/features/03-dashboard-chat-with-online-agent.md` design doc.
+- Fake-backend exec recorder and L2/L3 chat coverage
+  (`run-chat-l2.ts`, Playwright happy path).
+- Lossless `messagePipe` for agent backends (no drop-on-full transcript).
+
+### Changed
+
+- **Prompt size contract**: no field-level 16k cap; only the shared
+  1 MiB HTTP body limit applies. Model context remains backend-owned
+  (`docs/architecture/02` §4.2).
+- `system_prompt` matrix documented (claude/codex/pi honor; hermes +
+  copilot ignore).
+- Sidebar / AppShell / table surfaces further aligned to basalt Gen 2
+  (surety reference).
+- TypeScript bumped to ^7.0.2; OSV-gated transitive dep overrides
+  (js-yaml, postcss, nanoid, brace-expansion, fast-uri) and
+  react-router 8.3.0.
+- L2/e2e harnesses pre-build `meowthd` instead of `go run` to avoid
+  orphan processes on macOS.
+
+### Fixed
+
+- Bad `cwd` returns **400** `invalid_request` instead of opaque 500.
+- Negative / overflow `timeout_ms` and `max_turns` rejected as 400.
+- Argv-transport backends (pi/copilot): redact prompts in logs; map
+  OS `ARG_MAX` / E2BIG to 400.
+- Envelope truncation covers tool `Output`/`Input` (no silent skip).
+- Client disconnect: pump drains Messages so the lossless relay is
+  not stranded without a consumer.
+- Chat UI: coalesce consecutive text envelopes; streaming pending
+  indicator during cold-start.
+
+### Tests
+
+- L2 chat two-turn resume id propagation + redaction scan.
+- L3 Playwright chat happy path against fake backend.
+- Unit coverage for cwd validation, prompt size, messagePipe, and
+  envelope tool truncation.
+
+[0.4.0]: https://github.com/nocoo/meowth/releases/tag/v0.4.0
+
 ## [0.3.0] — 2026-06-25
 
 Dashboard Gen 2 structural UI redesign. Aligns the dashboard with
