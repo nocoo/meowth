@@ -49,16 +49,15 @@ describe('NAV_ITEMS / activeNavItem (Stage B1)', () => {
 });
 
 describe('NAV_GROUPS / isItemActive', () => {
-  it('exposes two groups: Dashboard (5 items) and System (1 item)', () => {
+  it('exposes two groups: Dashboard (4 items) and System (2 items)', () => {
     expect(NAV_GROUPS.map((g) => g.label)).toEqual(['Dashboard', 'System']);
     expect(NAV_GROUPS[0]?.items.map((i) => i.to)).toEqual([
       '/overview',
       '/agents',
       '/chat',
       '/sessions',
-      '/tokens',
     ]);
-    expect(NAV_GROUPS[1]?.items.map((i) => i.to)).toEqual(['/settings']);
+    expect(NAV_GROUPS[1]?.items.map((i) => i.to)).toEqual(['/tokens', '/settings']);
   });
 
   it('NAV_ITEMS is derived from NAV_GROUPS in declared order', () => {

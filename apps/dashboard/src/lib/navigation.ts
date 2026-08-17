@@ -83,8 +83,8 @@ const SETTINGS: NavItem = {
 // when an actual product surface (not just a single page) needs
 // its own visual section.
 export const NAV_GROUPS: readonly NavGroup[] = [
-  { label: 'Dashboard', items: [OVERVIEW, AGENTS, CHAT, SESSIONS, TOKENS] },
-  { label: 'System', items: [SETTINGS] },
+  { label: 'Dashboard', items: [OVERVIEW, AGENTS, CHAT, SESSIONS] },
+  { label: 'System', items: [TOKENS, SETTINGS] },
 ];
 
 // Flat list for the collapsed sidebar rail. Derived from
