@@ -1,19 +1,10 @@
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Notice } from '@/components/ui/notice';
 import useSetupViewModel from '@/viewmodels/useSetupViewModel';
 import { useId, useState } from 'react';
-
-// docs/architecture/06 §7.6 / §9.1 — /setup page.
-//
-// Two modes share one page. Mode A (default) is the paste-bearer
-// flow most users hit; mode B mints via the setup-code printed
-// by `meowthd init --skip-token`. The mode B button is disabled
-// when the dashboard is served from a different origin than the
-// daemon (Vite dev), per 04 §6.6 / 06 §9.2.
-//
-// Phase 2 Stage C6 swaps the local ErrorBanner block + the
-// disabled-mint footnote for semantic Notices, keeping all form
-// behavior (validation, placeholders, disabled state, dev-mint
-// guard) and existing tests/selectors unchanged.
 
 export default function SetupPage() {
   const vm = useSetupViewModel();
@@ -36,15 +27,15 @@ export default function SetupPage() {
 
   return (
     <main className="bg-background text-foreground flex min-h-screen items-center justify-center p-6">
-      <div className="bg-secondary rounded-card w-full max-w-md space-y-4 p-6">
+      <Card className="w-full max-w-md space-y-4 p-6">
         <h1 className="text-xl font-semibold">Meowth - Setup</h1>
 
         {vm.mode === 'token' ? (
           <form onSubmit={handleTokenSubmit} className="space-y-3" noValidate>
-            <label htmlFor={tokenId} className="block text-sm">
+            <Label htmlFor={tokenId} className="text-muted-foreground">
               Paste your root token to continue:
-            </label>
-            <input
+            </Label>
+            <Input
               id={tokenId}
               type="password"
               autoComplete="off"
@@ -52,7 +43,7 @@ export default function SetupPage() {
               placeholder="mwt_..."
               value={tokenInput}
               onChange={(e) => setTokenInput(e.target.value)}
-              className="border-input bg-background w-full rounded border px-3 py-2 font-mono text-sm"
+              className="font-mono"
             />
             {errorMessage ? (
               <Notice variant="destructive" role="alert">
@@ -60,31 +51,28 @@ export default function SetupPage() {
               </Notice>
             ) : null}
             <div className="flex items-center justify-end gap-2">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="bg-primary text-primary-foreground rounded px-3 py-2 text-sm disabled:opacity-50"
-              >
+              <Button type="submit" disabled={submitting}>
                 {submitting ? 'Continuing...' : 'Continue'}
-              </button>
+              </Button>
             </div>
             <div className="border-border border-t pt-3 text-sm">
               <p className="text-muted-foreground">Don't have a token yet?</p>
-              <button
+              <Button
                 type="button"
+                variant="link"
+                className="h-auto px-0"
                 onClick={() => vm.setMode('mint')}
-                className="text-primary mt-1 underline-offset-2 hover:underline"
               >
                 I have a setup-code instead
-              </button>
+              </Button>
             </div>
           </form>
         ) : (
           <form onSubmit={handleMintSubmit} className="space-y-3" noValidate>
-            <label htmlFor={codeId} className="block text-sm">
+            <Label htmlFor={codeId} className="text-muted-foreground">
               Paste the setup-code from <code>meowthd init --skip-token</code>:
-            </label>
-            <input
+            </Label>
+            <Input
               id={codeId}
               type="password"
               autoComplete="off"
@@ -92,7 +80,7 @@ export default function SetupPage() {
               placeholder="mws_..."
               value={codeInput}
               onChange={(e) => setCodeInput(e.target.value)}
-              className="border-input bg-background w-full rounded border px-3 py-2 font-mono text-sm"
+              className="font-mono"
             />
             {errorMessage ? (
               <Notice variant="destructive" role="alert">
@@ -100,29 +88,26 @@ export default function SetupPage() {
               </Notice>
             ) : null}
             <div className="flex items-center justify-end gap-2">
-              <button
-                type="submit"
-                disabled={submitting || vm.mintDisabled}
-                className="bg-primary text-primary-foreground rounded px-3 py-2 text-sm disabled:opacity-50"
-              >
+              <Button type="submit" disabled={submitting || vm.mintDisabled}>
                 {submitting ? 'Minting...' : 'Mint token'}
-              </button>
+              </Button>
             </div>
             {vm.mintDisabled && vm.mintDisabledReason ? (
               <Notice variant="info">{vm.mintDisabledReason}</Notice>
             ) : null}
             <div className="border-border border-t pt-3 text-sm">
-              <button
+              <Button
                 type="button"
+                variant="link"
+                className="h-auto px-0"
                 onClick={() => vm.setMode('token')}
-                className="text-primary underline-offset-2 hover:underline"
               >
                 Back to "I already have a token"
-              </button>
+              </Button>
             </div>
           </form>
         )}
-      </div>
+      </Card>
     </main>
   );
 }
