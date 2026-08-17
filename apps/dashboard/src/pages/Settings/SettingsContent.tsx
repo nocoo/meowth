@@ -23,7 +23,7 @@ export interface SettingsContentProps {
 
 export default function SettingsContent({ status }: SettingsContentProps) {
   return (
-    <>
+    <div className="space-y-4">
       {status.kind === 'error' ? (
         <Notice variant="destructive" role="alert">
           {status.message}
@@ -37,6 +37,6 @@ export default function SettingsContent({ status }: SettingsContentProps) {
         Daemon configuration (bind address, remote-access mode, log level) is not exposed in this
         page. Read <code>~/.meowth/config.toml</code> or the daemon startup log to inspect it.
       </p>
-    </>
+    </div>
   );
 }

@@ -1,17 +1,7 @@
 import MessageText from '@/components/MessageText';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import type { SessionInfo, SessionMessageRow } from '@/viewmodels/useSessionDetailViewModel';
-
-// docs/architecture/06 §7.3 + features/02 §4.4 — Phase 2 Stage C3b.
-// Pure-props Content for SessionDetail. Owns the header row
-// (id / backend / status / model / started / ended) and the
-// `session-messages` envelope list. No vm, no route params.
-//
-// Envelope rendering preserves the C3a contract:
-//   - message  : MessageText with payload.content ?? payload.output ?? ''
-//   - error / session_ended / session_started → StatusRow
-//   - heartbeat / usage → hidden (returns null)
-// StatusRow exposes `data-testid="status-row-${env.type}"` and
-// surfaces payload.detail (fallback payload.reason) inline.
 
 export interface SessionDetailContentProps {
   session: SessionInfo;
@@ -23,10 +13,17 @@ function payloadString(payload: Record<string, unknown>, key: string): string | 
   return typeof value === 'string' ? value : null;
 }
 
+function statusVariant(status: string): 'success' | 'destructive' | 'info' | 'secondary' {
+  if (status === 'completed') return 'success';
+  if (status === 'failed' || status === 'error') return 'destructive';
+  if (status === 'running') return 'info';
+  return 'secondary';
+}
+
 function MessageEnvelope({ env }: { env: SessionMessageRow }) {
   const text = payloadString(env.payload, 'content') ?? payloadString(env.payload, 'output') ?? '';
   return (
-    <div className="border-border border-t py-2">
+    <div className="border-border border-t py-3 first:border-t-0 first:pt-0">
       <div className="text-muted-foreground text-xs">
         seq {env.seq} · {env.ts}
       </div>
@@ -40,7 +37,10 @@ function StatusRow({ env, label }: { env: SessionMessageRow; label: string }) {
   const reason = payloadString(env.payload, 'reason');
   const value = detail ?? reason;
   return (
-    <div className="border-border border-t py-2 text-sm" data-testid={`status-row-${env.type}`}>
+    <div
+      className="border-border border-t py-3 text-sm first:border-t-0 first:pt-0"
+      data-testid={`status-row-${env.type}`}
+    >
       <span className="text-muted-foreground text-xs">
         seq {env.seq} · {env.ts}
       </span>
@@ -73,20 +73,24 @@ function renderEnvelope(env: SessionMessageRow): React.ReactNode {
 
 export default function SessionDetailContent({ session, messages }: SessionDetailContentProps) {
   return (
-    <>
-      <div className="space-y-1 text-sm">
+    <div className="space-y-4">
+      <Card className="space-y-3 p-6">
         <p className="text-muted-foreground font-mono text-xs" data-testid="session-detail-id">
           {session.id}
         </p>
-        <p>
-          <strong>{session.backend_type}</strong> · {session.status} · {session.model}
-        </p>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <strong>{session.backend_type}</strong>
+          <Badge variant={statusVariant(session.status)}>{session.status}</Badge>
+          <span className="text-muted-foreground">{session.model}</span>
+        </div>
         <p className="text-muted-foreground text-xs">
           Started {session.started_at}
           {session.ended_at !== null ? ` · ended ${session.ended_at}` : ''}
         </p>
-      </div>
-      <div data-testid="session-messages">{messages.map(renderEnvelope)}</div>
-    </>
+      </Card>
+      <Card className="p-6" data-testid="session-messages">
+        {messages.map(renderEnvelope)}
+      </Card>
+    </div>
   );
 }

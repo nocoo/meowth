@@ -1,4 +1,5 @@
 import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
+import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import useSettingsViewModel from '@/viewmodels/useSettingsViewModel';
 import SettingsContent from './SettingsContent';
@@ -18,11 +19,17 @@ export default function SettingsPage() {
   return (
     <section aria-labelledby="settings-heading">
       <PageHeader title="Settings" headingId="settings-heading" />
-      <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-[auto,1fr]">
-        <dt className="text-muted-foreground">Dashboard build</dt>
-        <dd className="font-mono">{vm.version}</dd>
-      </dl>
-      {vm.status.kind === 'loading' ? <SettingsSkeleton /> : <SettingsContent status={vm.status} />}
+      <Card className="space-y-4 p-6">
+        <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-[auto,1fr]">
+          <dt className="text-muted-foreground">Dashboard build</dt>
+          <dd className="font-mono">{vm.version}</dd>
+        </dl>
+        {vm.status.kind === 'loading' ? (
+          <SettingsSkeleton />
+        ) : (
+          <SettingsContent status={vm.status} />
+        )}
+      </Card>
     </section>
   );
 }
