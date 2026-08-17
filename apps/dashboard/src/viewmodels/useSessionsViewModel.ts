@@ -3,6 +3,8 @@ import type { Session } from '@/models/types';
 import { useCallback, useEffect, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
+export type { Session } from '@/models/types';
+
 export type SessionsStatus =
   | { kind: 'loading' }
   | { kind: 'ready'; sessions: readonly Session[] }

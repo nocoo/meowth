@@ -1,4 +1,4 @@
-import type { Envelope } from '@/models/types';
+import type { Envelope } from '@/viewmodels/useChatViewModel';
 
 // docs/features/03 §5.1 — "多个 text 块合并为一条流".
 //

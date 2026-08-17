@@ -5,8 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { AgentType } from '@/models/agents';
-import type { Agent } from '@/models/types';
+import type { Agent, AgentType } from '@/viewmodels/useChatViewModel';
 
 // docs/features/03 §4.4 — list `installed === true` agents only.
 // Streaming does NOT disable the picker; per §8 the parent

@@ -1,5 +1,4 @@
-import type { ChatTurn } from '@/models/chat';
-import type { Envelope } from '@/models/types';
+import type { ChatTurn, Envelope } from '@/viewmodels/useChatViewModel';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';

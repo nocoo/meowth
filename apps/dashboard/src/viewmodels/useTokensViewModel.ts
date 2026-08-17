@@ -3,6 +3,8 @@ import type { TokenView } from '@/models/types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
+export type { TokenView } from '@/models/types';
+
 // docs/architecture/06 §7.4 + 07 §7.2 — Tokens viewmodel.
 //
 // The `tokens` list state holds the secret-free TokenView shape;

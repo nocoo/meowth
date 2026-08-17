@@ -1,5 +1,5 @@
 import { EmptyState } from '@/components/ui/empty-state';
-import type { ChatTurn } from '@/models/chat';
+import type { ChatTurn } from '@/viewmodels/useChatViewModel';
 import type { ChatViewModel } from '@/viewmodels/useChatViewModel';
 import { Bot } from 'lucide-react';
 import AgentPicker from './AgentPicker';

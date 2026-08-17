@@ -1,5 +1,5 @@
 import MessageText from '@/components/MessageText';
-import type { ChatTurn } from '@/models/chat';
+import type { ChatTurn } from '@/viewmodels/useChatViewModel';
 import { Link } from 'react-router';
 import MessageBubble from './MessageBubble';
 import { groupEnvelopes } from './messageGroups';

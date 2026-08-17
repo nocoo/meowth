@@ -12,6 +12,10 @@ import type { Agent, Envelope } from '@/models/types';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
+export type { AgentType } from '@/models/agents';
+export type { ChatTurn, ChatTurnStatus } from '@/models/chat';
+export type { Agent, Envelope } from '@/models/types';
+
 // docs/features/03 §5.4 + §3.5 + §3.3 — useChatViewModel.
 //
 // Pulls `/v1/agents` on mount, drives one streaming turn at a

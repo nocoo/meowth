@@ -3,6 +3,8 @@ import type { Agent } from '@/models/types';
 import { useCallback, useEffect, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
+export type { Agent } from '@/models/types';
+
 export type AgentsStatus =
   | { kind: 'loading' }
   | { kind: 'ready'; agents: readonly Agent[] }

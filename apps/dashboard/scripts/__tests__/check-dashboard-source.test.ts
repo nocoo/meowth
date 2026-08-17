@@ -136,6 +136,13 @@ describe('check-dashboard-source.sh', () => {
     expect(r.stderr).toContain('direct console.* outside src/lib/logger.ts');
   });
 
+  it('fails when a page imports @/models', () => {
+    writeSrc(tmp, 'pages/Leak.tsx', "import type { Agent } from '@/models/types';\n");
+    const r = runScript(tmp, html);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('pages must not import models');
+  });
+
   it('allows console.* inside src/lib/logger.ts', () => {
     writeSrc(tmp, 'lib/logger.ts', `export function info(m: string){ ${CONSOLE_CALL} }\n`);
     const r = runScript(tmp, html);

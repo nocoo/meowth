@@ -1,5 +1,5 @@
 import MessageText from '@/components/MessageText';
-import type { Envelope } from '@/models/types';
+import type { Envelope } from '@/viewmodels/useChatViewModel';
 import { Link } from 'react-router';
 
 // docs/features/03 §5.1 dispatch table + §5.2 sanitizer rule +

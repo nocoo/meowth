@@ -1,4 +1,4 @@
-import type { ChatTurn } from '@/models/chat';
+import type { ChatTurn } from '@/viewmodels/useChatViewModel';
 import type { ChatAgentsStatus, ChatViewModel } from '@/viewmodels/useChatViewModel';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';

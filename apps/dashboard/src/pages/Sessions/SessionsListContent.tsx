@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Session } from '@/models/types';
+import type { Session } from '@/viewmodels/useSessionsViewModel';
 import { ListTree } from 'lucide-react';
 import { Link } from 'react-router';
 

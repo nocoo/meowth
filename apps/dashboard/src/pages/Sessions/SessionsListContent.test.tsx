@@ -1,4 +1,4 @@
-import type { Session } from '@/models/types';
+import type { Session } from '@/viewmodels/useSessionsViewModel';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';

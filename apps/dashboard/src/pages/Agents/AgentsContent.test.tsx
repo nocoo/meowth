@@ -1,4 +1,4 @@
-import type { Agent } from '@/models/types';
+import type { Agent } from '@/viewmodels/useAgentsViewModel';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import AgentsContent from './AgentsContent';

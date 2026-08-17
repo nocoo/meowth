@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Agent } from '@/models/types';
+import type { Agent } from '@/viewmodels/useAgentsViewModel';
 import { Bot } from 'lucide-react';
 
 // docs/architecture/06 §7.2 + features/02 §4.4 — Phase 2 Stage C2.

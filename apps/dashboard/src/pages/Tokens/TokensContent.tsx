@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { TokenView } from '@/models/types';
+import type { TokenView } from '@/viewmodels/useTokensViewModel';
 import { KeyRound } from 'lucide-react';
 import { useState } from 'react';
 
