@@ -45,7 +45,7 @@ meowth 已有 `--radius-island: 20px`、semantic text token、16 色 avatar。to
 | L2 | `bg-secondary rounded-card` | 表壳、StatCard、设置卡、空态 |
 | L3 | `bg-secondary border-border shadow-xs` | Button outline / Input / Select |
 
-禁止在 L2 卡上再画 `border` / `shadow`。
+L2 默认无 `border` / `shadow`。环线（`ring-1 ring-border/40`）由 [`05`](./05-dashboard-visual-align-whiteboard.md) 补上，与 Whiteboard pew 卡面对齐。
 
 ### 3.2 密度
 
