@@ -6,9 +6,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ChatSkeleton() {
   return (
-    <div className="rounded-card bg-secondary flex flex-col gap-3 p-4" data-slot="chat-skeleton">
+    <div
+      className="rounded-card bg-secondary mx-auto flex h-full w-full max-w-3xl flex-col gap-3 p-4"
+      data-slot="chat-skeleton"
+    >
       <Skeleton className="h-9 w-40" data-slot="skeleton-picker" />
-      <div className="space-y-2" data-slot="skeleton-messages">
+      <div className="min-h-0 flex-1 space-y-2" data-slot="skeleton-messages">
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />

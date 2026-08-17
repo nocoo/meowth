@@ -69,6 +69,11 @@ describe('ChatContent', () => {
     expect(screen.getByLabelText('Backend agent')).toBeInTheDocument();
     expect(screen.getByText('Start a conversation.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
+    const columns = document.querySelectorAll('[data-slot="chat-column"]');
+    expect(columns.length).toBeGreaterThan(0);
+    for (const column of columns) {
+      expect(column.className).toMatch(/max-w-3xl/);
+    }
   });
 
   it('ready with a streaming turn → Composer flips to Cancel + Textarea disabled', () => {

@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { activeNavItem } from '@/lib/navigation';
+import { cn } from '@/lib/utils';
 import { Menu } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router';
@@ -153,8 +154,15 @@ function AppShellInner() {
           </div>
         </header>
 
-        <div className="flex-1 px-2 pb-2 md:px-3 md:pb-3">
-          <div className="rounded-island bg-card h-full overflow-y-auto p-3 shadow-sm ring-1 ring-border/40 md:p-5">
+        <div className="flex min-h-0 flex-1 px-2 pb-2 md:px-3 md:pb-3">
+          <div
+            className={cn(
+              'rounded-island bg-card h-full min-h-0 shadow-sm ring-1 ring-border/40',
+              pathname === '/chat'
+                ? 'flex flex-col overflow-hidden p-0'
+                : 'overflow-y-auto p-3 md:p-5',
+            )}
+          >
             <Outlet />
           </div>
         </div>

@@ -29,30 +29,41 @@ export default function ChatContent({ vm }: ChatContentProps) {
   const installed = vm.agentsStatus.agents.filter((a) => a.installed);
   if (installed.length === 0) {
     return (
-      <EmptyState
-        icon={Bot}
-        title="No agents installed"
-        description="No backends are installed locally. Install at least one CLI (claude / copilot / codex / hermes / pi) — see the Agents page for status."
-      />
+      <div className="flex flex-1 items-center justify-center px-4">
+        <EmptyState
+          icon={Bot}
+          title="No agents installed"
+          description="No backends are installed locally. Install at least one CLI (claude / copilot / codex / hermes / pi) — see the Agents page for status."
+        />
+      </div>
     );
   }
 
   const streaming = isLastTurnStreaming(vm.turns);
 
   return (
-    <div className="flex min-h-[28rem] flex-col">
-      <header className="mb-3 flex items-center justify-between gap-2">
-        <AgentPicker
-          agents={vm.agentsStatus.agents}
-          selectedAgent={vm.selectedAgent}
-          onChange={vm.setSelectedAgent}
-        />
+    <div className="flex h-full min-h-0 flex-1 flex-col" data-slot="chat-shell">
+      <header className="flex shrink-0 justify-center px-4 pt-4 pb-2">
+        <div className="flex w-full max-w-3xl items-center" data-slot="chat-column">
+          <AgentPicker
+            agents={vm.agentsStatus.agents}
+            selectedAgent={vm.selectedAgent}
+            onChange={vm.setSelectedAgent}
+          />
+        </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-auto px-0.5" data-slot="chat-message-area">
-        <MessageList turns={vm.turns} />
+      <div className="min-h-0 flex-1 overflow-y-auto" data-slot="chat-message-area">
+        <div
+          className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 py-4"
+          data-slot="chat-column"
+        >
+          <MessageList turns={vm.turns} />
+        </div>
       </div>
-      <footer className="-mx-3 -mb-3 mt-3 md:-mx-5 md:-mb-5">
-        <ChatComposer composer={vm.composer} isStreaming={streaming} />
+      <footer className="flex shrink-0 justify-center px-4 pt-1 pb-4">
+        <div className="w-full max-w-3xl" data-slot="chat-column">
+          <ChatComposer composer={vm.composer} isStreaming={streaming} />
+        </div>
       </footer>
     </div>
   );

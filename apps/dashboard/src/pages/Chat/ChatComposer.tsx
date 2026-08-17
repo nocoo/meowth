@@ -26,7 +26,7 @@ export default function ChatComposer({ composer, isStreaming }: ChatComposerProp
         e.preventDefault();
         submitIfAllowed();
       }}
-      className="border-border/50 bg-card/80 border-t p-3 backdrop-blur"
+      className="w-full"
     >
       <div className="flex items-end gap-2 rounded-2xl bg-secondary p-2 ring-1 ring-border/50 focus-within:ring-primary/40">
         <Textarea
