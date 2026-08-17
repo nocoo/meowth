@@ -14,7 +14,10 @@ export function PageHeader({ title, description, actions, headingId, className }
   return (
     <div className={cn('mb-6 flex items-center justify-between gap-4', className)}>
       <div className="min-w-0">
-        <h2 id={headingId} className="truncate text-lg font-semibold text-foreground">
+        <h2
+          id={headingId}
+          className="truncate text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem]"
+        >
           {title}
         </h2>
         {description ? <p className="mt-0.5 text-sm text-muted-foreground">{description}</p> : null}

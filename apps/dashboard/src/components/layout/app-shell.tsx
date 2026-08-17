@@ -154,7 +154,7 @@ function AppShellInner() {
         </header>
 
         <div className="flex-1 px-2 pb-2 md:px-3 md:pb-3">
-          <div className="rounded-island bg-card h-full overflow-y-auto p-3 md:p-5">
+          <div className="rounded-island bg-card h-full overflow-y-auto p-3 shadow-sm ring-1 ring-border/40 md:p-5">
             <Outlet />
           </div>
         </div>
