@@ -55,7 +55,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
           'bg-background text-foreground sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden',
           mobile && 'h-full',
           isCollapsed ? 'w-[68px]' : 'w-[260px]',
-          'transition-[width] duration-150 ease-in-out',
+          'transition-all duration-300 ease-in-out',
         )}
       >
         {isCollapsed ? (
@@ -71,15 +71,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
 function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => void }) {
   return (
     <div className="flex h-full w-[68px] flex-col items-center">
-      {/* Logo — centered on the 68px rail so it shares the same
-          vertical centerline as the toggle, nav icons, and bottom
-          avatar (all of which sit at x=34 thanks to the parent's
-          `items-center`). surety uses pl-6 pr-3 justify-start
-          here, which pushes the 24px brand mark to x=36 and looks
-          ~2px off-axis vs the rest of the rail; meowth's user
-          feedback flagged this, so we keep the surety footprint
-          (h-14 row, 24px asset) but center the asset. */}
-      <div className="flex h-14 w-full items-center justify-center">
+      <div className="flex h-14 w-full items-center justify-start pr-3 pl-6">
         <img src="/logo-24.png" alt="Meowth" width={24} height={24} className="shrink-0" />
       </div>
 
@@ -115,7 +107,7 @@ function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => v
                   cn(
                     'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
                     isActive || isItemActive(item, pathname)
-                      ? 'bg-accent text-foreground'
+                      ? 'bg-primary/10 text-primary'
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                   )
                 }
@@ -156,7 +148,7 @@ function ExpandedView({
         <div className="flex w-full items-center justify-between px-3">
           <div className="flex items-center gap-3">
             <img src="/logo-24.png" alt="Meowth" width={24} height={24} className="shrink-0" />
-            <span className="text-base font-semibold">Meowth</span>
+            <span className="text-sm font-semibold tracking-tight">Meowth</span>
             <VersionPill />
           </div>
           {mobile ? null : (
@@ -179,7 +171,7 @@ function ExpandedView({
             <div className="px-3 py-2">
               <span
                 data-testid={`sidebar-group-label-${group.label.toLowerCase()}`}
-                className="text-muted-foreground/70 text-[11px] font-medium"
+                className="text-xs font-semibold text-muted-foreground"
               >
                 {group.label}
               </span>
@@ -193,7 +185,7 @@ function ExpandedView({
                     cn(
                       'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-normal transition-colors',
                       isActive || isItemActive(item, pathname)
-                        ? 'bg-accent text-foreground'
+                        ? 'bg-primary/10 font-medium text-primary'
                         : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                     )
                   }

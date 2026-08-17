@@ -26,13 +26,13 @@ describe('Sidebar (Stage B1)', () => {
   it('marks the active route via NavLink isActive style', () => {
     renderSidebar({ route: '/agents' });
     const active = screen.getByRole('link', { name: 'Agents' });
-    expect(active.className).toContain('bg-accent');
+    expect(active.className).toContain('bg-primary/10');
   });
 
   it('keeps Sessions highlighted under /sessions/<id> via isItemActive', () => {
     renderSidebar({ route: '/sessions/abc' });
     const sessions = screen.getByRole('link', { name: 'Sessions' });
-    expect(sessions.className).toContain('bg-accent');
+    expect(sessions.className).toContain('bg-primary/10');
   });
 
   it('renders an "M" Avatar fallback at the bottom (no user data)', () => {
@@ -102,20 +102,17 @@ describe('Sidebar (Stage B1)', () => {
     expect(screen.getByAltText('Meowth')).toBeInTheDocument();
   });
 
-  it('collapsed mode centers the logo container on the 68px rail (vertical centerline match with toggle/nav/avatar)', async () => {
+  it('collapsed mode keeps the pew logo inset (pl-6 justify-start)', async () => {
     const user = userEvent.setup();
     renderSidebar();
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
-    // The collapsed logo wrapper is the parent of <img alt="Meowth"> that
-    // also includes the `h-14` row class. Asserting `justify-center` here
-    // locks the rail's centerline contract — without it the asset drifts
-    // off-axis from the h-10 nav/toggle buttons and the h-9 avatar.
     const logoImg = screen.getByAltText('Meowth');
     const wrapper = logoImg.parentElement;
     expect(wrapper).not.toBeNull();
-    expect(wrapper?.className ?? '').toContain('justify-center');
+    expect(wrapper?.className ?? '').toContain('justify-start');
+    expect(wrapper?.className ?? '').toContain('pl-6');
     expect(wrapper?.className ?? '').toContain('h-14');
-    expect(wrapper?.className ?? '').not.toContain('justify-start');
+    expect(wrapper?.className ?? '').not.toContain('justify-center');
   });
 
   it('collapsed mode renders the flat icon rail with all five nav items + Expand button', async () => {
