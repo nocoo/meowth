@@ -136,7 +136,10 @@ function SessionEndedFooter({ envelope }: SessionEndedFooterProps) {
   }
 
   return (
-    <div data-bubble-kind="session-ended" className="text-muted-foreground text-xs italic">
+    <div
+      data-bubble-kind="session-ended"
+      className="text-muted-foreground/60 mt-1 text-[11px] leading-5 tabular-nums"
+    >
       {prefix}
       {suffix.length > 0 ? <MessageText content={suffix} /> : null}
     </div>
@@ -150,10 +153,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
   if (kind === 'text') {
     const content = payloadString(envelope, 'content');
     return (
-      <div
-        data-bubble-kind="text"
-        className="w-full rounded-2xl bg-secondary px-3.5 py-2.5 text-sm shadow-sm ring-1 ring-border/50"
-      >
+      <div data-bubble-kind="text" className="text-foreground text-[15px] leading-7">
         <TruncatedText content={content} cap={TEXT_CONTENT_CAP} sessionId={sessionId} />
       </div>
     );
@@ -182,9 +182,9 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     return (
       <div
         data-bubble-kind="tool-use"
-        className="w-full rounded-2xl bg-secondary px-3.5 py-2.5 text-sm shadow-sm ring-1 ring-border/50"
+        className="bg-muted/70 text-muted-foreground rounded-xl px-3 py-2 text-xs leading-5"
       >
-        <div className="text-xs font-semibold">tool: {tool}</div>
+        <div className="text-foreground/70 mb-1 font-medium">tool: {tool}</div>
         <TruncatedText content={serialized} cap={TOOL_USE_INPUT_CAP} sessionId={sessionId} />
       </div>
     );
@@ -195,9 +195,9 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     return (
       <div
         data-bubble-kind="tool-result"
-        className="w-full rounded-2xl bg-secondary px-3.5 py-2.5 text-sm shadow-sm ring-1 ring-border/50"
+        className="bg-muted/70 text-muted-foreground rounded-xl px-3 py-2 text-xs leading-5"
       >
-        <div className="text-xs font-semibold">tool result</div>
+        <div className="text-foreground/70 mb-1 font-medium">tool result</div>
         <TruncatedText content={output} cap={TOOL_RESULT_OUTPUT_CAP} sessionId={sessionId} />
       </div>
     );

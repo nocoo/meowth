@@ -17,7 +17,7 @@ export default function MessageList({ turns }: MessageListProps) {
   if (turns.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground text-sm italic" data-slot="chat-empty-hint">
+        <p className="text-muted-foreground text-sm" data-slot="chat-empty-hint">
           Start a conversation.
         </p>
       </div>
@@ -61,10 +61,10 @@ export default function MessageList({ turns }: MessageListProps) {
             // biome-ignore lint/suspicious/noArrayIndexKey: turn list is append-only
             key={ti}
             aria-label={`Turn ${ti + 1}`}
-            className="space-y-3"
+            className="space-y-4"
           >
             <div className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm text-primary-foreground shadow-sm">
+              <div className="max-w-[min(36rem,85%)] rounded-[1.35rem] bg-[color-mix(in_oklch,hsl(var(--foreground))_8%,hsl(var(--card)))] px-4 py-2.5 text-[15px] leading-6 text-foreground">
                 <MessageText content={turn.userPrompt} />
               </div>
             </div>
@@ -92,7 +92,7 @@ function PendingBubble() {
   return (
     <div
       data-bubble-kind="streaming-pending"
-      className="w-full rounded-2xl bg-secondary px-3.5 py-2.5 text-sm text-muted-foreground shadow-sm ring-1 ring-border/50"
+      className="text-muted-foreground text-[15px] leading-7"
       aria-label="Waiting for response"
     >
       <span className="inline-block animate-pulse">…</span>

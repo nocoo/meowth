@@ -28,7 +28,7 @@ export default function ChatComposer({ composer, isStreaming }: ChatComposerProp
       }}
       className="w-full"
     >
-      <div className="flex items-end gap-2 rounded-2xl bg-secondary p-2 ring-1 ring-border/50 focus-within:ring-primary/40">
+      <div className="flex items-end gap-2 rounded-[1.5rem] bg-[color-mix(in_oklch,hsl(var(--foreground))_6%,hsl(var(--card)))] px-3 py-2 focus-within:bg-[color-mix(in_oklch,hsl(var(--foreground))_9%,hsl(var(--card)))]">
         <Textarea
           value={composer.input}
           onChange={(e) => composer.setInput(e.target.value)}
