@@ -1,6 +1,6 @@
 # 05 · Dashboard visual alignment to Whiteboard pew chrome
 
-> Status: implementation.
+> Status: landed.
 > History: `git log -- docs/features/05-dashboard-visual-align-whiteboard.md`
 > Companion: [`02`](./02-dashboard-redesign-to-basalt-gen2.md) (shell), [`03`](./03-dashboard-chat-with-online-agent.md) (chat contract), [`04`](./04-dashboard-control-alignment.md) (control density).
 > Reference: `~/workspace/work/whiteboard/intentional-kusto-queries/data/dashboard` (AppShell, SectionNav, chat panel). This revision **does not** change that repo.
