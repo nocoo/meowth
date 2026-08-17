@@ -1,6 +1,6 @@
 # 04 · Dashboard 控件与页面视觉对齐 pew / zhe
 
-> 状态：实施中（2026-08-17）
+> 状态：已落地（2026-08-17）；Codex review 迭代中
 > 历史在 `git log -- docs/features/04-dashboard-control-alignment.md`
 > 配套：[docs/architecture/06](../architecture/06-dashboard-mvvm-and-basalt.md)（MVVM / Gen 2 壳保持不动）
 > 参考源：`~/workspace/personal/zhe`（`nocoo/zhe`，本机 clone）、`~/workspace/personal/pew`、`~/workspace/personal/gecko`、`~/workspace/personal/surety`

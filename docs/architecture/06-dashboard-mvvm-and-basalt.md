@@ -310,9 +310,9 @@ These files are the original Phase 3.13 basalt source-copy set; provenance class
 | `src/index.css` (basalt `@theme inline {...}` + `@import "tw-animate-css"`) | `apps/dashboard/src/index.css` | source-copy; do not modify token values; meowth-specific tokens appended at file end only |
 | `src/lib/utils.ts` (`cn()` = `clsx` + `tailwind-merge`) | `apps/dashboard/src/lib/utils.ts` | source-copy |
 | `src/lib/palette.ts` | `apps/dashboard/src/lib/palette.ts` | source-copy |
-| `src/components/ui/button.tsx` | `apps/dashboard/src/components/ui/button.tsx` | source-copy |
-| `src/components/ui/input.tsx` | `apps/dashboard/src/components/ui/input.tsx` | source-copy |
-| `src/components/ui/dialog.tsx` | `apps/dashboard/src/components/ui/dialog.tsx` | source-copy (Tokens page dialog depends on it) |
+| `src/components/ui/button.tsx` | `apps/dashboard/src/components/ui/button.tsx` | **superseded** by zhe density copy (features/04) |
+| `src/components/ui/input.tsx` | `apps/dashboard/src/components/ui/input.tsx` | **superseded** by zhe density copy (features/04) |
+| `src/components/ui/dialog.tsx` | `apps/dashboard/src/components/ui/dialog.tsx` | **superseded** by pew recipe (features/04) |
 
 `badge` / `label` / `separator` / `tooltip` etc. **are not** part of this basalt baseline anymore — they were re-imported from surety during Stage A3/A4 as part of the Gen 2 G1/G2 sets (see §4.1.3); `_UPSTREAM.md` lists each of them under the surety block.
 
@@ -483,9 +483,9 @@ Phase 2 redesign mapped basalt B05 surface tokens to a fixed four-layer brightne
 | layer | role | basalt token / utility | typical use |
 |-------|------|------------------------|-------------|
 | **L0** | page underlayer | `--color-background` → `bg-background` | `<html>` / outer `<main>` / page root chrome |
-| **L1** | floating-island panel | `--color-card` → `bg-card` + `border` + `rounded-card` | Sidebar floating panel, top-level page section, Tokens reveal-dialog inner card |
-| **L2** | embedded surface inside L1 | `--color-secondary` → `bg-secondary` + `rounded-card` | StatCard tile, EmptyState container, Notice fill |
-| **L3** | nested inset / chip / row separator | `bg-secondary` + `border-border border-t/b` | table row dividers, code block, in-card subdued strips |
+| **L1** | floating-island panel | `--color-card` → `bg-card` + `rounded-island` | AppShell island, Dialog panel (`rounded-xl bg-card`) |
+| **L2** | embedded surface inside L1 | `--color-secondary` → `bg-secondary` + `rounded-card` | `<Card>`, StatCard, EmptyState, table shells |
+| **L3** | nested inset / chip / row separator | `bg-secondary` + `border-border` + `shadow-xs` | Button outline / Input / Select |
 
 Constraints:
 
@@ -528,7 +528,7 @@ basalt 已包含 light/dark 两套（`@custom-variant dark (&:where(.dark, .dark
 
 ### 6.2 可执行的边界约束
 
-MVVM 边界由 `apps/dashboard/.dependency-cruiser.cjs` 强制执行，已在 G1 中通过 `pnpm dashboard:depcruise` 跑成检查（每个 commit 都跑）：
+MVVM 边界由 `scripts/check-dashboard-source.sh` 强制执行（`pages` 不得出现任何指向 `models/` 的 import / export / dynamic import）。`apps/dashboard/.dependency-cruiser.cjs` 仍是规则声明，但 dependency-cruiser@16.10.4 无法解析 TypeScript 7，G1 不能把它当活门。
 
 ```js
 {
@@ -582,7 +582,7 @@ Phase 2 Stage C refined the page layer so every page (except the pre-login `/set
 | sub-file | responsibility | typical imports |
 |----------|----------------|-----------------|
 | `XxxPage.tsx` | **shell** — owns `useXxxViewModel()` + the `loading / error / ready` branch; renders the heading and any always-on toolbar (e.g. Tokens `Create token` button); does not import models or API | `@/viewmodels/*`, `@/components/ui/empty-state`, the per-page Content + Skeleton siblings |
-| `XxxContent.tsx` | **pure-props** — receives the resolved domain data and renders the business UI (table / list / detail / etc.) plus the true-empty branch | `@/models/types` for prop types (or vm-re-exported types when the page's domain shape lives on the vm), `@/components/ui/*` |
+| `XxxContent.tsx` | **pure-props** — receives the resolved domain data and renders the business UI (table / list / detail / etc.) plus the true-empty branch | viewmodel-re-exported types only (never `@/models/*`), `@/components/ui/*` |
 | `XxxSkeleton.tsx` | **pre-data placeholder** — mirrors the Content footprint with `animate-pulse` cells using **stable string-key arrays** (never `index` as `key`) | `@/components/ui/skeleton` only |
 | `XxxDialog.tsx` (optional) | **extracted modal** — only when the page hosts a non-trivial dialog (currently `TokensCreateDialog`); kept separate so the shell stays small and the dialog's lifecycle (mount/unmount, plaintext clearing) can be tested independently | `@/viewmodels/*` for the vm contract, `@/components/SecretReveal`, etc. |
 

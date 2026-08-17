@@ -27,15 +27,11 @@ commit yet).
 | src/index.css                  | apps/dashboard/src/index.css                  |
 | src/lib/utils.ts               | apps/dashboard/src/lib/utils.ts               |
 | src/lib/palette.ts             | apps/dashboard/src/lib/palette.ts             |
-| src/components/ui/button.tsx   | apps/dashboard/src/components/ui/button.tsx   |
-| src/components/ui/input.tsx    | apps/dashboard/src/components/ui/input.tsx    |
-| src/components/ui/dialog.tsx   | apps/dashboard/src/components/ui/dialog.tsx   |
 
-Phase 2 dashboard redesign Stage B4 removed
-`src/components/ui/card.tsx` (originally copied in Phase 3.13).
-Business `<Card>` usage was migrated to direct
-`bg-secondary rounded-card` styling in Stage B3; B4 grep proved
-no remaining import / JSX reference, so the file was deleted.
+`button.tsx` / `input.tsx` / `dialog.tsx` were copied from basalt
+in Phase 3.13 and **superseded** by the zhe/pew copies in
+`docs/features/04`. `card.tsx` was deleted in Stage B4 and
+**restored** from zhe in that same feature.
 
 ### Source-copy verbatim — superseded by surety provenance below
 
@@ -178,8 +174,8 @@ alignment (`docs/features/04-dashboard-control-alignment.md`).
 
 | Field         | Value |
 |---------------|-------|
-| zhe           | local: ~/workspace/personal/zhe (`nocoo/zhe`) |
-| pew           | local: ~/workspace/personal/pew |
+| zhe           | local: ~/workspace/personal/zhe (`nocoo/zhe`) @90a1320b777d646c81e96e72bc124595ad88a9c4 |
+| pew           | local: ~/workspace/personal/pew @fd86e50a561868154659841065b2b66b06fe5161 |
 | copied_at     | 2026-08-17 |
 | license       | MIT |
 

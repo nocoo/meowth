@@ -9,7 +9,7 @@
 | 01 | [`01-port-migration-to-hexly-caddy.md`](./01-port-migration-to-hexly-caddy.md) | 端口迁移到 Hexly Caddy 体系（7040 + 37040 + 17040/17041） | 源码 + 文档 + Caddy 已落地;Caddy HTTPS 手工实测待跟进 |
 | 02 | [`02-dashboard-redesign-to-basalt-gen2.md`](./02-dashboard-redesign-to-basalt-gen2.md) | Dashboard 重构对齐 basalt Gen 2（AppShell / 浮岛 / 四层亮度 / MVVM 三段式） | Stage A/B/C 已落地（2026-06-25）;C7/C8 SKIPPED |
 | 03 | [`03-dashboard-chat-with-online-agent.md`](./03-dashboard-chat-with-online-agent.md) | Dashboard Chat 模块：选 online agent 多轮对话（复用 NDJSON exec + resume_session_id） | 已落地（v0.4.0） |
-| 04 | [`04-dashboard-control-alignment.md`](./04-dashboard-control-alignment.md) | 控件 / token / 页面视觉对齐 pew + zhe | 实施中 |
+| 04 | [`04-dashboard-control-alignment.md`](./04-dashboard-control-alignment.md) | 控件 / token / 页面视觉对齐 pew + zhe | 已落地 |
 
 ## 何时新建 features 文档
 
