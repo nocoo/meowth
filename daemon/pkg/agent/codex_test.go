@@ -1017,6 +1017,12 @@ func TestCodexStartOrResumeThreadStartsFresh(t *testing.T) {
 				if params["persistExtendedHistory"] != true {
 					t.Error("expected persistExtendedHistory=true on thread/start")
 				}
+				if params["approvalPolicy"] != "never" {
+					t.Errorf("approvalPolicy = %v, want never", params["approvalPolicy"])
+				}
+				if params["sandbox"] != "danger-full-access" {
+					t.Errorf("sandbox = %v, want danger-full-access", params["sandbox"])
+				}
 			},
 		},
 	})
@@ -1124,6 +1130,12 @@ func TestCodexStartOrResumeThreadResumesPriorThread(t *testing.T) {
 				}
 				if params["cwd"] != "/work" {
 					t.Errorf("cwd = %v, want /work", params["cwd"])
+				}
+				if params["approvalPolicy"] != "never" {
+					t.Errorf("approvalPolicy = %v, want never", params["approvalPolicy"])
+				}
+				if params["sandbox"] != "danger-full-access" {
+					t.Errorf("sandbox = %v, want danger-full-access", params["sandbox"])
 				}
 			},
 		},
@@ -1817,6 +1829,41 @@ func TestWithAgentStderrAppendsHint(t *testing.T) {
 	want := "codex initialize failed: process exited; codex stderr: unexpected argument '-m' found"
 	if msg != want {
 		t.Errorf("got %q, want %q", msg, want)
+	}
+}
+
+func TestBuildCodexArgsStartsWithYoloAppServer(t *testing.T) {
+	t.Parallel()
+
+	args := buildCodexArgs(ExecOptions{}, slog.Default())
+	wantPrefix := []string{"--yolo", "app-server", "--listen", "stdio://"}
+	if len(args) < len(wantPrefix) {
+		t.Fatalf("args too short: %v", args)
+	}
+	for i, want := range wantPrefix {
+		if args[i] != want {
+			t.Fatalf("args[:%d] = %v, want prefix %v", len(wantPrefix), args[:len(wantPrefix)], wantPrefix)
+		}
+	}
+}
+
+func TestBuildCodexArgsFiltersYoloFromCustomArgs(t *testing.T) {
+	t.Parallel()
+
+	args := buildCodexArgs(ExecOptions{
+		CustomArgs: []string{"--yolo", "-c", `model="o3"`},
+	}, slog.Default())
+	yoloCount := 0
+	for _, a := range args {
+		if a == "--yolo" {
+			yoloCount++
+		}
+	}
+	if yoloCount != 1 {
+		t.Fatalf("expected a single leading --yolo, got %d in %v", yoloCount, args)
+	}
+	if args[0] != "--yolo" {
+		t.Fatalf("leading flag = %q, want --yolo", args[0])
 	}
 }
 

@@ -232,7 +232,7 @@ CREATE INDEX idx_tokens_active ON tokens(revoked_at) WHERE revoked_at IS NULL;
 |------|---------------|----------|---------------|------|
 | `claude` | `claude` | `claude --output-format stream-json --input-format stream-json --verbose` | NDJSON stream-json，stdin 持续接控制消息 | pump multica `claude.go` |
 | `copilot` | `copilot` | `copilot -p "<prompt>" --output-format json --allow-all --no-ask-user` | JSONL events（Copilot CLI v1.0.28+） | pump multica `copilot.go`（**不是** `gh copilot`） |
-| `codex` | `codex` | `codex app-server --listen stdio://` | JSON-RPC 2.0 over stdin/stdout（**不是 stream-json**） | pump multica `codex.go` |
+| `codex` | `codex` | `codex --yolo app-server --listen stdio://` | JSON-RPC 2.0 over stdin/stdout（**不是 stream-json**） | pump multica `codex.go` |
 | `hermes` | `hermes` | `hermes acp <custom args>` | ACP 协议 over stdio | pump multica `hermes.go` |
 | `pi` | `pi` | `pi <prompt>`（prompt 走 argv 位置参数，配 session 文件） | 详见 `pi_invocation*.go` 平台分桶 | pump multica `pi.go` |
 

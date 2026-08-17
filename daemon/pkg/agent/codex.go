@@ -26,7 +26,8 @@ import (
 // stripped separately by filterCodexCustomConfigOverrides because they
 // share the `-c` flag with legitimate non-MCP overrides like `-c model=…`.
 var codexBlockedArgs = map[string]blockedArgMode{
-	"--listen": blockedWithValue, // stdio:// transport for daemon communication
+	"--listen": blockedWithValue,  // stdio:// transport for daemon communication
+	"--yolo":   blockedStandalone, // injected before app-server; after it the CLI rejects the flag
 }
 
 // codexStderrTailBytes bounds the stderr tail captured for inclusion in
@@ -78,14 +79,17 @@ type codexTimeoutDiagnostic struct {
 	CodexVersion string
 }
 
-// codexBackend implements Backend by spawning `codex app-server --listen stdio://`
-// and communicating via JSON-RPC 2.0 over stdin/stdout.
+// codexBackend implements Backend by spawning
+// `codex --yolo app-server --listen stdio://` and communicating via
+// JSON-RPC 2.0 over stdin/stdout.
 type codexBackend struct {
 	cfg Config
 }
 
 func buildCodexArgs(opts ExecOptions, logger *slog.Logger) []string {
-	args := []string{"app-server", "--listen", "stdio://"}
+	// --yolo is a hidden top-level alias and must precede the subcommand;
+	// `codex app-server --yolo` is rejected by the CLI.
+	args := []string{"--yolo", "app-server", "--listen", "stdio://"}
 	extra := filterCustomArgs(opts.ExtraArgs, codexBlockedArgs, logger)
 	custom := filterCustomArgs(opts.CustomArgs, codexBlockedArgs, logger)
 	// Only claim ownership of the `mcp_servers` namespace when the agent
@@ -943,6 +947,7 @@ func (c *codexClient) startOrResumeThread(ctx context.Context, opts ExecOptions,
 			"model":                 nilIfEmpty(opts.Model),
 			"developerInstructions": nilIfEmpty(opts.SystemPrompt),
 		}
+		applyCodexYoloPolicy(resumeParams)
 		// Explicit override of the persisted reasoning effort: without
 		// this, a Codex resume silently reuses whatever level the prior
 		// session was created with, even when the user has flipped the
@@ -969,8 +974,6 @@ func (c *codexClient) startOrResumeThread(ctx context.Context, opts ExecOptions,
 		"modelProvider":          nil,
 		"profile":                nil,
 		"cwd":                    opts.Cwd,
-		"approvalPolicy":         nil,
-		"sandbox":                nil,
 		"config":                 nil,
 		"baseInstructions":       nil,
 		"developerInstructions":  nilIfEmpty(opts.SystemPrompt),
@@ -979,6 +982,7 @@ func (c *codexClient) startOrResumeThread(ctx context.Context, opts ExecOptions,
 		"experimentalRawEvents":  false,
 		"persistExtendedHistory": true,
 	}
+	applyCodexYoloPolicy(startParams)
 	applyCodexReasoningEffort(startParams, opts.ThinkingLevel)
 	startResult, err := c.request(ctx, "thread/start", startParams)
 	if err != nil {
@@ -1009,6 +1013,17 @@ func (c *codexClient) setThreadName(ctx context.Context, threadID, name string) 
 		"name":     name,
 	})
 	return err
+}
+
+// applyCodexYoloPolicy writes the app-server equivalents of `codex --yolo`
+// so thread/start and thread/resume do not inherit the CLI's ask-first
+// defaults (approvalPolicy/sandbox nil).
+func applyCodexYoloPolicy(params map[string]any) {
+	if params == nil {
+		return
+	}
+	params["approvalPolicy"] = "never"
+	params["sandbox"] = "danger-full-access"
 }
 
 // applyCodexReasoningEffort writes the per-agent thinking_level into a
