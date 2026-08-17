@@ -284,10 +284,12 @@ v1 选定方案（**不**修改 04 安全边界）：
 
 ## 4. UI primitives — source-copy and source-derived
 
-`apps/dashboard/src/components/` is assembled from two upstream design systems plus a small set of meowth-local additions:
+`apps/dashboard/src/components/` is assembled from four local upstreams plus a small set of meowth-local additions:
 
-- **basalt** (`~/workspace/personal/basalt`) — the visual design system this dashboard inherits tokens and the original primitive set from. basalt is the project author's own local repository (not an npm package).
-- **surety** (`~/workspace/personal/surety`, MIT) — sibling project that already ships the Gen 2 floating-island app shell + extended primitive set (`empty-state`, `notice`, `skeleton`, the `layout/{app-shell,sidebar,sidebar-context}` triplet, etc.). Phase 2 Stage A/B introduced these by porting from surety rather than re-inventing them.
+- **basalt** (`~/workspace/personal/basalt`) — tokens and the original primitive set. Not an npm package.
+- **surety** (`~/workspace/personal/surety`, MIT) — Gen 2 floating-island app shell + extended primitives (`empty-state`, `notice`, `skeleton`, `layout/{app-shell,sidebar,sidebar-context}`).
+- **zhe** (`~/workspace/personal/zhe`, MIT) — control density + `Card` / `PageHeader` (features/04).
+- **pew** (`~/workspace/personal/pew`, MIT) — Dialog overlay/panel recipe + `ConfirmDialog` (features/04).
 
 dashboard **does not** depend on either project as an npm package; sources are copied (or formatted/coverage-annotated copies derived from them) into `apps/dashboard/src/`. The `_UPSTREAM.md` record at the root of `apps/dashboard/src/` tracks every primitive's origin and provenance class — see `§4.2`.
 
@@ -394,7 +396,7 @@ The §4.1.3 inventory is the full file set on disk; not every primitive is consu
 | `tooltip` | G1 | `components/layout/sidebar.tsx` |
 | `skeleton` | G1 | every `pages/<Xxx>/<Xxx>Skeleton.tsx` (Overview / Agents / SessionsList / SessionDetail / Tokens / Settings) |
 | `empty-state` | G1 | Agents (Page+Content), SessionsList (Page+Content), SessionDetail (Page), Tokens (Page+Content), Overview (Content) |
-| `table` | G2 | Agents Content+Skeleton, SessionsList Content+Skeleton, Tokens Content+Skeleton — all wrapped in `rounded-card bg-secondary overflow-hidden` L2 surface (see §5.1, §7) |
+| `table` | G2 | Agents / SessionsList / Tokens Content wrap `<Table>` in `<Card className="overflow-hidden">`; Skeletons may use the equivalent utility wrap |
 | `notice` | G2 | Settings (Content), Setup (Page) |
 | `button` / `input` / `dialog` | baseline | Tokens create dialog, Setup form, Chat composer |
 | `card` / `page-header` / `confirm-dialog` | features/04 | L2 surface, shared page titles, Tokens revoke |
