@@ -63,6 +63,23 @@ describe('TokensContent (props, Stage C4)', () => {
     expect(onRevoke).toHaveBeenCalledWith('target-id');
   });
 
+  it('does not fire onRevoke twice while the first confirm is in flight', async () => {
+    let release: (() => void) | undefined;
+    const onRevoke = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    );
+    render(<TokensContent tokens={[makeToken({ id: 'target-id' })]} onRevoke={onRevoke} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    await user.click(screen.getByRole('button', { name: '...' }));
+    expect(onRevoke).toHaveBeenCalledTimes(1);
+    release?.();
+  });
+
   it('shows an EmptyState (not the table) when tokens list is empty', () => {
     render(<TokensContent tokens={[]} onRevoke={noopRevoke} />);
     expect(screen.getByText('No tokens yet')).toBeInTheDocument();

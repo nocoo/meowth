@@ -21,6 +21,7 @@ export interface TokensContentProps {
 
 export default function TokensContent({ tokens, onRevoke }: TokensContentProps) {
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [revoking, setRevoking] = useState(false);
   const pending = tokens.find((tok) => tok.id === pendingId);
 
   if (tokens.length === 0) {
@@ -69,13 +70,19 @@ export default function TokensContent({ tokens, onRevoke }: TokensContentProps) 
       </Card>
       <ConfirmDialog
         open={pendingId !== null}
+        loading={revoking}
         onOpenChange={(open) => {
-          if (!open) setPendingId(null);
+          if (!open && !revoking) setPendingId(null);
         }}
         onConfirm={async () => {
-          if (pendingId === null) return;
-          await onRevoke(pendingId);
-          setPendingId(null);
+          if (pendingId === null || revoking) return;
+          setRevoking(true);
+          try {
+            await onRevoke(pendingId);
+            setPendingId(null);
+          } finally {
+            setRevoking(false);
+          }
         }}
         title="Revoke token?"
         description={
