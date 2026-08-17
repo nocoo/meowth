@@ -1,4 +1,5 @@
 import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
+import { PageHeader } from '@/components/ui/page-header';
 import useSettingsViewModel from '@/viewmodels/useSettingsViewModel';
 import SettingsContent from './SettingsContent';
 import SettingsSkeleton from './SettingsSkeleton';
@@ -15,10 +16,8 @@ export default function SettingsPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="settings-heading" className="space-y-3">
-      <h2 id="settings-heading" className="text-xl font-semibold">
-        Settings
-      </h2>
+    <section aria-labelledby="settings-heading">
+      <PageHeader title="Settings" headingId="settings-heading" />
       <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-[auto,1fr]">
         <dt className="text-muted-foreground">Dashboard build</dt>
         <dd className="font-mono">{vm.version}</dd>

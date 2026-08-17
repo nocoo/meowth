@@ -1,3 +1,5 @@
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   Table,
@@ -10,6 +12,13 @@ import {
 import type { Session } from '@/models/types';
 import { ListTree } from 'lucide-react';
 import { Link } from 'react-router';
+
+function statusVariant(status: string): 'success' | 'destructive' | 'info' | 'secondary' {
+  if (status === 'completed') return 'success';
+  if (status === 'failed' || status === 'error') return 'destructive';
+  if (status === 'running') return 'info';
+  return 'secondary';
+}
 
 // docs/architecture/06 §7.3 + features/02 §4.4 — Phase 2 Stage C3a.
 // Pure-props Content component for SessionsList. Receives the
@@ -43,7 +52,7 @@ export default function SessionsListContent({ sessions }: SessionsListContentPro
     );
   }
   return (
-    <div className="rounded-card bg-secondary overflow-hidden">
+    <Card className="overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -62,7 +71,9 @@ export default function SessionsListContent({ sessions }: SessionsListContentPro
                   {session.backend_type}
                 </Link>
               </TableCell>
-              <TableCell>{session.status}</TableCell>
+              <TableCell>
+                <Badge variant={statusVariant(session.status)}>{session.status}</Badge>
+              </TableCell>
               <TableCell className="font-mono text-xs">{session.model}</TableCell>
               <TableCell className="font-mono text-xs">{session.started_at}</TableCell>
               <TableCell className="text-xs">{session.thread_name}</TableCell>
@@ -70,6 +81,6 @@ export default function SessionsListContent({ sessions }: SessionsListContentPro
           ))}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   );
 }

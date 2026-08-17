@@ -1,5 +1,6 @@
 import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 import useSessionsViewModel from '@/viewmodels/useSessionsViewModel';
 import { AlertCircle } from 'lucide-react';
 import SessionsListContent from './SessionsListContent';
@@ -16,10 +17,8 @@ export default function SessionsListPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="sessions-heading" className="space-y-2">
-      <h2 id="sessions-heading" className="text-xl font-semibold">
-        Sessions
-      </h2>
+    <section aria-labelledby="sessions-heading">
+      <PageHeader title="Sessions" headingId="sessions-heading" />
       {vm.status.kind === 'loading' ? (
         <SessionsListSkeleton />
       ) : vm.status.kind === 'error' ? (

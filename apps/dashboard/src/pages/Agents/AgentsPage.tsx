@@ -1,5 +1,6 @@
 import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 import useAgentsViewModel from '@/viewmodels/useAgentsViewModel';
 import { AlertCircle } from 'lucide-react';
 import AgentsContent from './AgentsContent';
@@ -15,10 +16,8 @@ export default function AgentsPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="agents-heading" className="space-y-2">
-      <h2 id="agents-heading" className="text-xl font-semibold">
-        Agents
-      </h2>
+    <section aria-labelledby="agents-heading">
+      <PageHeader title="Agents" headingId="agents-heading" />
       {vm.status.kind === 'loading' ? (
         <AgentsSkeleton />
       ) : vm.status.kind === 'error' ? (

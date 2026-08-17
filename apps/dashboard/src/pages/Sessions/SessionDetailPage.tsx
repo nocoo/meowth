@@ -1,5 +1,6 @@
 import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 import useSessionDetailViewModel from '@/viewmodels/useSessionDetailViewModel';
 import { AlertCircle } from 'lucide-react';
 import { useParams } from 'react-router';
@@ -20,10 +21,8 @@ export default function SessionDetailPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="session-detail-heading" className="space-y-3">
-      <h2 id="session-detail-heading" className="text-xl font-semibold">
-        Session
-      </h2>
+    <section aria-labelledby="session-detail-heading">
+      <PageHeader title="Session" headingId="session-detail-heading" />
       {vm.status.kind === 'loading' ? (
         <SessionDetailSkeleton />
       ) : vm.status.kind === 'error' ? (

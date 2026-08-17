@@ -1,5 +1,6 @@
 import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 import useChatViewModel from '@/viewmodels/useChatViewModel';
 import { AlertCircle } from 'lucide-react';
 import { useCallback } from 'react';
@@ -24,10 +25,8 @@ export default function ChatPage() {
   useRegisterRefresh(handleHeaderRefresh);
 
   return (
-    <section aria-labelledby="chat-heading" className="space-y-2">
-      <h2 id="chat-heading" className="text-xl font-semibold">
-        Chat
-      </h2>
+    <section aria-labelledby="chat-heading">
+      <PageHeader title="Chat" headingId="chat-heading" />
       {vm.agentsStatus.kind === 'loading' ? (
         <ChatSkeleton />
       ) : vm.agentsStatus.kind === 'error' ? (

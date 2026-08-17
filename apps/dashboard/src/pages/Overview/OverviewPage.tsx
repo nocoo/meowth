@@ -1,5 +1,6 @@
 import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 import useOverviewViewModel from '@/viewmodels/useOverviewViewModel';
 import { AlertCircle } from 'lucide-react';
 import OverviewContent from './OverviewContent';
@@ -15,10 +16,8 @@ export default function OverviewPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="overview-heading" className="space-y-4">
-      <h2 id="overview-heading" className="text-xl font-semibold">
-        Overview
-      </h2>
+    <section aria-labelledby="overview-heading">
+      <PageHeader title="Overview" headingId="overview-heading" />
       {vm.status.kind === 'loading' ? (
         <OverviewSkeleton />
       ) : vm.status.kind === 'error' ? (

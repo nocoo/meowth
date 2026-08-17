@@ -1,3 +1,5 @@
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   Table,
@@ -37,7 +39,7 @@ export default function AgentsContent({ agents }: AgentsContentProps) {
     );
   }
   return (
-    <div className="rounded-card bg-secondary overflow-hidden">
+    <Card className="overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -51,13 +53,17 @@ export default function AgentsContent({ agents }: AgentsContentProps) {
           {agents.map((agent) => (
             <TableRow key={agent.type}>
               <TableCell className="font-mono">{agent.type}</TableCell>
-              <TableCell>{agent.installed ? 'yes' : 'no'}</TableCell>
+              <TableCell>
+                <Badge variant={agent.installed ? 'success' : 'outline'}>
+                  {agent.installed ? 'yes' : 'no'}
+                </Badge>
+              </TableCell>
               <TableCell className="font-mono text-xs">{agent.executable}</TableCell>
               <TableCell className="font-mono text-xs">{agent.version}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   );
 }
