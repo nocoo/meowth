@@ -396,14 +396,16 @@ The §4.1.3 inventory is the full file set on disk; not every primitive is consu
 | `empty-state` | G1 | Agents (Page+Content), SessionsList (Page+Content), SessionDetail (Page), Tokens (Page+Content), Overview (Content) |
 | `table` | G2 | Agents Content+Skeleton, SessionsList Content+Skeleton, Tokens Content+Skeleton — all wrapped in `rounded-card bg-secondary overflow-hidden` L2 surface (see §5.1, §7) |
 | `notice` | G2 | Settings (Content), Setup (Page) |
-| `button` / `input` / `dialog` | baseline | Tokens dialog, Setup form, layout chrome |
-| `collapsible` / `separator` / `badge` (G1); `dropdown-menu` / `select` / `label` / `section-divider` / `switch` / `textarea` / `toggle` / `toggle-group` / `sort-header` (G2) | G1/G2 | **not yet imported by any non-test consumer** — copied + smoke-tested only; reserved for future pages |
+| `button` / `input` / `dialog` | baseline | Tokens create dialog, Setup form, Chat composer |
+| `card` / `page-header` / `confirm-dialog` | features/04 | L2 surface, shared page titles, Tokens revoke |
+| `badge` / `label` / `select` / `textarea` | G1/G2 | Agents / Sessions / Overview status chips; Setup / Tokens labels; Chat picker + composer |
+| `collapsible` / `separator` / `dropdown-menu` / `section-divider` / `switch` / `toggle` / `toggle-group` / `sort-header` (G2) | G1/G2 | **not yet imported by any non-test consumer** — copied + smoke-tested only; reserved for future pages |
 
-`switch` and `sort-header` are kept on disk for the next surface that needs them, but per §6.4 #3 must not be wired without backing viewmodel state. G3 `alert-dialog` is **not** present on disk; it would be introduced in its own commit only when a real destructive-confirm path appears.
+`switch` and `sort-header` are kept on disk for the next surface that needs them, but per §6.4 #3 must not be wired without backing viewmodel state. Destructive confirm is `confirm-dialog.tsx` (pew recipe), not G3 `alert-dialog`.
 
-#### 4.1.6 Card primitive deletion (Stage B4)
+#### 4.1.6 Card primitive (features/04)
 
-`components/ui/card.tsx` (basalt source-copy) was deleted in Stage B4. The Gen 2 design uses Tailwind utility surfaces (`bg-card` / `bg-secondary` / `rounded-card`) directly inside each Content component; nothing in the dashboard imports `<Card>` any more. The local `StatPanel` (Stage B3) covered the small remaining "padded surface" use case before `StatCard` (§4.1.4) subsumed it.
+`components/ui/card.tsx` is back: zhe L2 (`bg-secondary rounded-card`, no border/shadow). Content pages wrap tables, settings, and session metadata in `<Card>` instead of repeating the utility string. The island remains `rounded-island bg-card` (L1).
 
 ### 4.2 来源锁定记录
 
@@ -659,7 +661,8 @@ The viewmodel itself keeps a separate fetch-driven test (`useXxxViewModel.test.t
 | Page (shell) | `pages/Tokens/TokensPage.tsx` (Heading + always-on `Create token` button + the dialog is always mounted, gates on `vm.modal.open` internally) |
 | Content (pure-props) | `pages/Tokens/TokensContent.tsx` (`<Table>` primitive on a `rounded-card bg-secondary overflow-hidden` L2 surface; columns Name / Prefix / Created / Last used / Revoke; `EmptyState icon={KeyRound}` when daemon returns zero tokens) |
 | Skeleton | `pages/Tokens/TokensSkeleton.tsx` (5 rows × 5 cols animate-pulse, same L2 wrap) |
-| Dialog | `pages/Tokens/TokensCreateDialog.tsx` (manual `role="dialog" + aria-modal + aria-label="Create token"`; not a G3 alert-dialog because the create flow is non-destructive) |
+| Dialog | `pages/Tokens/TokensCreateDialog.tsx` (`Dialog` + `Input` + `Label` + `Button`; accessible name stays `Create token`) |
+| Confirm | `pages/Tokens/TokensContent.tsx` uses `ConfirmDialog` for revoke |
 | ViewModel | `viewmodels/useTokensViewModel.ts` |
 | Models 调用 | `tokens.listTokens()`、`tokens.createToken({name})`、`tokens.revokeToken(id)` |
 | 显示 | 列表 + 创建按钮 + 撤销按钮 |

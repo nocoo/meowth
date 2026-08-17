@@ -167,4 +167,26 @@ redesign (Phase 2 feature plan
 
 | surety upstream path                                 | meowth target                                          |
 |------------------------------------------------------|--------------------------------------------------------|
-| _alert-dialog.tsx, copied only when a page commit actually consumes destructive confirm_      | _-_                                                    |
+| _alert-dialog.tsx, not used; revoke uses pew confirm-dialog instead_      | _-_                                                    |
+
+---
+
+# zhe / pew provenance
+
+Control-density and dialog recipe copies from the 2026-08-17
+alignment (`docs/features/04-dashboard-control-alignment.md`).
+
+| Field         | Value |
+|---------------|-------|
+| zhe           | local: ~/workspace/personal/zhe (`nocoo/zhe`) |
+| pew           | local: ~/workspace/personal/pew |
+| copied_at     | 2026-08-17 |
+| license       | MIT |
+
+| upstream path | meowth target | notes |
+|---------------|---------------|-------|
+| zhe `components/ui/button.tsx` + `docs/22-design-tokens.md` | `components/ui/button.tsx` | density ladder; `Slot.Root` from `radix-ui` |
+| zhe `components/ui/input.tsx` | `components/ui/input.tsx` | default/sm; omit native `size` |
+| zhe `components/ui/card.tsx` | `components/ui/card.tsx` | L2 `bg-secondary rounded-card` |
+| zhe `components/ui/page-header.tsx` | `components/ui/page-header.tsx` | plus `headingId` for `aria-labelledby` |
+| pew Dialog recipe + `confirm-dialog.tsx` | `components/ui/dialog.tsx`, `confirm-dialog.tsx` | overlay `/60`, `bg-card rounded-xl` |
