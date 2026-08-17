@@ -409,7 +409,7 @@ The §4.1.3 inventory is the full file set on disk; not every primitive is consu
 
 ### 4.2 来源锁定记录
 
-`apps/dashboard/src/_UPSTREAM.md` 同时记录 basalt 与 surety 两个来源（位置放 `src/` 根，覆盖整个 source-copy 范围：`index.css` + `lib/*` + `components/*`）：
+`apps/dashboard/src/_UPSTREAM.md` 记录 basalt、surety、以及 features/04 的 zhe/pew 控件来源（位置放 `src/` 根）：
 
 ```markdown
 # UI primitive provenance
@@ -493,7 +493,7 @@ Constraints:
 - **Do not invent `bg-L0` / `bg-L1` aliases**. Use the basalt utility tokens directly so any future basalt re-theme propagates.
 - Per-page Skeleton placeholders inherit the same layer ladder; if a section is L2 in `Content`, its `Skeleton` slot is also L2.
 - The Sidebar floating-island is the canonical L1 example; the previous Gen 1 full-bleed sidebar (`bg-background`) was deliberately removed in Stage B1.
-- **Data tables in a page Content sit on L2**: wrap `<Table>` (the surety-derived primitive at `components/ui/table.tsx`) in `<div className="rounded-card bg-secondary overflow-hidden">`. Applies to Agents, SessionsList, Tokens (bug-fix Commit 2). Per-page Skeletons mirror the same wrap so the placeholder footprint matches the resolved table tier.
+- **Data tables in a page Content sit on L2**: wrap `<Table>` in `<Card className="overflow-hidden">`. Applies to Agents, SessionsList, Tokens. Per-page Skeletons may still use the equivalent utility wrap.
 
 ### 5.2 typography
 
@@ -546,7 +546,7 @@ MVVM 边界由 `scripts/check-dashboard-source.sh` 强制执行（`pages` 不得
 }
 ```
 
-实际状态：`pnpm dashboard:depcruise` 当前 `no dependency violations found`（精确 module 数随 source-copy / page split 变化，参考 `pnpm dashboard:g1` 输出，本文档不硬编码）。新规则（如 §6.4 per-page split 的 `Content-must-not-import-viewmodel`）按需添加；任何违反 G1 红。Biome `noRestrictedImports` 与 vitest import-boundary test 当前**未启用**，dependency-cruiser 已经是 single source of truth。
+实际状态：`pnpm dashboard:depcruise` 因 TypeScript 7 解析失败而几乎不扫依赖，**不是**活门。pages → models 的活门是 `scripts/check-dashboard-source.sh`。Biome `noRestrictedImports` 未启用。
 
 ### 6.3 viewmodel 命名约定
 
