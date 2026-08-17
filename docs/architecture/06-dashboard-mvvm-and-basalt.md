@@ -291,7 +291,7 @@ v1 选定方案（**不**修改 04 安全边界）：
 - **zhe** (`~/workspace/personal/zhe`, MIT) — control density + `Card` / `PageHeader` (features/04).
 - **pew** (`~/workspace/personal/pew`, MIT) — Dialog overlay/panel recipe + `ConfirmDialog` (features/04).
 
-dashboard **does not** depend on either project as an npm package; sources are copied (or formatted/coverage-annotated copies derived from them) into `apps/dashboard/src/`. The `_UPSTREAM.md` record at the root of `apps/dashboard/src/` tracks every primitive's origin and provenance class — see `§4.2`.
+dashboard **does not** depend on any of those projects as an npm package; sources are copied (or formatted/coverage-annotated copies derived from them) into `apps/dashboard/src/`. The `_UPSTREAM.md` record at the root of `apps/dashboard/src/` tracks every primitive's origin and provenance class — see `§4.2`.
 
 ### 4.1 复制清单（文件级映射）
 
