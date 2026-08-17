@@ -154,10 +154,10 @@ function AppShellInner() {
           </div>
         </header>
 
-        <div className="flex min-h-0 flex-1 px-2 pb-2 md:px-3 md:pb-3">
+        <div className="flex min-h-0 flex-1 flex-col px-2 pb-2 md:px-3 md:pb-3">
           <div
             className={cn(
-              'rounded-island bg-card h-full min-h-0 shadow-sm ring-1 ring-border/40',
+              'rounded-island bg-card h-full min-h-0 w-full shadow-sm ring-1 ring-border/40',
               pathname === '/chat'
                 ? 'flex flex-col overflow-hidden p-0'
                 : 'overflow-y-auto p-3 md:p-5',

@@ -53,7 +53,9 @@ describe('AppShell (Stage B1) — desktop layout', () => {
     const { container } = render(<ShellWithChildPage child={<div>page-body</div>} />);
     expect(screen.getByText('page-body')).toBeInTheDocument();
     // The L1 floating-island wrapper carries rounded-island + bg-card.
-    expect(container.querySelector('.rounded-island.bg-card')).toBeTruthy();
+    const island = container.querySelector('.rounded-island.bg-card');
+    expect(island).toBeTruthy();
+    expect(island?.className ?? '').toContain('w-full');
   });
 
   it('header is h-14 and has no border-b (L0 same color as page)', () => {
