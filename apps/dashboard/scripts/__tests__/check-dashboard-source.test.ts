@@ -150,6 +150,17 @@ describe('check-dashboard-source.sh', () => {
     expect(r.stderr).toContain('pages must not import models');
   });
 
+  it('allows a page to import from @/viewmodels', () => {
+    writeSrc(
+      tmp,
+      'pages/Ok.tsx',
+      "import type { Agent } from '@/viewmodels/useAgentsViewModel';\n",
+    );
+    const r = runScript(tmp, html);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('dashboard source scan: OK');
+  });
+
   it('allows console.* inside src/lib/logger.ts', () => {
     writeSrc(tmp, 'lib/logger.ts', `export function info(m: string){ ${CONSOLE_CALL} }\n`);
     const r = runScript(tmp, html);

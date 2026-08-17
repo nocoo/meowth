@@ -75,7 +75,7 @@ check_console_outside_logger
 # dependency-cruiser@16.10.4 cannot parse TypeScript 7, so this rg
 # check is the live gate.
 if [ -d "$SRC/pages" ]; then
-  check_pattern "from ['\"][^'\"]*models/|import\\(['\"][^'\"]*models/|import ['\"][^'\"]*models/" \
+  check_pattern "['\"]@/models/|['\"](\\.\\./)+models/" \
     'pages must not import models' "$SRC/pages"
 fi
 
