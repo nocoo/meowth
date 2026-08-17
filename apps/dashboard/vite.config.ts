@@ -43,11 +43,8 @@ export default defineConfig({
     port: 37040,
     strictPort: true,
     allowedHosts: ['meowth-vite.dev.hexly.ai'],
-    hmr: {
-      host: 'meowth-vite.dev.hexly.ai',
-      protocol: 'wss',
-      clientPort: 443,
-    },
+    // Follow the page origin so localhost:37040 gets ws://37040 HMR.
+    // Visiting https://meowth-vite.dev.hexly.ai still uses wss via Caddy.
     proxy: {
       '/v1': { target: 'http://127.0.0.1:7040', changeOrigin: false },
       '/healthz': { target: 'http://127.0.0.1:7040', changeOrigin: false },
