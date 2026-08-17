@@ -61,8 +61,10 @@ export default function MessageList({ turns }: MessageListProps) {
             aria-label={`Turn ${ti + 1}`}
             className="space-y-2"
           >
-            <div className="bg-accent rounded-widget p-3">
-              <MessageText content={turn.userPrompt} />
+            <div className="flex w-full justify-end">
+              <div className="max-w-[92%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm text-primary-foreground shadow-sm">
+                <MessageText content={turn.userPrompt} />
+              </div>
             </div>
             {overflow ? <CapBanner sessionId={turn.sessionId} /> : null}
             {groups.map((env, i) => (
@@ -88,7 +90,7 @@ function PendingBubble() {
   return (
     <div
       data-bubble-kind="streaming-pending"
-      className="bg-secondary text-muted-foreground rounded-widget p-3 text-sm"
+      className="max-w-[92%] rounded-2xl rounded-bl-md bg-secondary px-3.5 py-2.5 text-sm text-muted-foreground shadow-sm ring-1 ring-border/50"
       aria-label="Waiting for response"
     >
       <span className="inline-block animate-pulse">…</span>

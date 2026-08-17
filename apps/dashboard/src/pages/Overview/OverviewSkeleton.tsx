@@ -10,7 +10,7 @@ export default function OverviewSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {SKELETON_KEYS.map((key) => (
-        <div key={key} className="bg-secondary rounded-card p-4">
+        <div key={key} className="bg-secondary rounded-card p-4 ring-1 ring-border/40">
           <Skeleton className="h-3 w-20" />
           <Skeleton className="mt-3 h-8 w-24" />
         </div>

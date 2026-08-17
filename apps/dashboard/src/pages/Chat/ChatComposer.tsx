@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type { ChatComposer as ChatComposerVM } from '@/viewmodels/useChatViewModel';
+import { ArrowUp, Square } from 'lucide-react';
 
 // docs/features/03 §4.3 — composer renders a Textarea + a single
 // trailing button that toggles between Send (non-streaming) and
@@ -25,31 +26,49 @@ export default function ChatComposer({ composer, isStreaming }: ChatComposerProp
         e.preventDefault();
         submitIfAllowed();
       }}
-      className="flex gap-2"
+      className="border-border/50 bg-card/80 border-t p-3 backdrop-blur"
     >
-      <Textarea
-        value={composer.input}
-        onChange={(e) => composer.setInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            submitIfAllowed();
-          }
-        }}
-        disabled={isStreaming}
-        placeholder="Type your message..."
-        aria-label="Message"
-        className="flex-1"
-      />
-      {isStreaming ? (
-        <Button type="button" variant="outline" onClick={() => composer.cancel()}>
-          Cancel
-        </Button>
-      ) : (
-        <Button type="submit" disabled={!composer.canSend}>
-          Send
-        </Button>
-      )}
+      <div className="flex items-end gap-2 rounded-2xl bg-secondary p-2 ring-1 ring-border/50 focus-within:ring-primary/40">
+        <Textarea
+          value={composer.input}
+          onChange={(e) => composer.setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              submitIfAllowed();
+            }
+          }}
+          disabled={isStreaming}
+          placeholder="Message…"
+          aria-label="Message"
+          className="max-h-40 min-h-10 flex-1 resize-none border-0 bg-transparent px-2 py-2 shadow-none focus-visible:ring-0"
+        />
+        {isStreaming ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            className="h-9 w-9 shrink-0 rounded-xl"
+            aria-label="Cancel"
+            onClick={() => composer.cancel()}
+          >
+            <Square className="h-3.5 w-3.5 fill-current" strokeWidth={0} />
+          </Button>
+        ) : (
+          <Button
+            type="submit"
+            size="icon"
+            className="h-9 w-9 shrink-0 rounded-xl"
+            disabled={!composer.canSend}
+            aria-label="Send"
+          >
+            <ArrowUp className="h-4 w-4" strokeWidth={2.25} />
+          </Button>
+        )}
+      </div>
+      <p className="text-muted-foreground mt-1.5 px-1 text-[11px]">
+        Enter to send · Shift+Enter for newline
+      </p>
     </form>
   );
 }
