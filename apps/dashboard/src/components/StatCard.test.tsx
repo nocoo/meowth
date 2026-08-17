@@ -11,6 +11,7 @@ describe('StatCard (Stage C1)', () => {
     expect(container.firstChild).toBeInstanceOf(HTMLElement);
     expect((container.firstChild as HTMLElement).className).toContain('bg-secondary');
     expect((container.firstChild as HTMLElement).className).toContain('rounded-card');
+    expect((container.firstChild as HTMLElement).className).toContain('ring-1');
   });
 
   it('accepts a ReactNode body (string, number, JSX)', () => {

@@ -8,6 +8,7 @@ describe('Card (zhe L2)', () => {
     const root = container.firstChild as HTMLElement;
     expect(root.className).toContain('bg-secondary');
     expect(root.className).toContain('rounded-card');
+    expect(root.className).toContain('ring-1');
     expect(root.className).not.toMatch(/(?:^|\s)border(?:\s|$)/);
     expect(root.className).not.toContain('shadow');
   });

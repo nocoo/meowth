@@ -18,7 +18,8 @@ export interface StatCardProps {
 
 export default function StatCard({ title, body, icon: Icon }: StatCardProps) {
   return (
-    <div className="bg-secondary rounded-card p-4">
+    <div className="bg-secondary rounded-card p-4 ring-1 ring-border/40">
+      <div className="mb-3 h-1 w-10 rounded-full bg-primary" />
       <div className="text-muted-foreground flex items-center gap-2 text-xs uppercase tracking-wide">
         {Icon ? <Icon className="h-3 w-3" aria-hidden="true" /> : null}
         <h3>{title}</h3>
