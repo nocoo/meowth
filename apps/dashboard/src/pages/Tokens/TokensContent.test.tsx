@@ -53,10 +53,12 @@ describe('TokensContent (props, Stage C4)', () => {
     expect(screen.getByRole('cell', { name: '—' })).toBeInTheDocument();
   });
 
-  it('Revoke button calls onRevoke(tok.id)', async () => {
+  it('Revoke button calls onRevoke(tok.id) after confirm', async () => {
     const onRevoke = vi.fn(noopRevoke);
     render(<TokensContent tokens={[makeToken({ id: 'target-id' })]} onRevoke={onRevoke} />);
     const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    expect(onRevoke).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
     expect(onRevoke).toHaveBeenCalledWith('target-id');
   });
