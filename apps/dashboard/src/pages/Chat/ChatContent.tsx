@@ -40,7 +40,7 @@ export default function ChatContent({ vm }: ChatContentProps) {
   const streaming = isLastTurnStreaming(vm.turns);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-h-[28rem] flex-col gap-3">
       <header>
         <AgentPicker
           agents={vm.agentsStatus.agents}
@@ -48,9 +48,9 @@ export default function ChatContent({ vm }: ChatContentProps) {
           onChange={vm.setSelectedAgent}
         />
       </header>
-      <main className="min-h-0 flex-1 overflow-auto" data-slot="chat-message-area">
+      <div className="min-h-0 flex-1 overflow-auto" data-slot="chat-message-area">
         <MessageList turns={vm.turns} />
-      </main>
+      </div>
       <footer>
         <ChatComposer composer={vm.composer} isStreaming={streaming} />
       </footer>

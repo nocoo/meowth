@@ -150,7 +150,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
   if (kind === 'text') {
     const content = payloadString(envelope, 'content');
     return (
-      <div data-bubble-kind="text" className="bg-card rounded-md p-2">
+      <div data-bubble-kind="text" className="bg-secondary rounded-widget p-3">
         <TruncatedText content={content} cap={TEXT_CONTENT_CAP} sessionId={sessionId} />
       </div>
     );
@@ -177,7 +177,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
       }
     })();
     return (
-      <div data-bubble-kind="tool-use" className="bg-card rounded-md p-2 border">
+      <div data-bubble-kind="tool-use" className="bg-secondary rounded-widget p-3">
         <div className="text-xs font-semibold">tool: {tool}</div>
         <TruncatedText content={serialized} cap={TOOL_USE_INPUT_CAP} sessionId={sessionId} />
       </div>
@@ -187,7 +187,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
   if (kind === 'tool-result') {
     const output = payloadString(envelope, 'output');
     return (
-      <div data-bubble-kind="tool-result" className="bg-card rounded-md p-2 border">
+      <div data-bubble-kind="tool-result" className="bg-secondary rounded-widget p-3">
         <div className="text-xs font-semibold">tool result</div>
         <TruncatedText content={output} cap={TOOL_RESULT_OUTPUT_CAP} sessionId={sessionId} />
       </div>
