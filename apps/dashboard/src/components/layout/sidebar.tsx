@@ -1,9 +1,10 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { NAV_GROUPS, NAV_ITEMS, isItemActive } from '@/lib/navigation';
+import { NAV_GROUPS, NAV_ITEMS, type NavGroup, isItemActive } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/lib/version';
-import { PanelLeft } from 'lucide-react';
+import { ChevronUp, PanelLeft } from 'lucide-react';
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { useSidebar } from './sidebar-context';
 
@@ -71,7 +72,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
 function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => void }) {
   return (
     <div className="flex h-full w-[68px] flex-col items-center">
-      <div className="flex h-14 w-full items-center justify-start pr-3 pl-6">
+      <div className="flex h-14 w-full items-center justify-center">
         <img src="/logo-24.png" alt="Meowth" width={24} height={24} className="shrink-0" />
       </div>
 
@@ -164,38 +165,9 @@ function ExpandedView({
         </div>
       </div>
 
-      {/* Grouped navigation. */}
       <nav aria-label="Pages" className="flex-1 overflow-y-auto pt-1">
         {NAV_GROUPS.map((group) => (
-          <div key={group.label} className="mt-2 px-3">
-            <div className="px-3 py-2">
-              <span
-                data-testid={`sidebar-group-label-${group.label.toLowerCase()}`}
-                className="text-xs font-semibold text-muted-foreground"
-              >
-                {group.label}
-              </span>
-            </div>
-            <div className="flex flex-col gap-0.5 px-3">
-              {group.items.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-normal transition-colors',
-                      isActive || isItemActive(item, pathname)
-                        ? 'bg-primary/10 font-medium text-primary'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                    )
-                  }
-                >
-                  <item.Icon className="h-4 w-4 shrink-0" aria-hidden="true" strokeWidth={1.5} />
-                  <span className="flex-1 text-left">{item.label}</span>
-                </NavLink>
-              ))}
-            </div>
-          </div>
+          <NavGroupSection key={group.label} group={group} pathname={pathname} />
         ))}
       </nav>
 
@@ -208,6 +180,68 @@ function ExpandedView({
           <div className="min-w-0 flex-1">
             <p className="text-foreground truncate text-sm font-medium">Meowth</p>
             <p className="text-muted-foreground truncate text-xs">Local daemon</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NavGroupSection({ group, pathname }: { group: NavGroup; pathname: string }) {
+  const [open, setOpen] = useState(true);
+  const slug = group.label.toLowerCase();
+  return (
+    <div className="mt-1 px-3">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        data-testid={`sidebar-group-${slug}`}
+        className="flex w-full items-center justify-between px-3 py-2"
+      >
+        <span
+          data-testid={`sidebar-group-label-${slug}`}
+          className="text-xs font-semibold text-muted-foreground"
+        >
+          {group.label}
+        </span>
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+          <ChevronUp
+            className={cn(
+              'text-muted-foreground/50 h-3.5 w-3.5 transition-transform duration-200',
+              !open && 'rotate-180',
+            )}
+            strokeWidth={1.5}
+            aria-hidden="true"
+          />
+        </span>
+      </button>
+      <div
+        className="grid overflow-hidden"
+        style={{
+          gridTemplateRows: open ? '1fr' : '0fr',
+          transition: 'grid-template-rows 200ms ease-out',
+        }}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="flex flex-col gap-0.5 px-3">
+            {group.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  cn(
+                    'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-normal transition-colors',
+                    isActive || isItemActive(item, pathname)
+                      ? 'bg-primary/10 font-medium text-primary'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                  )
+                }
+              >
+                <item.Icon className="h-4 w-4 shrink-0" aria-hidden="true" strokeWidth={1.5} />
+                <span className="flex-1 text-left">{item.label}</span>
+              </NavLink>
+            ))}
           </div>
         </div>
       </div>
