@@ -143,6 +143,13 @@ describe('check-dashboard-source.sh', () => {
     expect(r.stderr).toContain('pages must not import models');
   });
 
+  it('fails when a page re-exports or relatively imports models', () => {
+    writeSrc(tmp, 'pages/Rel.tsx', "export type { Agent } from '../../../models/types';\n");
+    const r = runScript(tmp, html);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('pages must not import models');
+  });
+
   it('allows console.* inside src/lib/logger.ts', () => {
     writeSrc(tmp, 'lib/logger.ts', `export function info(m: string){ ${CONSOLE_CALL} }\n`);
     const r = runScript(tmp, html);
