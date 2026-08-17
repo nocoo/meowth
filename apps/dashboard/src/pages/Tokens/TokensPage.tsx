@@ -27,7 +27,7 @@ export default function TokensPage() {
         title="Tokens"
         headingId="tokens-heading"
         actions={
-          <Button type="button" onClick={vm.openCreateModal}>
+          <Button type="button" size="xs" onClick={vm.openCreateModal}>
             Create token
           </Button>
         }
