@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 // docs/architecture/07 §7.1 — SecretReveal component contract.
@@ -106,27 +107,23 @@ export default function SecretReveal({
       <output
         id={fieldId}
         data-testid="secret-reveal-value"
-        className="bg-muted text-foreground block w-full break-all rounded border px-3 py-2 font-mono text-sm"
+        className="bg-muted text-foreground block w-full break-all rounded-md px-3 py-2 font-mono text-sm"
       >
         {display}
       </output>
       <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={toggleReveal}
-          className="border-input rounded border px-3 py-1 text-sm"
-        >
+        <Button type="button" variant="outline" size="sm" onClick={toggleReveal}>
           {masked ? 'Reveal' : 'Hide'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          size="sm"
           onClick={() => {
             void copy();
           }}
-          className="bg-primary text-primary-foreground rounded px-3 py-1 text-sm"
         >
           Copy
-        </button>
+        </Button>
         {feedback !== null ? (
           <output data-testid="secret-reveal-feedback" className="text-muted-foreground text-xs">
             {feedback}

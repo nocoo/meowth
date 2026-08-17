@@ -1,5 +1,7 @@
 import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
 import useTokensViewModel from '@/viewmodels/useTokensViewModel';
 import { AlertCircle } from 'lucide-react';
 import TokensContent from './TokensContent';
@@ -20,19 +22,16 @@ export default function TokensPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="tokens-heading" className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 id="tokens-heading" className="text-xl font-semibold">
-          Tokens
-        </h2>
-        <button
-          type="button"
-          onClick={vm.openCreateModal}
-          className="bg-primary text-primary-foreground rounded px-3 py-2 text-sm"
-        >
-          Create token
-        </button>
-      </div>
+    <section aria-labelledby="tokens-heading">
+      <PageHeader
+        title="Tokens"
+        headingId="tokens-heading"
+        actions={
+          <Button type="button" onClick={vm.openCreateModal}>
+            Create token
+          </Button>
+        }
+      />
 
       {vm.status.kind === 'loading' ? (
         <TokensSkeleton />

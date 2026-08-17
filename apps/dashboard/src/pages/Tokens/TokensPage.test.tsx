@@ -148,13 +148,16 @@ describe('TokensPage (shell, Stage C4)', () => {
     );
     const { rerender } = render(<TokensPage />);
     expect(screen.getByRole('dialog', { name: 'Create token' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'ci-bot' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'mwt_ABCDE' })).toBeInTheDocument();
+    // Radix modal marks the page inert, so table cells are not
+    // exposed as roles. Query the table slots directly.
+    const tableCells = () => Array.from(document.querySelectorAll('[data-slot="table-cell"]'));
+    expect(tableCells().some((el) => el.textContent === 'ci-bot')).toBe(true);
+    expect(tableCells().some((el) => el.textContent === 'mwt_ABCDE')).toBe(true);
     expect(document.body.textContent).not.toContain(SECRET);
 
     // No table cell (including the prefix cell) carries the
     // plaintext secret while the reveal dialog is open.
-    for (const cell of screen.getAllByRole('cell')) {
+    for (const cell of tableCells()) {
       expect(cell.textContent ?? '').not.toContain(SECRET);
     }
 
@@ -163,8 +166,8 @@ describe('TokensPage (shell, Stage C4)', () => {
     // from every table cell.
     await userEvent.setup().click(screen.getByRole('button', { name: 'Reveal' }));
     expect(screen.getByTestId('secret-reveal-value').textContent).toBe(SECRET);
-    expect(screen.getByRole('cell', { name: 'ci-bot' })).toBeInTheDocument();
-    for (const cell of screen.getAllByRole('cell')) {
+    expect(tableCells().some((el) => el.textContent === 'ci-bot')).toBe(true);
+    for (const cell of tableCells()) {
       expect(cell.textContent ?? '').not.toContain(SECRET);
     }
 
