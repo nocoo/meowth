@@ -57,12 +57,7 @@ export default function SetupPage() {
             </div>
             <div className="border-border border-t pt-3 text-sm">
               <p className="text-muted-foreground">Don't have a token yet?</p>
-              <Button
-                type="button"
-                variant="link"
-                className="h-auto px-0"
-                onClick={() => vm.setMode('mint')}
-              >
+              <Button type="button" variant="link" size="xs" onClick={() => vm.setMode('mint')}>
                 I have a setup-code instead
               </Button>
             </div>
@@ -96,12 +91,7 @@ export default function SetupPage() {
               <Notice variant="info">{vm.mintDisabledReason}</Notice>
             ) : null}
             <div className="border-border border-t pt-3 text-sm">
-              <Button
-                type="button"
-                variant="link"
-                className="h-auto px-0"
-                onClick={() => vm.setMode('token')}
-              >
+              <Button type="button" variant="link" size="xs" onClick={() => vm.setMode('token')}>
                 Back to "I already have a token"
               </Button>
             </div>
