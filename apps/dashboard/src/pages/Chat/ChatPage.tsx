@@ -1,27 +1,16 @@
-import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
 import useChatViewModel from '@/viewmodels/useChatViewModel';
 import { AlertCircle } from 'lucide-react';
-import { useCallback } from 'react';
 import ChatContent from './ChatContent';
 import ChatSkeleton from './ChatSkeleton';
 
-// docs/features/03 §4.3 — Page shell. Mirrors AgentsPage /
-// OverviewPage exactly. Owns the viewmodel + three-state branch.
-//
-// The header refresh button is wired to `reset() + refresh()` per
-// §4.3 "新会话" semantics: reset aborts an in-flight stream and
-// clears turns/resumeSessionId; refresh re-pulls /v1/agents. With
-// only `refresh()` the user would land back in the same chat
-// session, defeating the "new session" intent.
+// docs/features/03 §4.3 — Page shell. Owns the viewmodel +
+// three-state branch. Chat does not register the AppShell refresh
+// button: a header rotate-cw that wipes the live thread reads as
+// a page reload, not a new session.
 
 export default function ChatPage() {
   const vm = useChatViewModel();
-  const handleHeaderRefresh = useCallback(() => {
-    vm.reset();
-    vm.refresh();
-  }, [vm.reset, vm.refresh]);
-  useRegisterRefresh(handleHeaderRefresh);
 
   return (
     <section
