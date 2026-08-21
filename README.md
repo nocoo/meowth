@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/nocoo/meowth/releases"><img alt="release" src="https://img.shields.io/github/v/release/nocoo/meowth?label=release&color=blue" /></a>
   <a href="https://github.com/nocoo/meowth/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/nocoo/meowth/ci.yml?branch=main&label=CI" /></a>
-  <img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey" />
+  <img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20experimental-lightgrey" />
   <img alt="go" src="https://img.shields.io/badge/Go-1.26.4-00ADD8?logo=go" />
   <img alt="node" src="https://img.shields.io/badge/Node-%E2%89%A520-339933?logo=node.js" />
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-green" /></a>
@@ -29,7 +29,7 @@ pnpm install && pnpm daemon:build   # 1. 装依赖 + 编 meowthd 二进制
 open http://127.0.0.1:7040          # 4. 浏览器打开,粘 token,开始用
 ```
 
-### Windows（PowerShell）
+### Windows（实验性 PowerShell 构建）
 
 Windows 原生构建需要 Node.js 20+、pnpm 和 Go：
 
@@ -42,6 +42,10 @@ pnpm install
 
 Meowth 本身不依赖任何特定 coding CLI。claude、codex、copilot、hermes
 和 pi 都是可选 backend，只需安装实际要使用的 CLI。
+
+Windows 支持目前仅覆盖原生构建以及核心 `init` / `serve` 流程，尚未作为
+一等平台纳入完整 CI。POSIX `0600` / `0700` 文件权限在 Windows 上没有
+等价的 ACL 保证，完整测试套件也仍包含 Unix-only 假设；请仅用于实验环境。
 
 ## 文档
 
