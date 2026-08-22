@@ -17,8 +17,8 @@ Meowth stays a **darwin-first** personal tool. Releases, the full 6DQ
 matrix, and token-file permission guarantees remain macOS-only.
 
 **Allowed:** a best-effort native Windows path for `init` / `serve`
-and `scripts/build-daemon.ps1`. It is unsupported. POSIX `0600` /
-`0700` have no ACL equivalent on NTFS.
+and `scripts/build-daemon.ps1`. It is unsupported. Meowth does not
+apply an equivalent Windows ACL for POSIX `0600` / `0700`.
 
 **Not allowed:** treating Windows as a first-class platform, shipping
 windows binaries as a release artifact, or expanding the full CI
