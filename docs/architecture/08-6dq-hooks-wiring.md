@@ -351,7 +351,7 @@ baseline 项随后续 `test(<pkg|file>): lift coverage to S-tier and remove base
 
 - 主 runner：GitHub-hosted darwin runner（label 在 Phase 2.12 落地时确认；候选 `macos-14` / `macos-14-large` / `macos-15` / arm64 专用 label）。GHA 的 darwin runner 默认架构与 image 版本随时间变；本文档**不**写死 "macos-14 默认 arm64"，Phase 2.12 SDE 通过 `runs-on: <label>` + 一次 dry-run 工作流确认实际架构 + 资源
 - darwin-amd64：用同一份 macOS runner 跑 `GOARCH=amd64 go build` 交叉编译断言（不在 amd64 native 上跑全套测试，CI 时间成本太高）；release 阶段在本机 MBP 上做 amd64 native smoke
-- **不**用 ubuntu / windows runner（meowth darwin-only，[`docs/01-project-overview.md`](../01-project-overview.md) §6 已锁定）
+- **不**用 ubuntu / windows runner 跑完整 6DQ。允许在 darwin runner 上 `GOOS=windows go test -exec true ./...` 做编译门（[`features/06`](../features/06-experimental-windows.md) §3.3）
 - Fallback（若 GHA hosted darwin runner 不可用或资源不足）：自托管 MBP runner，label `self-hosted, darwin, arm64`；§13 #3 记录此项
 
 Phase 2.12 commit 落地 `.github/workflows/ci.yml` 时**必须**：

@@ -44,3 +44,4 @@ Meowth 项目的编号文档目录。所有架构决策、功能设计、长任�
 | Dashboard Chat 模块 / 与 online agent 多轮对话 / NDJSON exec + resume_session_id | [`features/03`](./features/03-dashboard-chat-with-online-agent.md) |
 | Dashboard 控件 / token / 页面视觉对齐 pew + zhe | [`features/04`](./features/04-dashboard-control-alignment.md) |
 | Dashboard chrome 对齐 Whiteboard pew | [`features/05`](./features/05-dashboard-visual-align-whiteboard.md) |
+| 实验性 Windows native build / init / serve | [`features/06`](./features/06-experimental-windows.md) |

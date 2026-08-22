@@ -8,7 +8,7 @@
 
 ## 1. 项目定位
 
-Meowth 是**运行在 macOS 本机的 coding-agent 桥接层**。
+Meowth 是**运行在 macOS 本机的 coding-agent 桥接层**（Windows 仅实验性 `init` / `serve`，见 [`docs/features/06`](features/06-experimental-windows.md)）。
 
 - 通过一层 **Agent SDK**（继承自 [multica](https://github.com/multica-ai/multica) 的 `Backend` 抽象，Go 实现）控制本机已安装的多家 coding CLI agent；
 - 通过一个 **HTTP daemon**（bearer-token 认证）把本机能力暴露给网络，让外部服务能远程调度本机的 agent；
@@ -33,7 +33,7 @@ Meowth 是**运行在 macOS 本机的 coding-agent 桥接层**。
 - ❌ **不做云端 SaaS**——只跑本机；不提供 cloud relay / multi-tenant / 计费
 - ❌ **不做 issue / squad / autopilot / workspace 等产品层**（multica 的业务侧不继承）
 - ❌ **不做插件市场**——agent 后端硬编码 5 个白名单，新增需改代码 + 发版
-- ❌ **不做 Linux / Windows 一等公民**——darwin 优先，其他平台先标 unsupported
+- ❌ **不做 Linux / Windows 一等公民**——darwin 优先。Windows 允许实验性 native `init` / `serve`（[`features/06`](features/06-experimental-windows.md)），不进完整 CI、不进 release 产物；Linux 仍标 unsupported
 - ❌ **不内嵌 LLM**——只调度本机已安装的 CLI，不直接调 model API
 - ❌ **不做 PTY / 终端模拟**——只走 stdin/stdout pipe（与 multica 一致）
 
@@ -63,7 +63,7 @@ V1 视为完成的客观条件（与 G1–G5 对应）：
   - 若上游存在 `NOTICE` 则同步拷贝（截至调查时 multica 仓库**只有 LICENSE，无 NOTICE**）
   - 在 `daemon/pkg/agent/UPSTREAM.md` 记录 source repo + 拉取时的 commit SHA + 拉取日期
   - dashboard 完全自写，**不引入** multica 的 `apps/web/`，避开保留 logo 条款
-- **macOS only**：darwin-arm64 / darwin-amd64 二进制
+- **darwin 发布物**：正式二进制仍是 darwin-arm64 / darwin-amd64。Windows `meowthd.exe` 是实验产物，不走 release 管线
 - **零云依赖**：所有持久化在 `~/.meowth/`；不要求外部 Postgres / Redis
 - **Agent 优先**：所有改动必须能在 pre-commit / pre-push 自动证明正确性，不依赖人工 QA
 - **原子化提交**：任何改动都拆成可独立解释、独立回滚的 commit（详见 [CLAUDE.md](../CLAUDE.md)）

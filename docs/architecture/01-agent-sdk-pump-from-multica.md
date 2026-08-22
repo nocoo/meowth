@@ -298,10 +298,9 @@ copilot_test.go
 copilot_invocation.go
 copilot_invocation_other.go
 copilot_invocation_test.go
-# 注：`copilot_invocation_windows{,_test}.go` 在 Phase 3.2 trim 时同步删除——
-# 它们依赖 cursor 子树里被裁的 `rewriteCmdToPS1` / `powerShellLookup` helper；
-# meowth 是 darwin-only（[`docs/01-project-overview.md`](../01-project-overview.md) §6），
-# 不抽 helper 到 daemon 本地以保持 vendor 边界。详 P3 trim commit 的"Beyond §4.2"段。
+# 注：`copilot_invocation_windows.go` + `npm_invocation_windows.go`
+# 已由 PR #1 / [`features/06`](../features/06-experimental-windows.md)
+# 以实验性路径恢复（仅 copilot / pi）。
 
 claude.go
 claude_test.go
@@ -318,8 +317,7 @@ pi_test.go
 pi_invocation.go
 pi_invocation_other.go
 pi_invocation_test.go
-# 注：`pi_invocation_windows{,_test}.go` 在 Phase 3.2 trim 时同步删除（与
-# copilot windows shim 同源原因；见上面 copilot 块注释）。
+# 注：`pi_invocation_windows.go` 随 features/06 实验性恢复。
 ```
 
 合计 ≈ 32 个 `.go` 文件（原 36 减去 4 个被同步删除的 windows shim）。`testdata/` 当前**不**保留任何 fixture（§2.2 调研下，唯一的 fixture 属于被裁的 openclaw，已在 §4.2 删除清单中）。pump 时若上游为白名单 provider 新增 testdata，自动落在 `daemon/pkg/agent/testdata/` 下并保留。
