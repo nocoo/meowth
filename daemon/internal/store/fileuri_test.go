@@ -21,3 +21,18 @@ func TestFileURIPathWindowsDriveLetter(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestFileURIPathWindowsRejectsUNCAndDevice(t *testing.T) {
+	for _, path := range []string{
+		`\\server\share\meowth.db`,
+		`\\?\C:\Users\meowth\meowth.db`,
+		`\\.\pipe\meowth`,
+		`C:meowth.db`,
+		`\Users\meowth\meowth.db`,
+		`meowth.db`,
+	} {
+		if _, err := fileURIPath(path, "windows"); err == nil {
+			t.Fatalf("expected error for %q", path)
+		}
+	}
+}
