@@ -320,7 +320,7 @@ pi_invocation_test.go
 # 注：`pi_invocation_windows.go` 随 features/06 实验性恢复。
 ```
 
-合计 ≈ 32 个 `.go` 文件（原 36 减去 4 个被同步删除的 windows shim）。`testdata/` 当前**不**保留任何 fixture（§2.2 调研下，唯一的 fixture 属于被裁的 openclaw，已在 §4.2 删除清单中）。pump 时若上游为白名单 provider 新增 testdata，自动落在 `daemon/pkg/agent/testdata/` 下并保留。
+合计 ≈ 36 个 `.go` 文件（含 features/06 恢复的 windows shim：`copilot_invocation_windows.go`、`pi_invocation_windows.go`、`npm_invocation_windows.go` 及其测试）。`testdata/` 当前**不**保留任何 fixture（§2.2 调研下，唯一的 fixture 属于被裁的 openclaw，已在 §4.2 删除清单中）。pump 时若上游为白名单 provider 新增 testdata，自动落在 `daemon/pkg/agent/testdata/` 下并保留。
 
 ---
 
