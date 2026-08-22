@@ -7,6 +7,7 @@ build
 
 # daemon (Go) build artifacts
 /daemon/meowthd
+/daemon/meowthd.exe
 
 # daemon embed copy of dashboard dist (Phase 3.21).
 # Root `dist` (line 2) globally ignores any `dist/` directory and
