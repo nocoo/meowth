@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"runtime"
-	"strings"
 
 	"github.com/nocoo/meowth/daemon/internal/home"
 
@@ -156,9 +154,9 @@ func buildDSN(path string) (string, error) {
 	// URI characters (?, #, space, etc.) do not silently truncate or
 	// re-interpret the SQLite open path. Using URL.Path (not Opaque)
 	// is what triggers the per-segment percent-escape we need.
-	uriPath := path
-	if runtime.GOOS == "windows" {
-		uriPath = "/" + strings.ReplaceAll(path, "\\", "/")
+	uriPath, err := FileURIPath(path)
+	if err != nil {
+		return "", err
 	}
 	u := &url.URL{Scheme: "file", Path: uriPath}
 	q := url.Values{}
