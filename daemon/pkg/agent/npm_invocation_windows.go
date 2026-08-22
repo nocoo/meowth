@@ -14,6 +14,8 @@ var powerShellLookup = defaultPowerShellLookup
 
 // rewriteCmdToPS1 bypasses npm's .cmd launcher so Go can pass every argv
 // element, including multi-line prompts, to the sibling .ps1 unchanged.
+// Scope is copilot and pi only (docs/features/06 §3.4). A custom
+// .cmd wrapper next to <tool>.ps1 is skipped on purpose.
 func rewriteCmdToPS1(toolName, lookedUp string, args []string, logger *slog.Logger) (string, []string, bool) {
 	ext := strings.ToLower(filepath.Ext(lookedUp))
 	if ext != ".cmd" && ext != ".bat" {

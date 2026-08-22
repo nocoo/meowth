@@ -11,7 +11,7 @@
 | 03 | [`03-dashboard-chat-with-online-agent.md`](./03-dashboard-chat-with-online-agent.md) | Dashboard Chat 模块：选 online agent 多轮对话（复用 NDJSON exec + resume_session_id） | 已落地（v0.4.0） |
 | 04 | [`04-dashboard-control-alignment.md`](./04-dashboard-control-alignment.md) | 控件 / token / 页面视觉对齐 pew + zhe | 已落地 |
 | 05 | [`05-dashboard-visual-align-whiteboard.md`](./05-dashboard-visual-align-whiteboard.md) | Dashboard chrome 对齐 Whiteboard pew（sidebar / 浮岛 ring / chat 气泡） | 已落地 |
-| 06 | [`06-experimental-windows.md`](./06-experimental-windows.md) | 实验性 Windows native build / init / serve（非一等公民） | 跟进中 |
+| 06 | [`06-experimental-windows.md`](./06-experimental-windows.md) | 实验性 Windows native build / init / serve（非一等公民） | 已落地 |
 
 ## 何时新建 features 文档
 

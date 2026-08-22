@@ -1,8 +1,7 @@
 # 06 · Experimental Windows (post-merge)
 
-> Status: landed on `main` via PR #1 (`b8a9530`); this document
-> records the policy carve-out and the follow-up commits that close
-> the merge-review gaps.
+> Status: policy + follow-up commits landed (2026-08-22).
+> PR #1 merge: `b8a9530`.
 > History: `git log -- docs/features/06-experimental-windows.md`
 
 > Parent: [`docs/01-project-overview.md`](../01-project-overview.md) §3 / §6.
