@@ -114,6 +114,30 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: pnpm daemon:build
 
+  compile-windows:
+    # docs/features/06 §3.3 — compile-only Windows gate on the
+    # darwin runner. Does not add a windows-latest runner or run
+    # Windows binaries. -exec true links the test binary then
+    # replaces the run with /usr/bin/true.
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: compile daemon for windows/${{ matrix.goarch }}
+        working-directory: daemon
+        env:
+          GOOS: windows
+          GOARCH: ${{ matrix.goarch }}
+        run: go test -exec true ./...
+
   l1-daemon:
     runs-on: macos-14
     steps:
