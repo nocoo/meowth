@@ -13,12 +13,20 @@ func TestFileURIPathUnixUnchanged(t *testing.T) {
 }
 
 func TestFileURIPathWindowsDriveLetter(t *testing.T) {
-	got, err := fileURIPath(`C:\Users\meowth user\meowth.db`, "windows")
-	if err != nil {
-		t.Fatal(err)
+	cases := []struct {
+		in, want string
+	}{
+		{`C:\Users\meowth user\meowth.db`, `/C:/Users/meowth user/meowth.db`},
+		{`C:/Users/meowth user/meowth.db`, `/C:/Users/meowth user/meowth.db`},
 	}
-	if got != `/C:/Users/meowth user/meowth.db` {
-		t.Fatalf("got %q", got)
+	for _, tc := range cases {
+		got, err := fileURIPath(tc.in, "windows")
+		if err != nil {
+			t.Fatalf("%q: %v", tc.in, err)
+		}
+		if got != tc.want {
+			t.Fatalf("%q: got %q want %q", tc.in, got, tc.want)
+		}
 	}
 }
 
