@@ -4,6 +4,50 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-08-22
+
+Dashboard controls aligned to the zhe/pew recipe (density, dialogs,
+cards, page headers, chat chrome), plus an experimental Windows
+build path after merging PR #1. Minor bump for the new UI primitives
+and the first-class documentation of unsupported Windows builds.
+
+### Added
+
+- Dashboard primitives: `card`, `page-header`, `confirm-dialog`.
+- Tokens create dialog and revoke confirmation.
+- Experimental Windows: `FileURIPath` helper, UNC/device rejection,
+  `scripts/build-daemon.ps1`, `compile-windows` CI job, and
+  `docs/features/06-experimental-windows.md`.
+
+### Changed
+
+- Button / input / dialog density matched to zhe; chat restyled off
+  L1 toward pew bubbles; settings and session detail lifted onto L2.
+- Sidebar collapse, content island, and chat column follow pew /
+  whiteboard chrome (tokens nav in the system group).
+- Pages no longer import models directly (MVVM gate).
+- Codex defaults to yolo.
+- Windows npm launcher rewrite scoped to copilot/pi `.cmd`/`.bat`.
+- Darwin remains the only release platform; Windows is explicit
+  unsupported / build-init-serve only.
+
+### Fixed
+
+- Vite HMR follows the page origin.
+- Token revoke ignores a second submit.
+- Setup page no longer overrides control density.
+- CI: Go 1.26.6 for stdlib vulns; pnpm 11 lockfile.
+- initcmd coverage after the FileURIPath refactor (unix error seam).
+
+### Tests
+
+- `FileURIPath` unix + Windows slash-drive + UNC reject.
+- initcmd bootstrap DSN error path on Darwin.
+- Windows `GOOS` compile gate in CI.
+- Dashboard primitive and tokens-dialog unit coverage.
+
+[0.5.0]: https://github.com/nocoo/meowth/releases/tag/v0.5.0
+
 ## [0.4.0] — 2026-08-17
 
 Dashboard Chat module for multi-turn dialogue with local agents,
