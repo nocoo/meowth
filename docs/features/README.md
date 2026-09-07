@@ -12,6 +12,7 @@
 | 04 | [`04-dashboard-control-alignment.md`](./04-dashboard-control-alignment.md) | 控件 / token / 页面视觉对齐 pew + zhe | 已落地 |
 | 05 | [`05-dashboard-visual-align-whiteboard.md`](./05-dashboard-visual-align-whiteboard.md) | Dashboard chrome 对齐 Whiteboard pew（sidebar / 浮岛 ring / chat 气泡） | 已落地 |
 | 06 | [`06-experimental-windows.md`](./06-experimental-windows.md) | 实验性 Windows native build / init / serve（非一等公民） | 已落地 |
+| 07 | [`07-dashboard-basalt-package.md`](./07-dashboard-basalt-package.md) | Dashboard 从 source-copy 迁到 `@nocoo/basalt@2.1.0` | 进行中 |
 
 ## 何时新建 features 文档
 
