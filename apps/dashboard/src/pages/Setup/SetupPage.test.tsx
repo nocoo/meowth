@@ -1,3 +1,5 @@
+import { THEME_STORAGE_KEY } from '@/lib/theme-init';
+import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router';
@@ -26,15 +28,27 @@ function renderAt(path = '/setup') {
     ],
     { initialEntries: [path] },
   );
-  return render(<RouterProvider router={router} />);
+  return render(
+    <ThemeProvider defaultTheme="light" storageKey={THEME_STORAGE_KEY} persist={false}>
+      <RouterProvider router={router} />
+    </ThemeProvider>,
+  );
 }
 
 describe('SetupPage', () => {
   it('renders mode A (token paste) by default with a Continue button', () => {
     renderAt();
-    expect(screen.getByRole('heading', { level: 1, name: /Meowth - Setup/ })).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { level: 1, name: /Meowth - Setup/ });
+    expect(heading).toBeInTheDocument();
+    expect(heading).toHaveClass('text-basalt-foreground');
     expect(screen.getByRole('button', { name: /Continue/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /setup-code instead/i })).toBeInTheDocument();
+  });
+
+  it('uses the visitor-badge card proportions', () => {
+    const { container } = renderAt();
+    const card = container.querySelector('[data-basalt-surface-root]');
+    expect(card).toHaveClass('aspect-[54/86]', 'w-72');
   });
 
   it('switches to mint mode when the link button is clicked', async () => {

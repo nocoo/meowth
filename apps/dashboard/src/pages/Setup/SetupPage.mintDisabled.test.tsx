@@ -1,4 +1,6 @@
+import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import type { SetupViewModel } from '@/viewmodels/useSetupViewModel';
+import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -46,9 +48,11 @@ describe('SetupPage mint-disabled Notice (Stage C6)', () => {
       },
     });
     render(
-      <MemoryRouter initialEntries={['/setup']}>
-        <SetupPage />
-      </MemoryRouter>,
+      <ThemeProvider defaultTheme="light" storageKey={THEME_STORAGE_KEY} persist={false}>
+        <MemoryRouter initialEntries={['/setup']}>
+          <SetupPage />
+        </MemoryRouter>
+      </ThemeProvider>,
     );
     const notice = screen.getByText(REASON);
     expect(notice).toHaveAttribute('data-slot', 'notice');
