@@ -89,4 +89,15 @@ actual reason; do not count synthetic responses as live-agent verification.
   Failed requests retain a contextual Retry action. The affected page/shell
   unit tests (41), light/dark rail browser checks (2), TypeScript, and build
   passed.
-- Chat implementation pending.
+- Rich assistant output now supports GFM formatting and table alignment, with
+  Basalt code surfaces, syntax colors, language labels, and exact code copying.
+  Raw HTML stays literal, unsafe links are inert, and Markdown images become
+  links so agent output cannot silently fetch remote images outside the CSP.
+  ANSI controls are stripped from Markdown; terminal/tool output retains its
+  escaped ANSI renderer. Clipboard failures remain retryable.
+- Markdown/ANSI/message unit checks (60), rich output/copy browser checks in
+  light/dark desktop/mobile (4), TypeScript, source scan, and production build
+  passed. OSV reported no vulnerabilities across the 96 added package versions.
+  The existing OpenAPI generator's TypeScript 5 peer range still disagrees with
+  the project's installed TypeScript 7; the Markdown packages have no peer gap.
+- Chat workspace implementation pending.

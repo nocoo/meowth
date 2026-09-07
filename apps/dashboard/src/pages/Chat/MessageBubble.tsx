@@ -1,3 +1,4 @@
+import MessageMarkdown from '@/components/MessageMarkdown';
 import MessageText from '@/components/MessageText';
 import { Notice } from '@/components/ui/notice';
 import { displayLabel } from '@/lib/labels';
@@ -11,10 +12,8 @@ import { Link } from 'react-router';
 // container concatenates streamed `message.kind=text` envelopes
 // upstream; this component is type-by-type and stateless.
 //
-// All untrusted dynamic strings flow through `<MessageText>`
-// (07 §4); literal labels and the static truncation suffix do
-// not. `tool-use.input` is JSON.stringify'd before sanitization
-// per §5.2.
+// Assistant prose uses safe Markdown (feature 09); tool and log
+// output stays literal through MessageText.
 
 export interface MessageBubbleProps {
   envelope: Envelope;
@@ -55,15 +54,23 @@ interface TruncatedTextProps {
   cap: number;
   sessionId: string;
   className?: string;
+  markdown?: boolean;
 }
 
-function TruncatedText({ content, cap, sessionId, className = '' }: TruncatedTextProps) {
+function TruncatedText({
+  content,
+  cap,
+  sessionId,
+  className = '',
+  markdown = false,
+}: TruncatedTextProps) {
+  const Renderer = markdown ? MessageMarkdown : MessageText;
   if (content.length <= cap) {
-    return <MessageText content={content} className={className} />;
+    return <Renderer content={content} className={className} />;
   }
   return (
     <div>
-      <MessageText content={content.slice(0, cap)} className={className} />
+      <Renderer content={content.slice(0, cap)} className={className} />
       <div className="text-basalt-muted-foreground text-xs mt-1">
         …(truncated,{' '}
         <Link to={`/sessions/${sessionId}`} className="underline">
@@ -158,6 +165,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
           content={content}
           cap={TEXT_CONTENT_CAP}
           sessionId={sessionId}
+          markdown
           className="font-basalt-sans text-[15px] leading-7"
         />
       </div>
@@ -169,7 +177,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     return (
       <details data-bubble-kind="thinking" className="text-basalt-muted-foreground">
         <summary className="cursor-pointer text-xs font-medium">Thinking...</summary>
-        <MessageText content={content} className="mt-2 font-basalt-sans text-sm" />
+        <MessageMarkdown content={content} className="mt-2 text-sm" />
       </details>
     );
   }

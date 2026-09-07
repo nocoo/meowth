@@ -15,7 +15,7 @@
 //     constructor.
 
 import { cn } from '@/lib/utils';
-import { type ReactNode, createElement } from 'react';
+import { type ReactNode, createElement, isValidElement } from 'react';
 
 type AnsiColor =
   | 'black'
@@ -360,4 +360,16 @@ export function ansiToReactNodes(input: string): ReactNode[] {
   }
   flush();
   return out;
+}
+
+export function ansiToPlainText(input: string): string {
+  return ansiToReactNodes(input)
+    .map((part) =>
+      typeof part === 'string'
+        ? part
+        : isValidElement<{ children: string }>(part)
+          ? part.props.children
+          : '',
+    )
+    .join('');
 }

@@ -43,7 +43,7 @@ const TOKENS: TokenView[] = [
   },
 ];
 
-export const LONG_OUTPUT = `界面已经准备好。\n${'long_filename_without_spaces_'.repeat(45)}\n<img src=x onerror=alert(1)>`;
+export const LONG_OUTPUT = `界面已经准备好。\n${'long-filename-without-spaces-'.repeat(45)}\n<img src=x onerror=alert(1)>`;
 
 const MESSAGES: Envelope[] = [
   {
