@@ -34,4 +34,20 @@ describe('applyStoredTheme', () => {
   it('uses THEME_STORAGE_KEY meowth_theme', () => {
     expect(THEME_STORAGE_KEY).toBe('meowth_theme');
   });
+
+  it('treats a throwing storage read as missing', () => {
+    const storage = {
+      getItem: (): string | null => {
+        throw new Error('denied');
+      },
+    };
+    applyStoredTheme(document.documentElement, storage, { matches: true });
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  it('treats missing matchMedia as light', () => {
+    applyStoredTheme(document.documentElement, { getItem: () => null }, undefined);
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+    expect(document.documentElement.getAttribute('data-mode')).toBe('light');
+  });
 });

@@ -1,6 +1,6 @@
 import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import { ThemeProvider } from '@nocoo/basalt/providers/theme';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ThemeToggle from './ThemeToggle';
 
@@ -83,6 +83,36 @@ describe('ThemeToggle initial theme resolution', () => {
     window.localStorage.setItem(THEME_STORAGE_KEY, 'midnight');
     renderToggle();
     expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  it('updates the toggle label when the system preference changes', async () => {
+    const listeners = new Set<(event: MediaQueryListEvent) => void>();
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: (_type: string, cb: (event: MediaQueryListEvent) => void) => {
+          listeners.add(cb);
+        },
+        removeEventListener: (_type: string, cb: (event: MediaQueryListEvent) => void) => {
+          listeners.delete(cb);
+        },
+        dispatchEvent: vi.fn(),
+      })),
+    });
+    renderToggle();
+    expect(screen.getByRole('button', { name: 'Switch to dark theme' })).toBeInTheDocument();
+    for (const cb of listeners) {
+      cb({ matches: true } as MediaQueryListEvent);
+    }
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Switch to light theme' })).toBeInTheDocument();
+    });
   });
 });
 

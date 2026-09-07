@@ -2,11 +2,16 @@ import { cn } from '@/lib/utils';
 import { Button } from '@nocoo/basalt';
 import { type BasaltTheme, useTheme } from '@nocoo/basalt/providers/theme';
 import { Moon, Sun } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-function resolvedDark(theme: BasaltTheme): boolean {
+function systemPrefersDark(): boolean {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function resolvedDark(theme: BasaltTheme, systemDark: boolean): boolean {
   if (theme === 'dark') return true;
   if (theme === 'light') return false;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return systemDark;
 }
 
 export interface ThemeToggleProps {
@@ -15,7 +20,16 @@ export interface ThemeToggleProps {
 
 export default function ThemeToggle({ className }: ThemeToggleProps) {
   const { theme, setTheme } = useTheme();
-  const isDark = resolvedDark(theme);
+  const [systemDark, setSystemDark] = useState(systemPrefersDark);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (event: MediaQueryListEvent) => setSystemDark(event.matches);
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, []);
+
+  const isDark = resolvedDark(theme, systemDark);
   const label = isDark ? 'Switch to light theme' : 'Switch to dark theme';
 
   return (
