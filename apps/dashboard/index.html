@@ -13,6 +13,19 @@
     />
     <meta property="og:image" content="/og-image.png" />
     <meta property="og:type" content="website" />
+    <script>
+      (function () {
+        var stored = null;
+        try {
+          stored = window.localStorage.getItem('meowth_theme');
+        } catch (e) {}
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var isDark = stored === 'dark' || (stored !== 'light' && prefersDark);
+        document.documentElement.classList.toggle('dark', isDark);
+        document.documentElement.classList.toggle('light', !isDark);
+        document.documentElement.dataset.mode = isDark ? 'dark' : 'light';
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,3 +1,6 @@
+/* biome-ignore-all lint/correctness/noInvalidPositionAtImportRule: Basalt INTEGRATION.md requires @source before Tailwind */
+@source "../node_modules/@nocoo/basalt/dist/**/*.{js,jsx,ts,tsx}";
+@import "@nocoo/basalt/styles/tailwind";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -410,11 +413,16 @@
  * Base styles
  */
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
   * {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-family: "Inter", system-ui, -apple-system, sans-serif;
   }
 }

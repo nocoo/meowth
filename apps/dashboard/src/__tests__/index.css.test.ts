@@ -23,6 +23,15 @@ function expectToken(token: string): void {
 }
 
 describe('index.css — Stage A2 Basalt B05 tokens', () => {
+  it('scans the published basalt dist before Tailwind', () => {
+    expect(css).toMatch(/@source\s+"\.\.\/node_modules\/@nocoo\/basalt\/dist/);
+    expect(css.indexOf('@source')).toBeLessThan(css.indexOf('@import "tailwindcss"'));
+  });
+
+  it('imports the basalt tailwind contract', () => {
+    expect(css).toMatch(/@import\s+"@nocoo\/basalt\/styles\/tailwind"/);
+  });
+
   it('declares --radius-island in @theme inline', () => {
     expect(css).toMatch(/--radius-island\s*:\s*20px/);
   });

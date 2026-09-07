@@ -1,4 +1,5 @@
 import AuthGate from '@/components/AuthGate';
+import { BasaltRouteProviders } from '@/components/basalt-providers';
 import { AppShell } from '@/components/layout';
 import AgentsPage from '@/pages/Agents';
 import ChatPage from '@/pages/Chat';
@@ -7,7 +8,7 @@ import SessionsListPage, { SessionDetailPage } from '@/pages/Sessions';
 import SettingsPage from '@/pages/Settings';
 import SetupPage from '@/pages/Setup';
 import TokensPage from '@/pages/Tokens';
-import { Navigate, type RouteObject, createBrowserRouter } from 'react-router';
+import { Navigate, Outlet, type RouteObject, createBrowserRouter } from 'react-router';
 
 // docs/architecture/06 §7 + §10 — the five product pages live
 // behind <AuthGate>, which probes /v1/agents on mount and
@@ -19,28 +20,41 @@ import { Navigate, type RouteObject, createBrowserRouter } from 'react-router';
 // DashboardLayout for the Gen 2 AppShell (sidebar +
 // floating-island main). /setup remains outside the shell.
 
+function RootLayout() {
+  return (
+    <BasaltRouteProviders>
+      <Outlet />
+    </BasaltRouteProviders>
+  );
+}
+
 export const routes: RouteObject[] = [
   {
-    path: '/',
-    element: (
-      <AuthGate>
-        <AppShell />
-      </AuthGate>
-    ),
+    element: <RootLayout />,
     children: [
-      { index: true, element: <Navigate to="/overview" replace /> },
-      { path: 'overview', element: <OverviewPage /> },
-      { path: 'agents', element: <AgentsPage /> },
-      { path: 'chat', element: <ChatPage /> },
-      { path: 'sessions', element: <SessionsListPage /> },
-      { path: 'sessions/:id', element: <SessionDetailPage /> },
-      { path: 'tokens', element: <TokensPage /> },
-      { path: 'settings', element: <SettingsPage /> },
+      {
+        path: '/',
+        element: (
+          <AuthGate>
+            <AppShell />
+          </AuthGate>
+        ),
+        children: [
+          { index: true, element: <Navigate to="/overview" replace /> },
+          { path: 'overview', element: <OverviewPage /> },
+          { path: 'agents', element: <AgentsPage /> },
+          { path: 'chat', element: <ChatPage /> },
+          { path: 'sessions', element: <SessionsListPage /> },
+          { path: 'sessions/:id', element: <SessionDetailPage /> },
+          { path: 'tokens', element: <TokensPage /> },
+          { path: 'settings', element: <SettingsPage /> },
+        ],
+      },
+      {
+        path: '/setup',
+        element: <SetupPage />,
+      },
     ],
-  },
-  {
-    path: '/setup',
-    element: <SetupPage />,
   },
 ];
 
