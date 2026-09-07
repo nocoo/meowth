@@ -38,8 +38,8 @@ describe('AgentsContent (Stage C2)', () => {
         ])}
       />,
     );
-    expect(screen.getByRole('cell', { name: 'claude' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'codex' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Claude' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Codex' })).toBeInTheDocument();
   });
 
   it('maps installed booleans to "yes" / "no" cell text', () => {
@@ -51,8 +51,8 @@ describe('AgentsContent (Stage C2)', () => {
         ])}
       />,
     );
-    expect(screen.getByRole('cell', { name: 'yes' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'no' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Yes' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'No' })).toBeInTheDocument();
   });
 
   it('shows an EmptyState (not the table) when no agents are reported', () => {

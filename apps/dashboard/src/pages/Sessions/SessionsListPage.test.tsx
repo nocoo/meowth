@@ -83,7 +83,7 @@ describe('SessionsListPage (shell, Stage C3a)', () => {
       }),
     );
     renderShell();
-    const link = screen.getByRole('link', { name: 'claude' });
+    const link = screen.getByRole('link', { name: 'Claude' });
     expect(link.getAttribute('href')).toBe('/sessions/sid-1');
   });
 });

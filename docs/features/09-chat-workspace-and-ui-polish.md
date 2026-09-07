@@ -79,4 +79,10 @@ actual reason; do not count synthetic responses as live-agent verification.
   API health, trusted WSS CSS update, document/draft preservation, TypeScript,
   and production build passed. The retired hostname no longer serves the
   dashboard; Vite rejects its Host header with HTTP 403.
-- UI and chat implementation pending.
+- Labels now use sentence case across agent lists, sessions, and chat status
+  output. Collapsed navigation uses a static class string: Radix tooltip slot
+  composition previously stringified the `NavLink` callback and lost `flex`,
+  moving each icon 12px off the rail axis. Light/dark browser geometry checks
+  now pass with all rail marks centered. Existing unit assertions were updated
+  for the visible labels; underlying API values remain unchanged.
+- Refresh removal and chat implementation pending.

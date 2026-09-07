@@ -50,7 +50,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
 function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => void }) {
   return (
     <>
-      <SidebarHeader className="justify-start px-0 pl-6 pr-3">
+      <SidebarHeader className="justify-center px-0">
         <BrandMark alt="Meowth" />
       </SidebarHeader>
 
@@ -72,14 +72,12 @@ function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => v
               <NavLink
                 to={item.to}
                 aria-label={item.label}
-                className={({ isActive }) =>
-                  cn(
-                    'flex h-10 w-10 items-center justify-center self-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-basalt-ring motion-reduce:transition-none',
-                    isActive || isItemActive(item, pathname)
-                      ? 'bg-basalt-primary/10 text-basalt-primary'
-                      : 'text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground',
-                  )
-                }
+                className={cn(
+                  'flex h-10 w-10 items-center justify-center self-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-basalt-ring motion-reduce:transition-none',
+                  isItemActive(item, pathname)
+                    ? 'bg-basalt-primary/10 text-basalt-primary'
+                    : 'text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground',
+                )}
               >
                 <item.Icon className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
               </NavLink>

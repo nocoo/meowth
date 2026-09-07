@@ -63,8 +63,8 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { kind: 'text', content: big },
       }),
     );
-    expect(screen.getByText('view in Sessions detail')).toBeInTheDocument();
-    const link = screen.getByRole('link', { name: 'view in Sessions detail' });
+    expect(screen.getByText('View session details')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'View session details' });
     expect(link).toHaveAttribute('href', '/sessions/sid-99');
   });
 
@@ -89,7 +89,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
         },
       }),
     );
-    expect(screen.getByText(/tool: Bash/)).toBeInTheDocument();
+    expect(screen.getByText(/Tool: Bash/)).toBeInTheDocument();
     expect(screen.getByText(/"cmd":"ls"/)).toBeInTheDocument();
   });
 
@@ -102,7 +102,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { kind: 'tool-use', tool: 'X', input: huge },
       }),
     );
-    expect(screen.getByText('view in Sessions detail')).toBeInTheDocument();
+    expect(screen.getByText('View session details')).toBeInTheDocument();
     expect(screen.getByRole('link')).toHaveAttribute('href', '/sessions/sid-tu');
   });
 
@@ -125,7 +125,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { kind: 'tool-result', output: big },
       }),
     );
-    expect(screen.getByText('view in Sessions detail')).toBeInTheDocument();
+    expect(screen.getByText('View session details')).toBeInTheDocument();
     expect(screen.getByRole('link')).toHaveAttribute('href', '/sessions/sid-tr');
   });
 
@@ -163,7 +163,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { kind: 'log', content: 'diag' },
       }),
     );
-    expect(screen.getByText('log')).toBeInTheDocument();
+    expect(screen.getByText('Log')).toBeInTheDocument();
   });
 
   it('envelope.type=error → yellow protocol-error style (distinct from kind=error red)', () => {
@@ -180,7 +180,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
     expect(screen.getByText('upstream failed')).toBeInTheDocument();
   });
 
-  it('session_ended completed + duration_ms → "completed in 4.2s"', () => {
+  it('session_ended completed + duration_ms → "Completed in 4.2s"', () => {
     renderBubble(
       makeEnvelope({
         type: 'session_ended',
@@ -191,7 +191,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
         },
       }),
     );
-    expect(screen.getByText(/completed/)).toBeInTheDocument();
+    expect(screen.getByText(/Completed/)).toBeInTheDocument();
     expect(screen.getByText(/in 4\.2s/)).toBeInTheDocument();
   });
 
@@ -205,7 +205,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
         },
       }),
     );
-    expect(screen.getByText(/failed/)).toBeInTheDocument();
+    expect(screen.getByText(/Failed/)).toBeInTheDocument();
     expect(screen.getByText(/backend stream closed early/)).toBeInTheDocument();
   });
 
@@ -216,7 +216,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { status: 'cancelled' },
       }),
     );
-    expect(screen.getByText(/cancelled/)).toBeInTheDocument();
+    expect(screen.getByText(/Cancelled/)).toBeInTheDocument();
   });
 
   it('session_ended completed without duration_ms → prefix only, no "in"', () => {
@@ -226,7 +226,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { status: 'completed' },
       }),
     );
-    expect(screen.getByText('completed')).toBeInTheDocument();
+    expect(screen.getByText('Completed')).toBeInTheDocument();
     expect(screen.queryByText(/in /)).toBeNull();
   });
 });

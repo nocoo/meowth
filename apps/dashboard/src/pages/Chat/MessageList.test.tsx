@@ -95,7 +95,7 @@ describe('MessageList', () => {
     expect(banner).toBeTruthy();
     expect(banner).toHaveAttribute('role', 'alert');
     expect(banner).toHaveTextContent('Cumulative envelope cap');
-    const link = screen.getByRole('link', { name: 'view in Sessions detail' });
+    const link = screen.getByRole('link', { name: 'View session details' });
     expect(link).toHaveAttribute('href', '/sessions/sid-cap');
     // 1000 kept raw envelopes: 500 text (each isolated by a tool-use
     // boundary, so no coalescing) + 500 tool-use. The dropped 1001st
@@ -128,9 +128,9 @@ describe('MessageList', () => {
     );
     const turn = makeTurn({ sessionId: null, envelopes });
     renderList([turn]);
-    expect(screen.queryByRole('link', { name: 'view in Sessions detail' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'View session details' })).toBeNull();
     expect(screen.getByText(/Cumulative envelope cap/)).toBeInTheDocument();
-    expect(screen.getByText('view in Sessions detail')).toBeInTheDocument();
+    expect(screen.getByText('View session details')).toBeInTheDocument();
   });
 });
 

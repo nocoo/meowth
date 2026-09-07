@@ -5,6 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { displayLabel } from '@/lib/labels';
 import type { Agent, AgentType } from '@/viewmodels/useChatViewModel';
 
 // docs/features/03 §4.4 — list `installed === true` agents only.
@@ -51,7 +52,7 @@ export default function AgentPicker({
       <SelectContent>
         {installed.map((a) => (
           <SelectItem key={a.type} value={a.type}>
-            {a.type}
+            {displayLabel(a.type)}
           </SelectItem>
         ))}
       </SelectContent>

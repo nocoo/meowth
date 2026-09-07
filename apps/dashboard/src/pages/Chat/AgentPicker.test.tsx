@@ -19,18 +19,18 @@ describe('AgentPicker', () => {
     render(<AgentPicker agents={AGENTS} selectedAgent={null} onChange={() => undefined} />);
     // Open the dropdown to inspect options.
     fireEvent.click(screen.getByRole('combobox'));
-    expect(screen.queryAllByText('claude').length).toBeGreaterThan(0);
-    expect(screen.queryAllByText('copilot').length).toBeGreaterThan(0);
-    expect(screen.queryAllByText('hermes').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Claude').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Copilot').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Hermes').length).toBeGreaterThan(0);
     // Excluded — must not appear as an option anywhere.
-    expect(screen.queryByText('codex')).toBeNull();
-    expect(screen.queryByText('pi')).toBeNull();
+    expect(screen.queryByText('Codex')).toBeNull();
+    expect(screen.queryByText('Pi')).toBeNull();
   });
 
   it('shows the selected agent in the trigger label', () => {
     render(<AgentPicker agents={AGENTS} selectedAgent="claude" onChange={() => undefined} />);
     const trigger = screen.getByRole('combobox');
-    expect(trigger).toHaveTextContent('claude');
+    expect(trigger).toHaveTextContent('Claude');
   });
 
   it('shows the placeholder when selectedAgent is null', () => {
@@ -43,7 +43,7 @@ describe('AgentPicker', () => {
     render(<AgentPicker agents={AGENTS} selectedAgent={null} onChange={onChange} />);
     fireEvent.click(screen.getByRole('combobox'));
     // Pick `hermes` — must be visible because it's installed.
-    const option = screen.getByRole('option', { name: 'hermes' });
+    const option = screen.getByRole('option', { name: 'Hermes' });
     fireEvent.click(option);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith('hermes');
@@ -54,7 +54,7 @@ describe('AgentPicker', () => {
     render(<AgentPicker agents={AGENTS} selectedAgent={null} onChange={onChange} disabled />);
     // The trigger should not open; if it did, options would appear.
     fireEvent.click(screen.getByRole('combobox'));
-    expect(screen.queryByRole('option', { name: 'claude' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Claude' })).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
   });
 
@@ -67,10 +67,10 @@ describe('AgentPicker', () => {
     const { rerender } = render(
       <AgentPicker agents={AGENTS} selectedAgent="claude" onChange={() => undefined} />,
     );
-    expect(screen.getByRole('combobox')).toHaveTextContent('claude');
+    expect(screen.getByRole('combobox')).toHaveTextContent('Claude');
     rerender(<AgentPicker agents={AGENTS} selectedAgent={null} onChange={() => undefined} />);
     const trigger = screen.getByRole('combobox');
-    expect(trigger).not.toHaveTextContent('claude');
+    expect(trigger).not.toHaveTextContent('Claude');
     expect(screen.getByText('Select an agent')).toBeInTheDocument();
   });
 });

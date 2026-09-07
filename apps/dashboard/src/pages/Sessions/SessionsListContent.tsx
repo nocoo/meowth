@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { displayLabel } from '@/lib/labels';
 import type { Session } from '@/viewmodels/useSessionsViewModel';
 import { ListTree } from 'lucide-react';
 import { Link } from 'react-router';
@@ -59,12 +60,12 @@ export default function SessionsListContent({ sessions }: SessionsListContentPro
         <TableBody>
           {sessions.map((session) => (
             <TableRow key={session.id}>
-              <TableCell className="font-mono">
+              <TableCell className="font-medium">
                 <Link
                   to={`/sessions/${session.id}`}
                   className="text-basalt-primary hover:underline"
                 >
-                  {session.backend_type}
+                  {displayLabel(session.backend_type)}
                 </Link>
               </TableCell>
               <TableCell>

@@ -127,10 +127,10 @@ function CapBanner({ sessionId }: CapBannerProps) {
       Cumulative envelope cap (1000) reached;{' '}
       {sessionId !== null ? (
         <Link to={`/sessions/${sessionId}`} className="underline">
-          view in Sessions detail
+          View session details
         </Link>
       ) : (
-        <span>view in Sessions detail</span>
+        <span>View session details</span>
       )}
     </div>
   );

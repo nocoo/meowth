@@ -21,5 +21,5 @@ test('paste setup-code → mint → /overview → /agents authenticates', async 
   await page.waitForURL(/\/agents$/);
   // Fake backend → all 5 backends installed; assert one as a
   // smoke check that the stored bearer survived the mint flow.
-  await expect(page.getByRole('cell', { name: 'claude' }).first()).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Claude' }).first()).toBeVisible();
 });

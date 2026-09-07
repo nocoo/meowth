@@ -126,8 +126,22 @@ for (const theme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: 'Collapse sidebar' }).click();
       await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
       const after = await logo.boundingBox();
-      expect(after?.x).toBe(before?.x);
       expect(after?.y).toBe(before?.y);
+      const rail = page.getByRole('complementary', { name: 'Primary navigation' });
+      await expect(rail).toHaveCSS('width', '68px');
+      const centers = await rail.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        const axis = bounds.x + bounds.width / 2;
+        const targets = element.querySelectorAll(
+          'img, nav a svg, button svg, [data-slot="avatar"]',
+        );
+        return [...targets].map((target) => {
+          const rect = target.getBoundingClientRect();
+          return Math.abs(rect.x + rect.width / 2 - axis);
+        });
+      });
+      expect(centers.length).toBeGreaterThanOrEqual(8);
+      for (const offset of centers) expect(offset).toBeLessThanOrEqual(0.5);
       await expect(page.getByRole('link', { name: 'Overview', exact: true })).toHaveAttribute(
         'aria-current',
         'page',

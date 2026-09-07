@@ -43,16 +43,16 @@ describe('SessionDetailContent (props, Stage C3b)', () => {
   it('renders the id / backend / status / model / started+ended header row', () => {
     render(<SessionDetailContent session={makeSession()} messages={[]} />);
     expect(screen.getByTestId('session-detail-id').textContent).toBe('sid');
-    expect(screen.getByText('claude')).toBeInTheDocument();
+    expect(screen.getByText('Claude')).toBeInTheDocument();
     expect(
-      screen.getByText(/Started 2026-06-22T00:00:00Z · ended 2026-06-22T00:00:10Z/),
+      screen.getByText(/Started 2026-06-22T00:00:00Z · Ended 2026-06-22T00:00:10Z/),
     ).toBeInTheDocument();
   });
 
   it('omits the " · ended ..." suffix when session.ended_at is null', () => {
     render(<SessionDetailContent session={makeSession({ ended_at: null })} messages={[]} />);
     expect(screen.getByText('Started 2026-06-22T00:00:00Z')).toBeInTheDocument();
-    expect(screen.queryByText(/ended/)).toBeNull();
+    expect(screen.queryByText(/Ended/)).toBeNull();
   });
 
   it('renders message envelopes with payload.content via MessageText and ignores heartbeat', () => {

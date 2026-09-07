@@ -1,6 +1,7 @@
 import MessageText from '@/components/MessageText';
 import SessionStatusBadge from '@/components/SessionStatusBadge';
 import { Card } from '@/components/ui/card';
+import { displayLabel } from '@/lib/labels';
 import type { SessionInfo, SessionMessageRow } from '@/viewmodels/useSessionDetailViewModel';
 
 export interface SessionDetailContentProps {
@@ -18,7 +19,7 @@ function MessageEnvelope({ env }: { env: SessionMessageRow }) {
   return (
     <div className="border-basalt-border border-t py-3 first:border-t-0 first:pt-0">
       <div className="text-basalt-muted-foreground text-xs">
-        seq {env.seq} · {env.ts}
+        Sequence {env.seq} · {env.ts}
       </div>
       <MessageText content={text} />
     </div>
@@ -35,7 +36,7 @@ function StatusRow({ env, label }: { env: SessionMessageRow; label: string }) {
       data-testid={`status-row-${env.type}`}
     >
       <span className="text-basalt-muted-foreground text-xs">
-        seq {env.seq} · {env.ts}
+        Sequence {env.seq} · {env.ts}
       </span>
       <p>
         <strong>{label}</strong>
@@ -75,13 +76,13 @@ export default function SessionDetailContent({ session, messages }: SessionDetai
           {session.id}
         </p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <strong>{session.backend_type}</strong>
+          <strong>{displayLabel(session.backend_type)}</strong>
           <SessionStatusBadge status={session.status} />
           <span className="text-basalt-muted-foreground">{session.model}</span>
         </div>
         <p className="text-basalt-muted-foreground text-xs">
           Started {session.started_at}
-          {session.ended_at !== null ? ` · ended ${session.ended_at}` : ''}
+          {session.ended_at !== null ? ` · Ended ${session.ended_at}` : ''}
         </p>
       </Card>
       <Card className="p-6" data-testid="session-messages">

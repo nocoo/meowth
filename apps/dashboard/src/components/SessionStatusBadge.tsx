@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { displayLabel } from '@/lib/labels';
 
 const VARIANTS: Record<string, 'success' | 'error' | 'info'> = {
   completed: 'success',
@@ -10,7 +11,7 @@ const VARIANTS: Record<string, 'success' | 'error' | 'info'> = {
 export default function SessionStatusBadge({ status }: { status: string }) {
   return (
     <Badge variant={VARIANTS[status] ?? 'secondary'} dot>
-      {status}
+      {displayLabel(status)}
     </Badge>
   );
 }

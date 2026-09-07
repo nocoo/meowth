@@ -44,7 +44,7 @@ describe('AgentsPage (shell, Stage C2)', () => {
     const { container } = render(<AgentsPage />);
     const pulses = container.querySelectorAll('.animate-pulse');
     expect(pulses.length).toBe(5 * 4);
-    expect(screen.queryByText('claude')).not.toBeInTheDocument();
+    expect(screen.queryByText('Claude')).not.toBeInTheDocument();
   });
 
   it('error branch routes to EmptyState (tone="error") with the vm message', () => {
@@ -65,7 +65,7 @@ describe('AgentsPage (shell, Stage C2)', () => {
       }),
     );
     render(<AgentsPage />);
-    expect(screen.getByRole('cell', { name: 'claude' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'codex' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Claude' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Codex' })).toBeInTheDocument();
   });
 });

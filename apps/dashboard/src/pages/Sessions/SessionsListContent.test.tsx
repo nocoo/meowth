@@ -41,8 +41,8 @@ describe('SessionsListContent (props, Stage C3a)', () => {
       makeSession('sid-1', { backend_type: 'claude' }),
       makeSession('sid-2', { backend_type: 'codex' }),
     ]);
-    const link1 = screen.getByRole('link', { name: 'claude' });
-    const link2 = screen.getByRole('link', { name: 'codex' });
+    const link1 = screen.getByRole('link', { name: 'Claude' });
+    const link2 = screen.getByRole('link', { name: 'Codex' });
     expect(link1.getAttribute('href')).toBe('/sessions/sid-1');
     expect(link2.getAttribute('href')).toBe('/sessions/sid-2');
   });

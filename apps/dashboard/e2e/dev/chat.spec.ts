@@ -24,7 +24,7 @@ test('chat: navigates to /chat, picker lists installed backends', async ({ page 
   const picker = page.getByRole('combobox', { name: 'Backend agent' });
   await expect(picker).toBeVisible();
   await picker.click();
-  await expect(page.getByRole('option', { name: 'claude' })).toBeVisible();
+  await expect(page.getByRole('option', { name: 'Claude' })).toBeVisible();
 });
 
 test('chat: sends a prompt and renders the streamed happy-fixture reply', async ({ page }) => {
@@ -49,7 +49,7 @@ test('chat: sends a prompt and renders the streamed happy-fixture reply', async 
   // the footer shows "completed in 42ms").
   const footer = page.locator('[data-bubble-kind="session-ended"]');
   await expect(footer).toBeVisible({ timeout: 10_000 });
-  await expect(footer).toContainText('completed');
+  await expect(footer).toContainText('Completed');
 });
 
 test('chat: composer flips back to Send after session_ended', async ({ page }) => {

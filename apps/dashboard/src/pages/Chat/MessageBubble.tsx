@@ -1,5 +1,6 @@
 import MessageText from '@/components/MessageText';
 import { Notice } from '@/components/ui/notice';
+import { displayLabel } from '@/lib/labels';
 import type { Envelope } from '@/viewmodels/useChatViewModel';
 import { LayerCard } from '@nocoo/basalt';
 import { Check, CircleDot, CircleSlash, Clock, type LucideIcon, X } from 'lucide-react';
@@ -66,7 +67,7 @@ function TruncatedText({ content, cap, sessionId, className = '' }: TruncatedTex
       <div className="text-basalt-muted-foreground text-xs mt-1">
         …(truncated,{' '}
         <Link to={`/sessions/${sessionId}`} className="underline">
-          view in Sessions detail
+          View session details
         </Link>
         )
       </div>
@@ -130,7 +131,7 @@ function SessionEndedFooter({ envelope }: SessionEndedFooterProps) {
   const durationMs = payloadNumber(rawDuration);
 
   const Icon = STATUS_ICONS[status] ?? CircleDot;
-  let label = status;
+  let label = displayLabel(status);
   if (status === 'completed' && durationMs > 0) label += ` in ${formatDuration(durationMs)}`;
   if (status === 'failed' && error.length > 0) label += `: ${error}`;
 
@@ -189,7 +190,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
         padding="sm"
         className="text-xs leading-5 text-basalt-muted-foreground"
       >
-        <div className="mb-1 font-medium">tool: {tool}</div>
+        <div className="mb-1 font-medium">Tool: {tool}</div>
         <TruncatedText
           content={serialized}
           cap={TOOL_USE_INPUT_CAP}
@@ -208,7 +209,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
         padding="sm"
         className="text-xs leading-5 text-basalt-muted-foreground"
       >
-        <div className="mb-1 font-medium">tool result</div>
+        <div className="mb-1 font-medium">Tool result</div>
         <TruncatedText
           content={output}
           cap={TOOL_RESULT_OUTPUT_CAP}
@@ -242,7 +243,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     const content = payloadString(envelope, 'content');
     return (
       <details data-bubble-kind="log" className="text-basalt-muted-foreground text-xs">
-        <summary className="cursor-pointer font-medium">log</summary>
+        <summary className="cursor-pointer font-medium">Log</summary>
         <MessageText content={content} className="mt-2 text-xs" />
       </details>
     );

@@ -102,16 +102,14 @@ describe('Sidebar (Stage B1)', () => {
     expect(screen.getByAltText('Meowth')).toBeInTheDocument();
   });
 
-  it('collapsed mode keeps the logo left-aligned so it does not jump', async () => {
+  it('collapsed links keep their flex class through tooltip composition', async () => {
     const user = userEvent.setup();
     renderSidebar();
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
-    const logoImg = screen.getByAltText('Meowth');
-    const wrapper = logoImg.parentElement;
-    expect(wrapper).not.toBeNull();
-    expect(wrapper?.className ?? '').toContain('h-14');
-    expect(wrapper?.className ?? '').toContain('justify-start');
-    expect(wrapper?.className ?? '').toContain('pl-6');
+    for (const link of screen.getAllByRole('link')) {
+      expect(link).toHaveClass('flex');
+      expect(link.className).not.toContain('=>');
+    }
   });
 
   it('collapsed groups hide their links from keyboard navigation', async () => {

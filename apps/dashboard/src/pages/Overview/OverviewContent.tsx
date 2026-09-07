@@ -2,6 +2,7 @@ import SessionStatusBadge from '@/components/SessionStatusBadge';
 import StatCard from '@/components/StatCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { displayLabel } from '@/lib/labels';
 import type { OverviewData } from '@/viewmodels/useOverviewViewModel';
 import { LayerCard } from '@nocoo/basalt';
 import { SectionRule } from '@nocoo/basalt/components/section-rule';
@@ -95,10 +96,10 @@ export default function OverviewContent({ data }: OverviewContentProps) {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">
-                          {session.thread_name || `${session.backend_type} session`}
+                          {session.thread_name || `${displayLabel(session.backend_type)} session`}
                         </p>
                         <p className="mt-1 truncate text-xs text-basalt-muted-foreground">
-                          {session.backend_type}
+                          {displayLabel(session.backend_type)}
                           {session.model ? ` · ${session.model}` : ''}
                         </p>
                       </div>
@@ -136,7 +137,7 @@ export default function OverviewContent({ data }: OverviewContentProps) {
                       aria-hidden="true"
                     />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                      {agent.type}
+                      {displayLabel(agent.type)}
                     </span>
                     <Badge variant={agent.installed ? 'success' : 'outline'} dot>
                       {agent.installed ? 'Installed' : 'Not installed'}

@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { displayLabel } from '@/lib/labels';
 import type { Agent } from '@/viewmodels/useAgentsViewModel';
 import { Bot } from 'lucide-react';
 
@@ -52,10 +53,10 @@ export default function AgentsContent({ agents }: AgentsContentProps) {
         <TableBody>
           {agents.map((agent) => (
             <TableRow key={agent.type}>
-              <TableCell className="font-medium">{agent.type}</TableCell>
+              <TableCell className="font-medium">{displayLabel(agent.type)}</TableCell>
               <TableCell>
                 <Badge variant={agent.installed ? 'success' : 'outline'} dot>
-                  {agent.installed ? 'yes' : 'no'}
+                  {agent.installed ? 'Yes' : 'No'}
                 </Badge>
               </TableCell>
               <TableCell className="font-mono text-xs text-basalt-muted-foreground">
