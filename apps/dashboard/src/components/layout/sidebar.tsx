@@ -111,7 +111,7 @@ function ExpandedView({
   return (
     <>
       <SidebarHeader>
-        <div className="flex w-full items-center justify-between">
+        <div className="flex w-full items-center justify-between px-3">
           <div className="flex min-w-0 items-center gap-3">
             <img src="/logo-24.png" alt="Meowth" width={24} height={24} className="shrink-0" />
             <span className="truncate text-sm font-semibold tracking-tight">Meowth</span>

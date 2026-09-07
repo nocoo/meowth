@@ -1,8 +1,8 @@
+import { THEME_STORAGE_KEY } from '@/lib/theme-init';
+import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ThemeToggle from './ThemeToggle';
-
-const STORAGE_KEY = 'meowth_theme';
 
 interface MatchMediaState {
   prefersDark: boolean;
@@ -30,7 +30,16 @@ function installMatchMedia(state: MatchMediaState): void {
 
 function resetTheme(): void {
   window.localStorage.clear();
-  document.documentElement.classList.remove('dark');
+  document.documentElement.classList.remove('dark', 'light');
+  document.documentElement.removeAttribute('data-mode');
+}
+
+function renderToggle() {
+  return render(
+    <ThemeProvider defaultTheme="system" storageKey={THEME_STORAGE_KEY}>
+      <ThemeToggle />
+    </ThemeProvider>,
+  );
 }
 
 beforeEach(() => {
@@ -45,34 +54,34 @@ afterEach(() => {
 describe('ThemeToggle initial theme resolution', () => {
   it('no stored theme + system light → no `dark` class', () => {
     installMatchMedia({ prefersDark: false });
-    render(<ThemeToggle />);
+    renderToggle();
     expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 
   it('no stored theme + system dark → applies `dark` class', () => {
     installMatchMedia({ prefersDark: true });
-    render(<ThemeToggle />);
+    renderToggle();
     expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
   it('stored `dark` wins over system light', () => {
     installMatchMedia({ prefersDark: false });
-    window.localStorage.setItem(STORAGE_KEY, 'dark');
-    render(<ThemeToggle />);
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+    renderToggle();
     expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
   it('stored `light` wins over system dark', () => {
     installMatchMedia({ prefersDark: true });
-    window.localStorage.setItem(STORAGE_KEY, 'light');
-    render(<ThemeToggle />);
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    renderToggle();
     expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 
   it('malformed stored value is ignored and system preference applies', () => {
     installMatchMedia({ prefersDark: true });
-    window.localStorage.setItem(STORAGE_KEY, 'midnight'); // not light|dark
-    render(<ThemeToggle />);
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'midnight');
+    renderToggle();
     expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 });
@@ -80,45 +89,44 @@ describe('ThemeToggle initial theme resolution', () => {
 describe('ThemeToggle interaction', () => {
   it('clicking toggles dark class and persists to localStorage', () => {
     installMatchMedia({ prefersDark: false });
-    render(<ThemeToggle />);
+    renderToggle();
     expect(document.documentElement.classList.contains('dark')).toBe(false);
 
     fireEvent.click(screen.getByRole('button'));
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('dark');
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
 
     fireEvent.click(screen.getByRole('button'));
     expect(document.documentElement.classList.contains('dark')).toBe(false);
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('light');
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
   });
 
   it('aria-label flips with current theme', () => {
     installMatchMedia({ prefersDark: false });
-    render(<ThemeToggle />);
+    renderToggle();
     expect(screen.getByRole('button', { name: 'Switch to dark theme' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button'));
     expect(screen.getByRole('button', { name: 'Switch to light theme' })).toBeInTheDocument();
   });
 
-  it('uses the surety-aligned ghost button class set (h-8 w-8 rounded-lg, no border)', () => {
+  it('keeps both light/dark classes and data-mode in sync', () => {
     installMatchMedia({ prefersDark: false });
-    render(<ThemeToggle />);
-    const button = screen.getByRole('button');
-    const cls = button.className;
-    expect(cls).toContain('h-8');
-    expect(cls).toContain('w-8');
-    expect(cls).toContain('rounded-lg');
-    expect(cls).toContain('text-muted-foreground');
-    expect(cls).toContain('hover:bg-accent');
-    // Old Gen-1 visual is gone: no border-input + bg-background combo.
-    expect(cls).not.toContain('border-input');
-    expect(cls).not.toContain('bg-background');
+    renderToggle();
+    fireEvent.click(screen.getByRole('button'));
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(document.documentElement.classList.contains('light')).toBe(false);
+    expect(document.documentElement.getAttribute('data-mode')).toBe('dark');
+
+    fireEvent.click(screen.getByRole('button'));
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+    expect(document.documentElement.classList.contains('light')).toBe(true);
+    expect(document.documentElement.getAttribute('data-mode')).toBe('light');
   });
 
   it('renders an h-4 w-4 icon inside the button', () => {
     installMatchMedia({ prefersDark: false });
-    const { container } = render(<ThemeToggle />);
+    const { container } = renderToggle();
     const icon = container.querySelector('button svg');
     expect(icon).not.toBeNull();
     const iconClass = icon?.getAttribute('class') ?? '';

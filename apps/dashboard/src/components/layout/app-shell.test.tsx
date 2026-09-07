@@ -1,3 +1,5 @@
+import { THEME_STORAGE_KEY } from '@/lib/theme-init';
+import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type React from 'react';
@@ -28,14 +30,16 @@ function setViewport(width: number): void {
 
 function ShellWithChildPage({ child }: { child: React.ReactElement }) {
   return (
-    <MemoryRouter initialEntries={['/overview']}>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route path="/overview" element={child} />
-          <Route path="/agents" element={<div data-testid="agents-page">agents</div>} />
-        </Route>
-      </Routes>
-    </MemoryRouter>
+    <ThemeProvider defaultTheme="system" storageKey={THEME_STORAGE_KEY}>
+      <MemoryRouter initialEntries={['/overview']}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/overview" element={child} />
+            <Route path="/agents" element={<div data-testid="agents-page">agents</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </ThemeProvider>
   );
 }
 

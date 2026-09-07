@@ -1,5 +1,7 @@
 import { AppShell } from '@/components/layout/app-shell';
+import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import type { OverviewViewModel } from '@/viewmodels/useOverviewViewModel';
+import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -33,13 +35,15 @@ function vm(refresh: () => void | Promise<void>): OverviewViewModel {
 
 function renderShellWithOverview() {
   return render(
-    <MemoryRouter initialEntries={['/overview']}>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route path="/overview" element={<OverviewPage />} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+    <ThemeProvider defaultTheme="system" storageKey={THEME_STORAGE_KEY}>
+      <MemoryRouter initialEntries={['/overview']}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/overview" element={<OverviewPage />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </ThemeProvider>,
   );
 }
 
