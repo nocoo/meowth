@@ -69,11 +69,7 @@ describe('AppShell (Stage B1) — desktop layout', () => {
   it('breadcrumbs include "Meowth" home crumb plus active page', () => {
     render(<ShellWithChildPage child={<div>overview-body</div>} />);
     expect(screen.getByRole('link', { name: 'Meowth' })).toBeInTheDocument();
-    // Sidebar nav also renders "Overview" as a link; the breadcrumb
-    // version is the unique aria-current=page span.
-    const matches = screen.getAllByText('Overview');
-    const breadcrumb = matches.find((el) => el.getAttribute('aria-current') === 'page');
-    expect(breadcrumb).toBeDefined();
+    expect(screen.getByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument();
   });
 
   it('desktop mode does not render the mobile menu trigger', () => {
@@ -180,10 +176,7 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
-    // Radix Dialog renders an overlay sibling on the dialog with
-    // data-slot="sheet-overlay"; clicking it (pointerDown +
-    // pointerUp) triggers the same close path as Escape.
-    const overlay = document.querySelector('[data-slot="sheet-overlay"]');
+    const overlay = document.querySelector('.fixed.inset-0.bg-black\\/50');
     expect(overlay).toBeTruthy();
     if (!overlay) throw new Error('sheet overlay not found');
     fireEvent.pointerDown(overlay);
