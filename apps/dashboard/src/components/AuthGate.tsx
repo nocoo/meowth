@@ -1,7 +1,8 @@
-import Spinner from '@/components/Spinner';
 import { isApiError } from '@/lib/api';
 import { clearStoredToken, getStoredToken } from '@/lib/localStorage';
 import { fetchAgents } from '@/models/agents';
+import { Button, LayerCard } from '@nocoo/basalt';
+import { LoadingScreen } from '@nocoo/basalt/components/loading-screen';
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
@@ -25,23 +26,19 @@ type AuthPhase = 'probing' | 'ok' | 'unreachable';
 
 function DaemonUnreachable({ onRetry }: { onRetry: () => void }) {
   return (
-    <main className="bg-background text-foreground flex min-h-screen items-center justify-center p-6">
-      <div className="bg-secondary rounded-card w-full max-w-md space-y-3 p-6">
+    <main className="bg-basalt-background text-basalt-foreground flex min-h-screen items-center justify-center p-6">
+      <LayerCard className="w-full max-w-md space-y-3" padding="lg">
         <h1 className="text-xl font-semibold">Daemon unreachable</h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-basalt-muted-foreground text-sm">
           The Meowth daemon did not respond. Check that meowthd is running and reachable from this
           browser.
         </p>
         <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={onRetry}
-            className="bg-primary text-primary-foreground rounded px-3 py-2 text-sm"
-          >
+          <Button type="button" onClick={onRetry}>
             Retry
-          </button>
+          </Button>
         </div>
-      </div>
+      </LayerCard>
     </main>
   );
 }
@@ -88,8 +85,9 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   if (phase === 'ok') return <>{children}</>;
   if (phase === 'unreachable') return <DaemonUnreachable onRetry={onRetry} />;
   return (
-    <main className="bg-background text-foreground flex min-h-screen items-center justify-center">
-      <Spinner label="Verifying token..." />
-    </main>
+    <LoadingScreen
+      label="Verifying token..."
+      mark={<img src="/logo-80.png" alt="" width={32} height={32} />}
+    />
   );
 }
