@@ -38,9 +38,7 @@ function renderAt(path = '/setup') {
 describe('SetupPage', () => {
   it('renders mode A (token paste) by default with a Continue button', () => {
     renderAt();
-    const heading = screen.getByRole('heading', { level: 1, name: /Meowth - Setup/ });
-    expect(heading).toBeInTheDocument();
-    expect(heading).toHaveClass('text-basalt-foreground');
+    expect(screen.getByRole('heading', { level: 1, name: /Meowth - Setup/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Continue/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /setup-code instead/i })).toBeInTheDocument();
   });

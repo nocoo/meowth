@@ -107,15 +107,16 @@ export default function SetupPage() {
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 pt-6 pb-14">
-              <div className="bg-basalt-secondary ring-basalt-border flex h-24 w-24 items-center justify-center overflow-hidden rounded-full p-2.5 ring-1">
-                <img src="/logo-80.png" alt="" width={40} height={40} />
+              <h1 className="sr-only">Meowth - Setup</h1>
+              <div className="bg-basalt-secondary ring-basalt-border flex h-24 w-24 items-center justify-center overflow-hidden rounded-full p-5 ring-1">
+                <img
+                  src="/logo-80.png"
+                  alt=""
+                  width={56}
+                  height={56}
+                  className="h-full w-full object-contain"
+                />
               </div>
-              <h1 className="text-basalt-foreground mt-5 text-lg font-semibold">Meowth - Setup</h1>
-              <p className="text-basalt-muted-foreground mt-1 text-xs">
-                {vm.mode === 'token'
-                  ? 'Sign in with a root token'
-                  : 'Mint a token from a setup-code'}
-              </p>
               <div className="bg-basalt-border mt-5 h-px w-full" />
               <div className="flex-1" />
 
@@ -141,9 +142,14 @@ export default function SetupPage() {
                   <Button type="submit" className="w-full rounded-xl py-3" loading={submitting}>
                     {submitting ? 'Continuing...' : 'Continue'}
                   </Button>
-                  <div className="pt-1 text-center text-sm">
-                    <p className="text-basalt-muted-foreground">Don't have a token yet?</p>
-                    <Button type="button" variant="link" onClick={() => vm.setMode('mint')}>
+                  <div className="pt-1 text-center">
+                    <p className="text-basalt-muted-foreground text-xs">Don't have a token yet?</p>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto text-xs"
+                      onClick={() => vm.setMode('mint')}
+                    >
                       I have a setup-code instead
                     </Button>
                   </div>
@@ -185,8 +191,13 @@ export default function SetupPage() {
                   {vm.mintDisabled && vm.mintDisabledReason ? (
                     <Notice variant="info">{vm.mintDisabledReason}</Notice>
                   ) : null}
-                  <div className="pt-1 text-center text-sm">
-                    <Button type="button" variant="link" onClick={() => vm.setMode('token')}>
+                  <div className="pt-1 text-center">
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto text-xs"
+                      onClick={() => vm.setMode('token')}
+                    >
                       Back to "I already have a token"
                     </Button>
                   </div>
