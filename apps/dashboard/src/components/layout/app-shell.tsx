@@ -107,7 +107,7 @@ function AppShellInner() {
           <ContentIsland
             className={cn(
               'rounded-island bg-card h-full w-full',
-              pathname === '/chat' ? 'flex flex-col overflow-hidden p-0' : undefined,
+              pathname === '/chat' ? 'flex flex-col overflow-hidden p-0 md:p-0' : undefined,
             )}
           >
             <Outlet />
