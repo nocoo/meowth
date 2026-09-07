@@ -1,9 +1,9 @@
 import { LayerCard } from '@nocoo/basalt';
-import type { ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-export function Card({ children, className }: { children?: ReactNode; className?: string }) {
+export function Card({ children, className, ...props }: ComponentPropsWithoutRef<'div'>) {
   return (
-    <LayerCard padding="none" outlined {...(className ? { className } : {})}>
+    <LayerCard padding="none" outlined className={className ?? ''} {...props}>
       {children}
     </LayerCard>
   );
