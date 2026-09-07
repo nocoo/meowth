@@ -128,13 +128,21 @@
 }
 
 @keyframes accordion-down {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height); }
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
 }
 
 @keyframes accordion-up {
-  from { height: var(--radix-accordion-content-height); }
-  to { height: 0; }
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
 }
 
 /*
@@ -407,6 +415,18 @@
   --heatmap-orange-2: 30 55% 35%;
   --heatmap-orange-3: 30 60% 45%;
   --heatmap-orange-4: 30 65% 55%;
+}
+
+/*
+ * AccentProvider lightens primary in dark mode until black overlay
+ * text passes WCAG. Meowth blue stays a filled accent; overlay text
+ * is white so header strips and primary buttons stay readable.
+ */
+html.dark,
+html[data-mode="dark"] {
+  --basalt-primary: 217 91% 50% !important;
+  --basalt-primary-foreground: 0 0% 100% !important;
+  --basalt-ring: 217 91% 50% !important;
 }
 
 /*

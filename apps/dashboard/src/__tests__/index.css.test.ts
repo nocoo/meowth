@@ -93,6 +93,11 @@ describe('index.css — Stage A2 Basalt B05 tokens', () => {
     });
   });
 
+  it('forces white overlay text on Meowth primary in dark mode', () => {
+    expect(css).toMatch(/html\.dark/);
+    expect(css).toMatch(/--basalt-primary-foreground:\s*0 0% 100%\s*!important/);
+  });
+
   describe('semantic colors must be present in both light and dark blocks', () => {
     it.each([
       'warning',
