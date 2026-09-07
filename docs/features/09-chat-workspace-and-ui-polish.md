@@ -75,4 +75,8 @@ actual reason; do not count synthetic responses as live-agent verification.
 
 ## Results
 
-Pending implementation and verification.
+- Single HTTPS origin complete. Caddy candidate validation/reload, main-origin
+  API health, trusted WSS CSS update, document/draft preservation, TypeScript,
+  and production build passed. The retired hostname no longer serves the
+  dashboard; Vite rejects its Host header with HTTP 403.
+- UI and chat implementation pending.

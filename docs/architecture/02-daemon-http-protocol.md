@@ -622,7 +622,7 @@ Content-Type: application/problem+json; charset=utf-8
 每层职责：
 
 - **bearer_auth**：从 `Authorization: Bearer ...` 取 token，按 prefix 查 SQLite，argon2id 验证（实现细节 → 03 / Phase 3.6）；非 `/v1/*` 路径直通；`OPTIONS` preflight 直通（避免 CORS preflight 因缺 bearer 被 401，使 CORS middleware 失效）；失败 → 401 problem+json `type=unauthorized`，**不**记录失败 token 字面值，access_log 只记 prefix（前 9 字符，`mwt_` + 5 base32）；常量时间比对（详 → 03）
-- **cors (dev only)**：默认**不挂载**；`--dev` 下放行 `Origin: http://meowth-vite.dev.hexly.ai`，无白名单则拒；**必须位于 bearer_auth 之前**，以便浏览器 `OPTIONS /v1/...` preflight（不带 bearer）能拿到正确 CORS header；不写入响应 cache。**若 dev CORS 在工程层被认为多余**（实操中 dashboard dev 走 Vite proxy 同源转发已足够），可在 Phase 3.7 实施时直接不实现该 middleware，daemon 只依赖 Vite proxy；该决策记入 §15 未决问题。
+- **cors (dev only)**：默认**不挂载**；`--dev` 下放行 `Origin: https://meowth.dev.hexly.ai`，无白名单则拒；**必须位于 bearer_auth 之前**，以便浏览器 `OPTIONS /v1/...` preflight（不带 bearer）能拿到正确 CORS header；不写入响应 cache。**若 dev CORS 在工程层被认为多余**（实操中 dashboard dev 走 Vite proxy 同源转发已足够），可在 Phase 3.7 实施时直接不实现该 middleware，daemon 只依赖 Vite proxy；该决策记入 §15 未决问题。
 - **nosniff**：全局 middleware，所有响应（含 401 / 413 / 404 / problem+json / dashboard HTML / static asset）注入 `X-Content-Type-Options: nosniff`；与 docs/architecture/07 §4.1 C 一致；详 → 07。
 - **security_headers**：**不**作为 chi middleware 全局挂载；仅 dashboard HTML / SPA fallback handler 与静态 asset handler 自行调用 `secheaders.Document` / `secheaders.Asset` wrapper（07 §4.1 A/B + §4.2 / §4.3）。`/v1/*` / `/healthz` / `/bootstrap/*` 等 API/JSON 响应只带 `nosniff`，不带 CSP / COOP / CORP / Referrer-Policy / Permissions-Policy。
 

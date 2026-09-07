@@ -1,5 +1,9 @@
 # 01 · 端口迁移到 Hexly Caddy 体系
 
+> Historical migration record. Current development uses only
+> `https://meowth.dev.hexly.ai` for the dashboard, API, and Vite hot refresh.
+> The routing below is superseded by [feature 08](08-dashboard-theme-and-vite.md#development-routes).
+
 > 状态：源码 + 文档迁移已落地（2026-06-23），自动化验证全绿；Caddy HTTPS 链路手工实测待跟进
 > 历史在 `git log -- docs/features/01-port-migration-to-hexly-caddy.md`
 

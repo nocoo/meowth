@@ -267,12 +267,12 @@ basalt 的 token 全文以 `@theme` 形式存在于 `src/index.css`，由 §4.1 
 
 ### 3.4 dev proxy **不**覆盖 `/bootstrap/*`
 
-[`04`](04-bootstrap-and-first-run-mint.md) §6.6 浏览器来源门要求 `POST /bootstrap/mint` 请求的 `Origin` header 必须**精确等于** `http://` + daemon `r.Host`。Vite dev server 在 `http://meowth-vite.dev.hexly.ai` 跑，浏览器发的请求 `Origin: http://meowth-vite.dev.hexly.ai`；即使 Vite proxy 把 path 转到 daemon `127.0.0.1:7040`，daemon 看到的 `Origin` 仍是 `http://meowth-vite.dev.hexly.ai`，不匹配 `http://127.0.0.1:7040` → 04 §6.6 判定 cross-site → 统一 404。dev 下 `/setup` mint 表单因此会**假失败**。
+[`04`](04-bootstrap-and-first-run-mint.md) §6.6 浏览器来源门要求 `POST /bootstrap/mint` 请求的 `Origin` header 必须**精确等于** `http://` + daemon `r.Host`。开发界面经 Caddy 在 `https://meowth.dev.hexly.ai` 提供，浏览器发的请求 `Origin: https://meowth.dev.hexly.ai`；即使 Vite proxy 把 path 转到 daemon `127.0.0.1:7040`，daemon 看到的 `Origin` 仍是 `https://meowth.dev.hexly.ai`，不匹配 `http://127.0.0.1:7040` → 04 §6.6 判定 cross-site → 统一 404。dev 下 `/setup` mint 表单因此会**假失败**。
 
 v1 选定方案（**不**修改 04 安全边界）：
 
 - **dev proxy 不接管 `/bootstrap/*`**（§3.2 已落实）
-- dev 下 `/setup` mint 表单**仍渲染**（同一份 page 代码，方便 UI 开发），但**提交按钮按"是否 HTTP loopback origin"判定**——`useSetupViewModel` 检测当前 `window.location.origin`：HTTP loopback（`http://127.0.0.1:*`、`http://localhost:*`、`http://[::1]:*`）放行（mint 路径 B 真实跑在 daemon `http://127.0.0.1:7040`，e2e `dashboard-embed-mint` 也跑在 `http://127.0.0.1:17041`，都属 loopback），其它任何 origin（如 `http://meowth-vite.dev.hexly.ai`、Caddy HTTPS `https://meowth.dev.hexly.ai`）一律 disabled，旁边显示文案「Mint must be reached at http://127.0.0.1:7040/setup (not via Caddy HTTPS; localhost may resolve to IPv6 — prefer 127.0.0.1)」。这条规则同时保护 Caddy HTTPS 入口：浏览器从 `https://meowth.dev.hexly.ai/setup` 访问时表单不可点
+- dev 下 `/setup` mint 表单**仍渲染**（同一份 page 代码，方便 UI 开发），但**提交按钮按"是否 HTTP loopback origin"判定**——`useSetupViewModel` 检测当前 `window.location.origin`：HTTP loopback（`http://127.0.0.1:*`、`http://localhost:*`、`http://[::1]:*`）放行（mint 路径 B 真实跑在 daemon `http://127.0.0.1:7040`，e2e `dashboard-embed-mint` 也跑在 `http://127.0.0.1:17041`，都属 loopback），其它任何 origin（如 Caddy HTTPS `https://meowth.dev.hexly.ai`）一律 disabled，旁边显示文案「Mint must be reached at http://127.0.0.1:7040/setup (not via Caddy HTTPS; localhost may resolve to IPv6 — prefer 127.0.0.1)」。这条规则同时保护 Caddy HTTPS 入口：浏览器从 `https://meowth.dev.hexly.ai/setup` 访问时表单不可点
 - mint L3 测试因此只在"production embed 形态"下跑（Phase 3.20 / 3.21 用 daemon embed dashboard dist 后通过 same-origin 触达 `http://127.0.0.1:17041`）；dev 下 mint 行为 = "按钮 disabled + 文案" 即视为正确
 - L2 层面对 mint endpoint 的 wire 测试由 daemon 侧 curl-level harness 覆盖（[`08`](08-6dq-hooks-wiring.md)），不在 dashboard 测试范围
 
@@ -856,7 +856,7 @@ export function clearStoredToken(): void { localStorage.removeItem(KEY); }
 
 - mint 表单的 404 响应**不区分**原因（[`04`](04-bootstrap-and-first-run-mint.md) §6.5）；dashboard 也**不**尝试根据 404 推断 daemon 状态（如 "remote mode" / "lockout" / "hash missing"）。统一文案，把进一步诊断留给 daemon 日志
 - dashboard **不**做任何 unauthenticated daemon state introspection（无 ping 状态 endpoint、无 `GET /bootstrap/status`、无 first-run probe）；§9 决策树**只**用受保护 `/v1/agents` 的 200/401 + mint 端点的 200/404 这两条线索
-- **dev 模式下 mint 表单不承诺工作**（§3.4 已说明）：[`04`](04-bootstrap-and-first-run-mint.md) §6.6 浏览器来源门要求 `Origin` 等于 daemon `Host`，dev 下 Vite dev server `meowth-vite.dev.hexly.ai` 与 daemon `127.0.0.1:7040` 不同源；`useSetupViewModel` 检测到 `window.location.origin` 非 HTTP loopback 时（含 Caddy HTTPS 入口 `https://meowth.dev.hexly.ai`），mint 表单 submit 按钮 **disabled** 且显示提示「Mint must be reached at http://127.0.0.1:7040/setup」；按钮 disabled = 不发出 cross-site POST。HTTP loopback origin（含 e2e 的 17041 fixture）放行
+- **dev 模式下 mint 表单不承诺工作**（§3.4 已说明）：[`04`](04-bootstrap-and-first-run-mint.md) §6.6 浏览器来源门要求 `Origin` 等于 daemon `Host`，dev 下 Caddy/Vite 入口 `https://meowth.dev.hexly.ai` 与 daemon `127.0.0.1:7040` 不同源；`useSetupViewModel` 检测到 `window.location.origin` 非 HTTP loopback 时（含 Caddy HTTPS 入口 `https://meowth.dev.hexly.ai`），mint 表单 submit 按钮 **disabled** 且显示提示「Mint must be reached at http://127.0.0.1:7040/setup」；按钮 disabled = 不发出 cross-site POST。HTTP loopback origin（含 e2e 的 17041 fixture）放行
 
 ### 9.3 setup 路由守卫不能循环
 

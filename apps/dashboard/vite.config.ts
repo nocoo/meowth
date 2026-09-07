@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
       host: '127.0.0.1',
       port: 37040,
       strictPort: true,
-      allowedHosts: ['meowth.dev.hexly.ai', 'meowth-vite.dev.hexly.ai'],
+      allowedHosts: ['meowth.dev.hexly.ai'],
       // HMR follows the browser origin: ws on loopback, wss through Caddy.
       proxy: {
         '/v1': { target: daemonUrl, changeOrigin: false },

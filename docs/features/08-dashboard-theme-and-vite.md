@@ -38,14 +38,13 @@ are different delivery modes, not different frontend frameworks.
 | Entry | Frontend | API |
 |---|---|---|
 | `https://meowth.dev.hexly.ai` | Caddy to Vite `127.0.0.1:37040` | Caddy to daemon `127.0.0.1:7040` |
-| `https://meowth-vite.dev.hexly.ai` | Caddy to Vite `127.0.0.1:37040` | Vite proxy to daemon |
 | `http://127.0.0.1:37040` | Vite directly | Vite proxy to daemon |
 | `http://127.0.0.1:7040` | Embedded production build | Daemon directly |
 
 `pnpm dashboard:dev` starts only the frontend. Reuse the running daemon, or
 start `./daemon/meowthd serve` in another terminal. `pnpm dev` also runs Vite.
-The development server uses a strict loopback port and accepts both HTTPS
-hostnames. Its HMR client derives WS/WSS from the browser origin.
+The development server uses a strict loopback port and accepts only the main
+HTTPS hostname. Its HMR client derives WS/WSS from the browser origin.
 
 `MEOWTH_DAEMON_URL` sets the Vite proxy target, defaulting to
 `http://127.0.0.1:7040`. Vite reads it from the shell or dashboard `.env.local`;
@@ -80,6 +79,9 @@ Validate the candidate configuration with `caddy validate --adapter caddyfile
 `caddy reload --adapter caddyfile --config /opt/homebrew/etc/Caddyfile`.
 The `/bootstrap` matcher preserves the daemon's own rejection of mint requests
 through a proxy; it does not enable mint on the HTTPS hostname.
+
+The separate Vite hostname was retired on 2026-09-08. The main hostname is the
+only configured HTTPS entry for the dashboard, API, and hot refresh.
 
 ### Isolated browser tests
 

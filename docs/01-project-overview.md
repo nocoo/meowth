@@ -158,7 +158,6 @@ type Backend interface {
 - **绑定**：默认 `127.0.0.1:7040`；监听其他地址需走 §7.7 远程访问规则
 - **本机 Caddy 反代**（Hexly 域名体系，详 [`docs/features/08-dashboard-theme-and-vite.md`](features/08-dashboard-theme-and-vite.md)）：
   - `https://meowth.dev.hexly.ai` → Vite `37040` for UI/HMR, daemon `7040` for API
-  - `https://meowth-vite.dev.hexly.ai` → Vite dev `37040`（dev-only）
   - `http://127.0.0.1:7040` → daemon with the embedded production dashboard
   - **mint 不走 Caddy**：必须 `http://127.0.0.1:7040/setup` 直连（§7.8 同源门）
 
