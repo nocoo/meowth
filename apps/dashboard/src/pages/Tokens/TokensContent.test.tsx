@@ -75,7 +75,8 @@ describe('TokensContent (props, Stage C4)', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
-    await user.click(screen.getByRole('button', { name: '...' }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.querySelector('button[aria-busy="true"]')).not.toBeNull();
     expect(onRevoke).toHaveBeenCalledTimes(1);
     release?.();
   });
