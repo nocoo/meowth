@@ -4,6 +4,8 @@ packages:
 allowBuilds:
   '@biomejs/biome': true
   esbuild: false
+minimumReleaseAgeExclude:
+  - '@nocoo/basalt@2.1.0'
 onlyBuiltDependencies:
   - '@biomejs/biome'
 overrides:
