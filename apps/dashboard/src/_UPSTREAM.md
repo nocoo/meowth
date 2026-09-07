@@ -9,20 +9,19 @@ basalt / surety / zhe / pew trees.
 | package       | `@nocoo/basalt` |
 | version       | `2.1.0` |
 | adopted_at    | 2026-09-07 |
-| contract      | `docs/features/07-dashboard-basalt-package.md` |
+| contract      | `docs/features/07-dashboard-basalt-package.md`, `docs/features/08-dashboard-theme-and-vite.md` |
 | integration   | `~/workspace/personal/basalt/INTEGRATION.md` |
 
 Brand accent is Meowth blue, applied through `AccentProvider`
 `paletteOverrides.primary` in `components/basalt-providers.tsx`.
 
-## Local adapters (not upstream copies)
+## Local aliases and adapters
 
-These stay in the dashboard because Basalt has no 1:1 export, or
-because Meowth owns the behaviour:
+These connect Basalt controls to Meowth's layout and behavior:
 
 - `components/ui/notice.tsx` — inline status block
-- `components/ui/table.tsx` — simple table (Basalt ships DataTable)
-- `components/ui/textarea.tsx` — chat composer
+- `components/ui/table.tsx` — Basalt Table with a horizontal scroll container
+- `components/ui/textarea.tsx` — Basalt InputArea alias for the chat composer
 - `components/ui/skeleton.tsx` — pulse placeholder
 - `components/ui/empty-state.tsx` — LayerCard.Empty adapter
 - `components/ui/button.tsx` — size map (`xs` / `icon-sm`)
