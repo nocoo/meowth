@@ -197,6 +197,7 @@ func New(cfg Config) (*Server, error) {
 		"logo-24.png",
 		"logo-80.png",
 		"og-image.png",
+		"theme-init.js",
 	} {
 		r.Get("/"+name, static.RootAsset(dist, name).ServeHTTP)
 	}
