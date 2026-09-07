@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -22,7 +23,7 @@ const SKELETON_COLS = ['backend', 'status', 'model', 'started', 'thread'] as con
 
 export default function SessionsListSkeleton() {
   return (
-    <div className="rounded-card bg-secondary overflow-hidden">
+    <Card className="overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -45,6 +46,6 @@ export default function SessionsListSkeleton() {
           ))}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   );
 }

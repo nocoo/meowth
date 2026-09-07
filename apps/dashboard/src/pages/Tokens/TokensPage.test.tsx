@@ -55,7 +55,7 @@ describe('TokensPage (shell, Stage C4)', () => {
   it('always renders the Tokens heading and the Create token button', () => {
     mockUseTokens.mockReturnValue(vmFor({ status: { kind: 'loading' } }));
     render(<TokensPage />);
-    expect(screen.getByRole('heading', { level: 2, name: 'Tokens' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Tokens' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create token' })).toBeInTheDocument();
   });
 

@@ -2,18 +2,15 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Card, CardContent, CardHeader, CardTitle } from './card';
 
-describe('Card (zhe L2)', () => {
-  it('uses bg-secondary rounded-card with no border or shadow', () => {
+describe('Card', () => {
+  it('renders as a Basalt LayerCard surface', () => {
     const { container } = render(<Card>body</Card>);
     const root = container.firstChild as HTMLElement;
-    expect(root.className).toContain('bg-secondary');
-    expect(root.className).toContain('rounded-card');
-    expect(root.className).toContain('ring-1');
-    expect(root.className).not.toMatch(/(?:^|\s)border(?:\s|$)/);
-    expect(root.className).not.toContain('shadow');
+    expect(root).toHaveAttribute('data-basalt-surface');
+    expect(screen.getByText('body')).toBeInTheDocument();
   });
 
-  it('renders header title inside the L2 shell', () => {
+  it('renders header title inside the card', () => {
     render(
       <Card>
         <CardHeader>

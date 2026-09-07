@@ -68,7 +68,7 @@ describe('AgentsContent (Stage C2)', () => {
       />,
     );
     // The L2 wrap is the parent of the table-container div (added by Commit 2).
-    const wrap = container.querySelector('.rounded-card.bg-secondary');
+    const wrap = container.querySelector('[data-basalt-surface]');
     expect(wrap).not.toBeNull();
     expect(wrap?.querySelector('[data-slot="table-container"]')).not.toBeNull();
   });

@@ -36,7 +36,7 @@ describe('AgentsPage (shell, Stage C2)', () => {
   it('always renders the Agents heading', () => {
     mockUseAgents.mockReturnValue(vm({ kind: 'loading' }));
     render(<AgentsPage />);
-    expect(screen.getByRole('heading', { level: 2, name: 'Agents' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Agents' })).toBeInTheDocument();
   });
 
   it('loading branch shows the AgentsSkeleton (5 row × 4 col placeholders)', () => {

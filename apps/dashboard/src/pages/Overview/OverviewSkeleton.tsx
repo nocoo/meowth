@@ -1,4 +1,5 @@
 import { Skeleton } from '@/components/ui/skeleton';
+import { LayerCard } from '@nocoo/basalt';
 
 // docs/architecture/06 §7.1 + features/02 §4.4 — Phase 2 Stage C1.
 // Per-page Skeleton mirroring `OverviewContent`'s 4-tile grid so the
@@ -10,10 +11,10 @@ export default function OverviewSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {SKELETON_KEYS.map((key) => (
-        <div key={key} className="bg-secondary rounded-card p-4 ring-1 ring-border/40">
+        <LayerCard key={key} outlined>
           <Skeleton className="h-3 w-20" />
           <Skeleton className="mt-3 h-8 w-24" />
-        </div>
+        </LayerCard>
       ))}
     </div>
   );

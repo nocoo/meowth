@@ -2,11 +2,11 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { PageHeader } from './page-header';
 
-describe('PageHeader (zhe)', () => {
-  it('renders title as h2 and wires headingId for aria-labelledby', () => {
+describe('PageHeader', () => {
+  it('renders title as h1 and wires headingId for aria-labelledby', () => {
     render(<PageHeader title="Tokens" headingId="tokens-heading" />);
-    const heading = screen.getByRole('heading', { level: 2, name: 'Tokens' });
-    expect(heading).toHaveAttribute('id', 'tokens-heading');
+    expect(screen.getByRole('heading', { level: 1, name: 'Tokens' })).toBeInTheDocument();
+    expect(screen.getByText('Tokens')).toHaveAttribute('id', 'tokens-heading');
   });
 
   it('renders description and trailing actions', () => {

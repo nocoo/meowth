@@ -9,9 +9,7 @@ describe('StatCard (Stage C1)', () => {
     expect(screen.getByText('Tokens')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(container.firstChild).toBeInstanceOf(HTMLElement);
-    expect((container.firstChild as HTMLElement).className).toContain('bg-secondary');
-    expect((container.firstChild as HTMLElement).className).toContain('rounded-card');
-    expect((container.firstChild as HTMLElement).className).toContain('ring-1');
+    expect((container.firstChild as HTMLElement).getAttribute('data-basalt-surface')).toBe('');
   });
 
   it('accepts a ReactNode body (string, number, JSX)', () => {

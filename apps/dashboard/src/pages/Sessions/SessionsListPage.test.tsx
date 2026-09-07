@@ -46,7 +46,7 @@ describe('SessionsListPage (shell, Stage C3a)', () => {
   it('always renders the Sessions heading', () => {
     mockUseSessions.mockReturnValue(vm({ kind: 'loading' }));
     renderShell();
-    expect(screen.getByRole('heading', { level: 2, name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Sessions' })).toBeInTheDocument();
   });
 
   it('loading branch shows the SessionsListSkeleton (5 row × 5 col placeholders)', () => {

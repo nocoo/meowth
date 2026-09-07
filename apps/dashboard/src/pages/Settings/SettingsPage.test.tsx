@@ -39,7 +39,7 @@ describe('SettingsPage (shell, Stage C5)', () => {
   it('always renders the Settings heading and the Dashboard build row', () => {
     mockUseSettings.mockReturnValue(vmFor({ status: { kind: 'loading' }, version: '1.2.3' }));
     render(<SettingsPage />);
-    expect(screen.getByRole('heading', { level: 2, name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByText('Dashboard build')).toBeInTheDocument();
     expect(screen.getByText('1.2.3')).toBeInTheDocument();
   });

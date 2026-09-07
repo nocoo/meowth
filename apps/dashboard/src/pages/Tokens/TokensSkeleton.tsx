@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -21,7 +22,7 @@ const SKELETON_COLS = ['name', 'prefix', 'created', 'last_used', 'action'] as co
 
 export default function TokensSkeleton() {
   return (
-    <div className="rounded-card bg-secondary overflow-hidden">
+    <Card className="overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -44,6 +45,6 @@ export default function TokensSkeleton() {
           ))}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   );
 }

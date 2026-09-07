@@ -20,7 +20,7 @@ describe('TokensSkeleton (Stage C4)', () => {
 
   it('wraps the placeholder table in a rounded-card bg-secondary L2 surface', () => {
     const { container } = render(<TokensSkeleton />);
-    const wrap = container.querySelector('.rounded-card.bg-secondary');
+    const wrap = container.querySelector('[data-basalt-surface]');
     expect(wrap).not.toBeNull();
     expect(wrap?.querySelector('[data-slot="table-container"]')).not.toBeNull();
   });

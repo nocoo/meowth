@@ -55,7 +55,7 @@ describe('SessionsListContent (props, Stage C3a)', () => {
 
   it('wraps the populated table in a rounded-card bg-secondary L2 surface', () => {
     const { container } = renderContent([makeSession('sid-x')]);
-    const wrap = container.querySelector('.rounded-card.bg-secondary');
+    const wrap = container.querySelector('[data-basalt-surface]');
     expect(wrap).not.toBeNull();
     expect(wrap?.querySelector('[data-slot="table-container"]')).not.toBeNull();
   });

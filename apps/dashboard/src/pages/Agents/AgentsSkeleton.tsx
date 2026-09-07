@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -24,7 +25,7 @@ const SKELETON_COLS = ['type', 'installed', 'executable', 'version'] as const;
 
 export default function AgentsSkeleton() {
   return (
-    <div className="rounded-card bg-secondary overflow-hidden">
+    <Card className="overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -46,6 +47,6 @@ export default function AgentsSkeleton() {
           ))}
         </TableBody>
       </Table>
-    </div>
+    </Card>
   );
 }

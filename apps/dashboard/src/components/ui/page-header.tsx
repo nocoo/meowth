@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-
 import { cn } from '@/lib/utils';
+import { PageHeader as BasaltPageHeader } from '@nocoo/basalt/components/page-header';
+import type { ReactNode } from 'react';
 
 interface PageHeaderProps {
   title: string;
@@ -12,19 +12,12 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, actions, headingId, className }: PageHeaderProps) {
   return (
-    <div className={cn('mb-6 flex items-center justify-between gap-4', className)}>
-      <div className="min-w-0">
-        <h2
-          id={headingId}
-          className="truncate text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem]"
-        >
-          {title}
-        </h2>
-        {description ? <p className="mt-0.5 text-sm text-muted-foreground">{description}</p> : null}
-      </div>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{actions}</div>
-      ) : null}
+    <div className={cn(className)}>
+      <BasaltPageHeader
+        title={<span id={headingId}>{title}</span>}
+        description={description}
+        actions={actions}
+      />
     </div>
   );
 }

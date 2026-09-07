@@ -5,7 +5,7 @@ import OverviewSkeleton from './OverviewSkeleton';
 describe('OverviewSkeleton (Stage C1)', () => {
   it('renders 4 placeholder tiles with the L2 surface class', () => {
     const { container } = render(<OverviewSkeleton />);
-    const tiles = container.querySelectorAll('.bg-secondary.rounded-card.p-4');
+    const tiles = container.querySelectorAll('[data-basalt-surface]');
     expect(tiles.length).toBe(4);
   });
 
