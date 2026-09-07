@@ -108,7 +108,7 @@ export default function SetupPage() {
 
             <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 pt-6 pb-14">
               <h1 className="sr-only">Meowth - Setup</h1>
-              <div className="bg-basalt-secondary ring-basalt-border flex h-24 w-24 items-center justify-center overflow-hidden rounded-full p-5 ring-1">
+              <div className="bg-basalt-secondary ring-basalt-border flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full p-5 ring-1">
                 <img
                   src="/logo-80.png"
                   alt=""
