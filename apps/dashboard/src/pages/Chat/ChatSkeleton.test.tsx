@@ -14,7 +14,6 @@ describe('ChatSkeleton', () => {
     const { container } = render(<ChatSkeleton />);
     const wrapper = container.querySelector('[data-slot="chat-skeleton"]') as HTMLElement;
     expect(wrapper).toBeTruthy();
-    expect(wrapper.className).toMatch(/rounded-card/);
-    expect(wrapper.className).toMatch(/bg-secondary/);
+    expect(wrapper).toHaveAttribute('data-basalt-surface');
   });
 });

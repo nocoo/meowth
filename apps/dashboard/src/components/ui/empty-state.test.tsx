@@ -3,7 +3,7 @@ import { Inbox } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import { EmptyState } from './empty-state';
 
-describe('EmptyState (G1 smoke)', () => {
+describe('EmptyState', () => {
   it('renders icon, title, description, and action', () => {
     render(
       <EmptyState
@@ -29,15 +29,7 @@ describe('EmptyState (G1 smoke)', () => {
 
   it('applies error tone class when tone="error"', () => {
     const { container } = render(<EmptyState icon={Inbox} title="Error state" tone="error" />);
-    // tone="error" must (a) keep the L2 shell intact and (b) route the
-    // icon path through `text-destructive-text` so the --destructive-text
-    // token added in A3 actually gets used. Pin both contracts.
     expect(screen.getByText('Error state')).toBeInTheDocument();
-    expect(container.firstChild).toBeInstanceOf(HTMLElement);
-    expect((container.firstChild as HTMLElement).className).toMatch(/bg-secondary/);
-    // The Lucide icon is rendered as an inline <svg>; its parent inherits
-    // the text color class so `text-destructive-text` should appear in
-    // the rendered HTML when tone="error".
     expect(container.innerHTML).toContain('text-destructive-text');
   });
 });

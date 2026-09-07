@@ -1,4 +1,5 @@
 import { Skeleton } from '@/components/ui/skeleton';
+import { LayerCard } from '@nocoo/basalt';
 
 // docs/features/03 §4.4 — pre-/v1/agents skeleton. Reserves the
 // same vertical footprint as ChatContent (picker / list / composer)
@@ -6,8 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ChatSkeleton() {
   return (
-    <div
-      className="rounded-card bg-secondary mx-auto flex h-full w-full max-w-3xl flex-col gap-3 p-4"
+    <LayerCard
+      className="mx-auto flex h-full w-full max-w-3xl flex-col gap-3"
       data-slot="chat-skeleton"
     >
       <Skeleton className="h-9 w-40" data-slot="skeleton-picker" />
@@ -17,6 +18,6 @@ export default function ChatSkeleton() {
         <Skeleton className="h-12 w-full" />
       </div>
       <Skeleton className="h-16 w-full" data-slot="skeleton-composer" />
-    </div>
+    </LayerCard>
   );
 }
