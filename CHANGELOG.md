@@ -32,6 +32,7 @@ new design-system dependency and the outside-in shell rewrite.
 - Embed 404 for `theme-init.js`; blocked `localStorage` no longer
   blanks `/setup`.
 - Chat island padding on desktop; Card `data-testid` forwarding.
+- G2: `fast-uri` override 3.1.5 → 3.1.6 (four high OSV findings).
 
 ### Removed
 
