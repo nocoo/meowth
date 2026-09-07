@@ -7,40 +7,45 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Notice } from '@/components/ui/notice';
 import type { TokensViewModel } from '@/viewmodels/useTokensViewModel';
-import { useId } from 'react';
+import { type ReactElement, useId } from 'react';
 
 export interface TokensCreateDialogProps {
   vm: TokensViewModel;
+  trigger: ReactElement;
 }
 
-export default function TokensCreateDialog({ vm }: TokensCreateDialogProps) {
-  if (!vm.modal.open) return null;
+export default function TokensCreateDialog({ vm, trigger }: TokensCreateDialogProps) {
   return (
     <Dialog
-      open
+      open={vm.modal.open}
       onOpenChange={(open) => {
-        if (!open) vm.closeCreateModal();
+        if (open) vm.openCreateModal();
+        else vm.closeCreateModal();
       }}
     >
-      <DialogContent aria-label="Create token">
-        <DialogTitle className={vm.modal.phase === 'reveal' ? 'sr-only' : undefined}>
-          Create token
-        </DialogTitle>
-        {vm.modal.phase === 'reveal' ? (
-          <RevealStep
-            createdName={vm.modal.createdName}
-            secret={vm.modal.createdSecret}
-            onClose={vm.closeCreateModal}
-          />
-        ) : (
-          <NameStep vm={vm} />
-        )}
-      </DialogContent>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {vm.modal.open ? (
+        <DialogContent aria-label="Create token">
+          <DialogTitle className={vm.modal.phase === 'reveal' ? 'sr-only' : undefined}>
+            Create token
+          </DialogTitle>
+          {vm.modal.phase === 'reveal' ? (
+            <RevealStep
+              createdName={vm.modal.createdName}
+              secret={vm.modal.createdSecret}
+              onClose={vm.closeCreateModal}
+            />
+          ) : (
+            <NameStep vm={vm} />
+          )}
+        </DialogContent>
+      ) : null}
     </Dialog>
   );
 }

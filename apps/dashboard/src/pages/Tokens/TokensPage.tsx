@@ -28,10 +28,15 @@ export default function TokensPage() {
         description="Manage access for the dashboard, CLI, and other clients."
         headingId="tokens-heading"
         actions={
-          <Button type="button" size="xs" onClick={vm.openCreateModal}>
-            <Plus className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
-            Create token
-          </Button>
+          <TokensCreateDialog
+            vm={vm}
+            trigger={
+              <Button type="button" size="xs">
+                <Plus className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                Create token
+              </Button>
+            }
+          />
         }
       />
 
@@ -47,8 +52,6 @@ export default function TokensPage() {
       ) : (
         <TokensContent tokens={vm.status.tokens} onRevoke={vm.revoke} />
       )}
-
-      <TokensCreateDialog vm={vm} />
     </section>
   );
 }

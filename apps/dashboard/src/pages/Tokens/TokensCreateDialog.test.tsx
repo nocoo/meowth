@@ -1,8 +1,14 @@
 import type { TokensViewModel } from '@/viewmodels/useTokensViewModel';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import TokensCreateDialog from './TokensCreateDialog';
+import TokensCreateDialogComponent from './TokensCreateDialog';
+
+function TokensCreateDialog({ vm }: { vm: TokensViewModel }) {
+  return (
+    <TokensCreateDialogComponent vm={vm} trigger={<button type="button">Create token</button>} />
+  );
+}
 
 // TokensCreateDialog tests for Phase 2 Stage C4.
 //
@@ -53,14 +59,34 @@ function vmFor(overrides: Partial<TokensViewModel>): TokensViewModel {
 }
 
 describe('TokensCreateDialog (Stage C4)', () => {
-  it('renders nothing when modal.open is false', () => {
-    const { container } = render(<TokensCreateDialog vm={vmFor({})} />);
-    expect(container.firstChild).toBeNull();
+  it('keeps the trigger available when modal.open is false', () => {
+    render(<TokensCreateDialog vm={vmFor({})} />);
+    expect(screen.getByRole('button', { name: 'Create token' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('exposes role=dialog with name="Create token" when modal.open', () => {
     render(<TokensCreateDialog vm={vmFor({ modal: { open: true, phase: 'idle', name: '' } })} />);
     expect(screen.getByRole('dialog', { name: 'Create token' })).toBeInTheDocument();
+  });
+
+  it.each(['cancel', 'escape'])('restores focus to its trigger after %s', async (dismissal) => {
+    const user = userEvent.setup();
+    const closeCreateModal = vi.fn();
+    const { rerender } = render(<TokensCreateDialog vm={vmFor({})} />);
+    const trigger = screen.getByRole('button', { name: 'Create token' });
+    await user.click(trigger);
+    rerender(
+      <TokensCreateDialog
+        vm={vmFor({ modal: { open: true, phase: 'idle', name: '' }, closeCreateModal })}
+      />,
+    );
+    await waitFor(() => expect(screen.getByLabelText('Name')).toHaveFocus());
+    if (dismissal === 'cancel') await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    else await user.keyboard('{Escape}');
+    expect(closeCreateModal).toHaveBeenCalledOnce();
+    rerender(<TokensCreateDialog vm={vmFor({})} />);
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
   it('phase=idle renders the name input + Create button; Cancel calls closeCreateModal', async () => {
@@ -129,7 +155,7 @@ describe('TokensCreateDialog (Stage C4)', () => {
 
   it('plaintext lifecycle: secret leaves the DOM after close, and a fresh idle modal does not leak it', () => {
     const SECRET = 'mwt_LIFECYCLE_PLAINTEXT';
-    const { rerender, container } = render(
+    const { rerender } = render(
       <TokensCreateDialog
         vm={vmFor({
           modal: {
@@ -147,7 +173,7 @@ describe('TokensCreateDialog (Stage C4)', () => {
 
     // Close (vm reduces modal to { open: false }) → dialog unmounts.
     rerender(<TokensCreateDialog vm={vmFor({ modal: { open: false } })} />);
-    expect(container.firstChild).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.body.textContent).not.toContain(SECRET);
 
     // Re-open with a fresh idle modal (the canonical openCreateModal
