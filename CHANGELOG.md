@@ -4,6 +4,42 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-09-08
+
+Dashboard chrome now imports the published `@nocoo/basalt@2.1.0`
+package instead of source-copied primitives. Minor bump for the
+new design-system dependency and the outside-in shell rewrite.
+
+### Added
+
+- `@nocoo/basalt@2.1.0` as the dashboard UI package.
+- Basalt providers (`ThemeProvider`, `AccentProvider`, `LinkProvider`)
+  with Meowth blue as the default accent.
+- Visitor-badge Setup page and `LoadingScreen` AuthGate boot.
+- External `/theme-init.js` pre-hydration script (CSP `script-src 'self'`).
+
+### Changed
+
+- AppShell / Sidebar / AppHeader / ContentIsland / PageHeader /
+  LayerCard / Button / Input / Dialog / Badge / Select / Confirm
+  come from Basalt; leftover widgets are thin adapters.
+- Collapsed sidebar logo stays at 24px so the mark does not jump.
+- Theme toggle writes through ThemeProvider (`meowth_theme`).
+- Playwright headings scoped to the content island (`h1`).
+
+### Fixed
+
+- Embed 404 for `theme-init.js`; blocked `localStorage` no longer
+  blanks `/setup`.
+- Chat island padding on desktop; Card `data-testid` forwarding.
+
+### Removed
+
+- Forked local sheet / tooltip / avatar / breadcrumbs / Spinner
+  and the dashboard `radix-ui` dependency.
+
+[0.6.0]: https://github.com/nocoo/meowth/releases/tag/v0.6.0
+
 ## [0.5.0] — 2026-08-22
 
 Dashboard controls aligned to the zhe/pew recipe (density, dialogs,
