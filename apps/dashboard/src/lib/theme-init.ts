@@ -2,18 +2,23 @@ export const THEME_STORAGE_KEY = 'meowth_theme';
 
 export function applyStoredTheme(
   root: HTMLElement = document.documentElement,
-  storage: Pick<Storage, 'getItem'> | undefined = globalThis.localStorage,
-  media: Pick<MediaQueryList, 'matches'> | undefined = globalThis.matchMedia?.(
-    '(prefers-color-scheme: dark)',
-  ),
+  storage?: Pick<Storage, 'getItem'>,
+  media?: Pick<MediaQueryList, 'matches'>,
 ): void {
   let stored: string | null = null;
   try {
-    stored = storage?.getItem(THEME_STORAGE_KEY) ?? null;
+    const store = storage ?? globalThis.localStorage;
+    stored = store?.getItem(THEME_STORAGE_KEY) ?? null;
   } catch {
     stored = null;
   }
-  const prefersDark = media?.matches ?? false;
+  let prefersDark = false;
+  try {
+    prefersDark =
+      (media ?? globalThis.matchMedia?.('(prefers-color-scheme: dark)'))?.matches ?? false;
+  } catch {
+    prefersDark = false;
+  }
   const isDark = stored === 'dark' || (stored !== 'light' && prefersDark);
   root.classList.toggle('dark', isDark);
   root.classList.toggle('light', !isDark);

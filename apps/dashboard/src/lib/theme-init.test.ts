@@ -50,4 +50,22 @@ describe('applyStoredTheme', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(false);
     expect(document.documentElement.getAttribute('data-mode')).toBe('light');
   });
+
+  it('treats a throwing localStorage getter as missing', () => {
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('blocked');
+      },
+    });
+    try {
+      applyStoredTheme(document.documentElement, undefined, { matches: true });
+      expect(document.documentElement.classList.contains('dark')).toBe(true);
+    } finally {
+      if (original) {
+        Object.defineProperty(globalThis, 'localStorage', original);
+      }
+    }
+  });
 });
