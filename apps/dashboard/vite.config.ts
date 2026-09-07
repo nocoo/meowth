@@ -14,6 +14,8 @@ import { defineConfig } from 'vite';
 // Port layout (docs/features/01-port-migration-to-hexly-caddy.md):
 //   37040 — Vite dev (this server); Caddy → meowth-vite.dev.hexly.ai
 //    7040 — daemon meowthd (prod + dev); Caddy → meowth.dev.hexly.ai
+// Bind IPv4 loopback: Caddy reverse_proxy targets 127.0.0.1:37040;
+// Vite's default [::1] made Caddy return empty 200s.
 // allowedHosts is required because Vite ≥5.0.12 rejects non-loopback
 // Host headers by default (403 Blocked); the Caddy upstream forwards
 // the original Host so we whitelist meowth-vite.dev.hexly.ai.
@@ -40,6 +42,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: '127.0.0.1',
     port: 37040,
     strictPort: true,
     allowedHosts: ['meowth-vite.dev.hexly.ai'],
