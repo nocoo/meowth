@@ -1,4 +1,4 @@
-import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import useSettingsViewModel from '@/viewmodels/useSettingsViewModel';
@@ -14,7 +14,6 @@ import SettingsSkeleton from './SettingsSkeleton';
 
 export default function SettingsPage() {
   const vm = useSettingsViewModel();
-  useRegisterRefresh(vm.refresh);
 
   return (
     <section className="space-y-6" aria-labelledby="settings-heading">
@@ -33,6 +32,12 @@ export default function SettingsPage() {
         ) : (
           <SettingsContent status={vm.status} />
         )}
+        {vm.status.kind === 'error' ||
+        (vm.status.kind === 'ready' && !vm.status.daemonReachable) ? (
+          <Button variant="outline" size="xs" onClick={vm.refresh}>
+            Retry connection
+          </Button>
+        ) : null}
       </Card>
     </section>
   );

@@ -110,8 +110,8 @@ for (const theme of ['light', 'dark'] as const) {
       for (const icon of positions) {
         expect([icon.width, icon.height, icon.stroke]).toEqual([16, 16, '1.5']);
       }
+      await expect(page.getByRole('button', { name: 'Refresh page data' })).toHaveCount(0);
       const toolbar = [
-        page.getByRole('button', { name: 'Refresh page data' }),
         page.getByRole('link', { name: 'GitHub repository' }),
         page.getByRole('button', { name: /Switch to .* theme/ }),
       ];

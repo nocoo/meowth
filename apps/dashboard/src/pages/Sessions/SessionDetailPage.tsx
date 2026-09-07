@@ -1,4 +1,4 @@
-import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useSessionDetailViewModel from '@/viewmodels/useSessionDetailViewModel';
@@ -18,7 +18,6 @@ export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const sessionId = id ?? '';
   const vm = useSessionDetailViewModel(sessionId);
-  useRegisterRefresh(vm.refresh);
 
   return (
     <section className="space-y-6" aria-labelledby="session-detail-heading">
@@ -42,6 +41,11 @@ export default function SessionDetailPage() {
             title="Session unavailable"
             description={vm.status.message}
             tone="error"
+            action={
+              <Button variant="outline" size="xs" onClick={vm.refresh}>
+                Retry
+              </Button>
+            }
           />
         </>
       ) : (

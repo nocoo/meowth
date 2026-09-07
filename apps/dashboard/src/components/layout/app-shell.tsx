@@ -14,8 +14,6 @@ import {
 import { Menu } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router';
-import RefreshButton from './refresh-button';
-import { RefreshProvider } from './refresh-context';
 import { Sidebar } from './sidebar';
 import { SidebarProvider, useSidebar } from './sidebar-context';
 
@@ -82,7 +80,6 @@ function AppShellInner() {
           title={current?.label}
           actions={
             <>
-              <RefreshButton />
               <Button
                 asChild
                 variant="ghost"
@@ -121,9 +118,7 @@ function AppShellInner() {
 export function AppShell() {
   return (
     <SidebarProvider>
-      <RefreshProvider>
-        <AppShellInner />
-      </RefreshProvider>
+      <AppShellInner />
     </SidebarProvider>
   );
 }

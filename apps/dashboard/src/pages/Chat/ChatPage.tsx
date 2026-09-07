@@ -4,11 +4,6 @@ import { AlertCircle } from 'lucide-react';
 import ChatContent from './ChatContent';
 import ChatSkeleton from './ChatSkeleton';
 
-// docs/features/03 §4.3 — Page shell. Owns the viewmodel +
-// three-state branch. Chat does not register the AppShell refresh
-// button: a header rotate-cw that wipes the live thread reads as
-// a page reload, not a new session.
-
 export default function ChatPage() {
   const vm = useChatViewModel();
 

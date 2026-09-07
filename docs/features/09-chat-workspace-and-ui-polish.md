@@ -85,4 +85,8 @@ actual reason; do not count synthetic responses as live-agent verification.
   moving each icon 12px off the rail axis. Light/dark browser geometry checks
   now pass with all rail marks centered. Existing unit assertions were updated
   for the visible labels; underlying API values remain unchanged.
-- Refresh removal and chat implementation pending.
+- Global refresh control, provider, and page registration hooks removed.
+  Failed requests retain a contextual Retry action. The affected page/shell
+  unit tests (41), light/dark rail browser checks (2), TypeScript, and build
+  passed.
+- Chat implementation pending.

@@ -1,4 +1,3 @@
-import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
@@ -19,7 +18,6 @@ import TokensSkeleton from './TokensSkeleton';
 
 export default function TokensPage() {
   const vm = useTokensViewModel();
-  useRegisterRefresh(vm.refresh);
 
   return (
     <section className="space-y-6" aria-labelledby="tokens-heading">
@@ -48,6 +46,11 @@ export default function TokensPage() {
           title="Tokens unavailable"
           description={vm.status.message}
           tone="error"
+          action={
+            <Button variant="outline" size="xs" onClick={vm.refresh}>
+              Retry
+            </Button>
+          }
         />
       ) : (
         <TokensContent tokens={vm.status.tokens} onRevoke={vm.revoke} />

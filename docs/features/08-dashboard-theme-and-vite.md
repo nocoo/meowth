@@ -108,7 +108,7 @@ flakiness; it is also verified locally for this change.
 | Area | Files |
 |---|---|
 | Theme | `apps/dashboard/src/index.css`, `components/basalt-providers.tsx` |
-| Chrome | `apps/dashboard/src/components/layout/{app-shell,sidebar,refresh-button}.tsx` |
+| Chrome | `apps/dashboard/src/components/layout/{app-shell,sidebar}.tsx` |
 | Content | `apps/dashboard/src/pages/`, `components/{StatCard,MessageText}.tsx`, `components/ui/` |
 | Runtime | `apps/dashboard/vite.config.ts`, root `package.json`, `turbo.json`, `README.md` |
 | Browser checks | `apps/dashboard/playwright.config.ts`, `apps/dashboard/e2e/` |

@@ -1,4 +1,4 @@
-import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useSessionsViewModel from '@/viewmodels/useSessionsViewModel';
@@ -14,7 +14,6 @@ import SessionsListSkeleton from './SessionsListSkeleton';
 
 export default function SessionsListPage() {
   const vm = useSessionsViewModel();
-  useRegisterRefresh(vm.refresh);
 
   return (
     <section className="space-y-6" aria-labelledby="sessions-heading">
@@ -31,6 +30,11 @@ export default function SessionsListPage() {
           title="Sessions unavailable"
           description={vm.status.message}
           tone="error"
+          action={
+            <Button variant="outline" size="xs" onClick={vm.refresh}>
+              Retry
+            </Button>
+          }
         />
       ) : (
         <SessionsListContent sessions={vm.status.sessions} />

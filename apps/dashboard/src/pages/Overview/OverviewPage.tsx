@@ -1,4 +1,4 @@
-import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useOverviewViewModel from '@/viewmodels/useOverviewViewModel';
@@ -13,7 +13,6 @@ import OverviewSkeleton from './OverviewSkeleton';
 
 export default function OverviewPage() {
   const vm = useOverviewViewModel();
-  useRegisterRefresh(vm.refresh);
 
   return (
     <section className="space-y-6" aria-labelledby="overview-heading">
@@ -30,6 +29,11 @@ export default function OverviewPage() {
           title="Overview unavailable"
           description={vm.status.message}
           tone="error"
+          action={
+            <Button variant="outline" size="xs" onClick={vm.refresh}>
+              Retry
+            </Button>
+          }
         />
       ) : (
         <OverviewContent data={vm.status.data} />

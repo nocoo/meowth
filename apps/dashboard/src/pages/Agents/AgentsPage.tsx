@@ -1,4 +1,4 @@
-import { useRegisterRefresh } from '@/components/layout/use-register-refresh';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useAgentsViewModel from '@/viewmodels/useAgentsViewModel';
@@ -13,7 +13,6 @@ import AgentsSkeleton from './AgentsSkeleton';
 
 export default function AgentsPage() {
   const vm = useAgentsViewModel();
-  useRegisterRefresh(vm.refresh);
 
   return (
     <section className="space-y-6" aria-labelledby="agents-heading">
@@ -30,6 +29,11 @@ export default function AgentsPage() {
           title="Agents unavailable"
           description={vm.status.message}
           tone="error"
+          action={
+            <Button variant="outline" size="xs" onClick={vm.refresh}>
+              Retry
+            </Button>
+          }
         />
       ) : (
         <AgentsContent agents={vm.status.agents} />
