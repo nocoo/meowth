@@ -153,13 +153,18 @@ v1 默认走方案 A（更可控；不依赖 OS 行为细节）。具体由 Phas
 
 #### 3.4.1 `dashboardDevFixture`（Vite proxy）
 
-- daemon 起在 `127.0.0.1:7040`（fake backend）
-- `pnpm --filter @meowth/dashboard dev` 在 `127.0.0.1:37040`（Vite dev server）
-- Playwright 直连 `http://localhost:37040/` —— **不**经 Caddy。Caddy 反代 `https://meowth-vite.dev.hexly.ai` 仅用于人工开发,e2e 期间 Caddy 不在测试链路里
+- Isolated fake daemon: `127.0.0.1:47041`; Vite: `127.0.0.1:47040` with
+  `MEOWTH_DAEMON_URL=http://127.0.0.1:47041`.
+- Playwright connects directly to `http://127.0.0.1:47040/`. It starts fresh
+  servers and leaves the normal daemon/Vite ports (`7040`/`37040`) available.
+- `dashboard-ui` shares the test Vite server and intercepts every API request.
+  It needs no daemon and covers both themes, mobile layout, navigation,
+  dialog focus, long escaped chat output, empty states, and an actual CSS HMR update.
 - 覆盖：手输 token 路径（[`06`](06-dashboard-mvvm-and-basalt.md) §11 (a)）、401 redirect（[`06`](06-dashboard-mvvm-and-basalt.md) §11 (c)）、agent exec / cancel / session messages follow（v1 endpoints via Vite proxy）
 - **不**覆盖 mint 路径 B（[`06`](06-dashboard-mvvm-and-basalt.md) §3.4 / [`07`](07-dashboard-security-csp-and-xss.md) §4.4）
 - **不**覆盖 CSP header 断言（Vite dev 不注入 production CSP；[`07`](07-dashboard-security-csp-and-xss.md) §4.4）
-- **不**覆盖 Caddy host allowlist / HMR wss 行为（依赖 Caddy 起着,留给手工实测,见 [`docs/features/01-port-migration-to-hexly-caddy.md`](../features/01-port-migration-to-hexly-caddy.md) §6 跳过项）
+- Caddy HTTPS/WSS verification runs separately on the local machine; see
+  [`features/08`](../features/08-dashboard-theme-and-vite.md#results).
 
 #### 3.4.2 `dashboardEmbedFixture`（production embed）
 
@@ -170,7 +175,8 @@ v1 默认走方案 A（更可控；不依赖 OS 行为细节）。具体由 Phas
 - 覆盖：mint 路径 B（[`06`](06-dashboard-mvvm-and-basalt.md) §11 (b)）、CSP / security headers 全套断言（[`07`](07-dashboard-security-csp-and-xss.md) §11 L3 a/b/c）、XSS payload 显示为转义、Tokens secret modal happy path
 - 这套 fixture 是 release 前的最终守门员
 
-Playwright config 在两套 fixture 间共享 worker；CI 矩阵 job 分别跑（`l3-dev` / `l3-embed`）。
+Playwright uses one worker. CI runs the `dashboard-ui`, `dashboard-embed`, and
+`dashboard-embed-mint` projects in the same job; `dashboard-dev` can run locally.
 
 ### 3.5 Test artifacts
 

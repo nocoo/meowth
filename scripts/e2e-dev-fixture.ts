@@ -8,7 +8,7 @@
  *      mwt_... root token
  *   3. Write token to a deterministic temp file the Playwright
  *      spec reads (path printed once on stdout for the user)
- *   4. `meowthd serve --bind 127.0.0.1:7040` → blocks until
+ *   4. `meowthd serve --listen-addr 127.0.0.1:47041` → blocks until
  *      SIGINT / SIGTERM. The serve process additionally sets
  *      `MEOWTH_BACKEND_FACTORY=fake` so /v1/agents reports all
  *      five backends as installed and exec on any of them replays
@@ -89,7 +89,7 @@ process.on('SIGHUP', () => {
   process.exit(129);
 });
 
-let serveRef: ReturnType<typeof spawn> | undefined;
+let serveRef: ReturnType<typeof spawn> | undefined = undefined;
 
 // Build meowthd once and exec it directly so a SIGTERM from
 // Playwright reaches the actual daemon rather than a `go run`
@@ -119,8 +119,8 @@ if (!firstLine.startsWith('mwt_')) {
 writeFileSync(TOKEN_FILE, firstLine, { encoding: 'utf8', mode: 0o600 });
 log(`token written to ${TOKEN_FILE} (file mode 0o600)`);
 
-// Step 2: serve. webServer waits for port 7040 to accept.
-const serve = spawn(meowthdBinary, ['serve', '--listen-addr', '127.0.0.1:7040'], {
+// Step 2: serve. webServer waits for port 47041 to accept.
+const serve = spawn(meowthdBinary, ['serve', '--listen-addr', '127.0.0.1:47041'], {
   env: {
     ...process.env,
     MEOWTH_TEST_HOME: home,

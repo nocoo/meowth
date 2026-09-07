@@ -44,12 +44,12 @@ test('chat: sends a prompt and renders the streamed happy-fixture reply', async 
   await expect(page.getByText('All done. Closing out.')).toBeVisible({ timeout: 10_000 });
 
   // The session_ended footer is the terminal signal; the
-  // SessionEndedFooter component formats happy as "✓ completed
+  // SessionEndedFooter component formats happy as "completed
   // in <duration>" (the happy fixture sets duration_ms=42, so
-  // the footer shows "✓ completed in 42ms").
+  // the footer shows "completed in 42ms").
   const footer = page.locator('[data-bubble-kind="session-ended"]');
   await expect(footer).toBeVisible({ timeout: 10_000 });
-  await expect(footer).toContainText('✓ completed');
+  await expect(footer).toContainText('completed');
 });
 
 test('chat: composer flips back to Send after session_ended', async ({ page }) => {

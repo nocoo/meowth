@@ -1,7 +1,8 @@
 import { type PlaywrightTestConfig, defineConfig } from '@playwright/test';
 
 // docs/architecture/08-6dq-hooks-wiring.md §3.4 — L3 fixtures.
-//   - dashboard-dev        → §3.4.1 Vite dev + meowthd path A on :7040
+//   - dashboard-dev        → §3.4.1 Vite dev + meowthd path A on :47041 (Vite :47040)
+//   - dashboard-ui         → isolated Vite + mocked API on :47040
 //   - dashboard-embed      → §3.4.2 daemon-embedded dashboard dist on :17040
 //                            (mint window CLOSED — token already exists)
 //   - dashboard-embed-mint → §3.4.2 daemon-embedded dist on :17041, booted
@@ -30,24 +31,29 @@ const DEV_FIXTURE = '../../scripts/e2e-dev-fixture.ts';
 const EMBED_FIXTURE = '../../scripts/e2e-embed-fixture.ts';
 const EMBED_MINT_FIXTURE = '../../scripts/e2e-embed-mint-fixture.ts';
 
-const DEV_SERVERS: PlaywrightTestConfig['webServer'] = [
+type WebServerConfig = Exclude<PlaywrightTestConfig['webServer'], undefined | unknown[]>;
+
+const VITE_SERVER: WebServerConfig = {
+  command: 'pnpm exec vite --port 47040 --strictPort',
+  url: 'http://127.0.0.1:47040',
+  env: { MEOWTH_DAEMON_URL: 'http://127.0.0.1:47041' },
+  timeout: 60_000,
+  reuseExistingServer: false,
+};
+
+const DEV_SERVERS: WebServerConfig[] = [
   {
     command: `pnpm tsx ${DEV_FIXTURE}`,
-    url: 'http://127.0.0.1:7040/healthz',
+    url: 'http://127.0.0.1:47041/healthz',
     timeout: 60_000,
     reuseExistingServer: false,
     stdout: 'pipe',
     stderr: 'pipe',
   },
-  {
-    command: 'pnpm exec vite --port 37040 --strictPort',
-    url: 'http://localhost:37040',
-    timeout: 60_000,
-    reuseExistingServer: false,
-  },
+  VITE_SERVER,
 ];
 
-const EMBED_SERVERS: PlaywrightTestConfig['webServer'] = [
+const EMBED_SERVERS: WebServerConfig[] = [
   {
     command: `pnpm tsx ${EMBED_FIXTURE}`,
     url: 'http://127.0.0.1:17040/healthz',
@@ -58,7 +64,7 @@ const EMBED_SERVERS: PlaywrightTestConfig['webServer'] = [
   },
 ];
 
-const EMBED_MINT_SERVERS: PlaywrightTestConfig['webServer'] = [
+const EMBED_MINT_SERVERS: WebServerConfig[] = [
   {
     command: `pnpm tsx ${EMBED_MINT_FIXTURE}`,
     url: 'http://127.0.0.1:17041/healthz',
@@ -73,8 +79,9 @@ function selectedProjects(argv: readonly string[]): Set<string> {
   const out = new Set<string>();
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--project' && i + 1 < argv.length) {
-      out.add(argv[i + 1]);
+    const next = argv[i + 1];
+    if (a === '--project' && next !== undefined) {
+      out.add(next);
     } else if (a?.startsWith('--project=')) {
       out.add(a.slice('--project='.length));
     }
@@ -82,16 +89,17 @@ function selectedProjects(argv: readonly string[]): Set<string> {
   return out;
 }
 
-function buildWebServers(): PlaywrightTestConfig['webServer'] {
+function buildWebServers(): WebServerConfig[] {
   const sel = selectedProjects(process.argv);
   const wantDev = sel.size === 0 || sel.has('dashboard-dev');
+  const wantUi = sel.size === 0 || sel.has('dashboard-ui');
   const wantEmbed = sel.size === 0 || sel.has('dashboard-embed');
   const wantEmbedMint = sel.size === 0 || sel.has('dashboard-embed-mint');
-  const entries: NonNullable<PlaywrightTestConfig['webServer']>[number][] = [];
-  if (wantDev) entries.push(...(DEV_SERVERS as NonNullable<typeof DEV_SERVERS>));
-  if (wantEmbed) entries.push(...(EMBED_SERVERS as NonNullable<typeof EMBED_SERVERS>));
-  if (wantEmbedMint)
-    entries.push(...(EMBED_MINT_SERVERS as NonNullable<typeof EMBED_MINT_SERVERS>));
+  const entries: WebServerConfig[] = [];
+  if (wantDev) entries.push(...DEV_SERVERS);
+  if (wantUi && !wantDev) entries.push(VITE_SERVER);
+  if (wantEmbed) entries.push(...EMBED_SERVERS);
+  if (wantEmbedMint) entries.push(...EMBED_MINT_SERVERS);
   return entries;
 }
 
@@ -111,8 +119,13 @@ export default defineConfig({
   webServer: buildWebServers(),
   projects: [
     {
+      name: 'dashboard-ui',
+      use: { baseURL: 'http://127.0.0.1:47040' },
+      testMatch: /ui\/.*\.spec\.ts$/,
+    },
+    {
       name: 'dashboard-dev',
-      use: { baseURL: 'http://localhost:37040' },
+      use: { baseURL: 'http://127.0.0.1:47040' },
       testMatch: /dev\/.*\.spec\.ts$/,
     },
     {

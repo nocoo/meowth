@@ -260,14 +260,16 @@ jobs:
           path: ~/Library/Caches/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('apps/dashboard/package.json') }}
       - run: pnpm --filter @meowth/dashboard e2e:install
-      - name: L3 Playwright (embed + embed-mint projects)
+      - name: L3 Playwright (UI + embed + embed-mint)
         # dashboard-dev fixture (Vite + meowthd path A) is excluded
         # here: docs/features/01 §6.2 marks it as skipped because
         # GitHub macOS runners regularly fail the `meowthd init`
         # step inside e2e-dev-fixture.ts. embed + embed-mint cover
         # the production path (the release surface) and are the
         # canonical Phase 3.20-3.24 regression set.
-        run: pnpm --filter @meowth/dashboard e2e --project=dashboard-embed --project=dashboard-embed-mint
+        # dashboard-ui uses mocked API data and verifies layout,
+        # keyboard navigation, responsive content, and Vite HMR.
+        run: pnpm --filter @meowth/dashboard e2e --project=dashboard-ui --project=dashboard-embed --project=dashboard-embed-mint
 
   g2:
     # docs/architecture/08 §7.3: supply-chain only. Secret scan is

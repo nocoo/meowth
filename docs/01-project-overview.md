@@ -156,9 +156,10 @@ type Backend interface {
   - `GET  /` 与静态资源 — 免认证（dashboard 静态文件，由 daemon embed）
   - `POST /bootstrap/mint` — **受 §7.8 全部硬约束保护**（mode-gated + loopback + setup_nonce.hash + 高熵 setup-code + one-shot + 速率锁定）。实现必须以 §7.8 为准，**不要按本摘要简化**
 - **绑定**：默认 `127.0.0.1:7040`；监听其他地址需走 §7.7 远程访问规则
-- **本机 Caddy 反代**（Hexly 域名体系，详 [`docs/features/01-port-migration-to-hexly-caddy.md`](features/01-port-migration-to-hexly-caddy.md)）：
-  - `https://meowth.dev.hexly.ai` → daemon `7040`（prod + dev 日常 API/UI 入口）
+- **本机 Caddy 反代**（Hexly 域名体系，详 [`docs/features/08-dashboard-theme-and-vite.md`](features/08-dashboard-theme-and-vite.md)）：
+  - `https://meowth.dev.hexly.ai` → Vite `37040` for UI/HMR, daemon `7040` for API
   - `https://meowth-vite.dev.hexly.ai` → Vite dev `37040`（dev-only）
+  - `http://127.0.0.1:7040` → daemon with the embedded production dashboard
   - **mint 不走 Caddy**：必须 `http://127.0.0.1:7040/setup` 直连（§7.8 同源门）
 
 ### 7.4 数据与本机目录

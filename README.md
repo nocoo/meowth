@@ -29,6 +29,31 @@ pnpm install && pnpm daemon:build   # 1. 装依赖 + 编 meowthd 二进制
 open http://127.0.0.1:7040          # 4. 浏览器打开,粘 token,开始用
 ```
 
+### Dashboard development (Vite)
+
+The dashboard uses React + Vite. The Go binary embeds a production build;
+frontend development uses Vite's Fast Refresh instead:
+
+```bash
+./daemon/meowthd serve   # Terminal 1, only if the daemon is not already running
+pnpm dashboard:dev      # Terminal 2
+```
+
+Open **[meowth.dev.hexly.ai](https://meowth.dev.hexly.ai)** with the local
+[Caddy routing](docs/features/08-dashboard-theme-and-vite.md#local-caddy-routing)
+configured, or use **[127.0.0.1:37040](http://127.0.0.1:37040)** directly.
+The HTTPS hostname keeps its existing browser login. Frontend edits update
+automatically; the API continues to use the daemon on port 7040.
+
+For another backend address, set `MEOWTH_DAEMON_URL` in the shell or in
+`apps/dashboard/.env.local`. It configures Vite's server-side proxy.
+First-run mint still requires the direct daemon URL
+`http://127.0.0.1:7040/setup`; an existing token can be pasted into the dev UI.
+
+Use `pnpm daemon:build` for an embedded production build. The direct daemon UI
+shows that build after the rebuilt daemon is started. Frontend edits through
+Vite do not require rebuilding or restarting the daemon.
+
 ### Windows（实验性 PowerShell 构建）
 
 Windows 原生构建需要 Node.js 20+、pnpm 和 Go：

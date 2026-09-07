@@ -9,6 +9,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dashboard:dev": "pnpm --filter @meowth/dashboard dev",
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "turbo run typecheck",
