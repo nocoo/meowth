@@ -4,7 +4,7 @@ import { THEME_STORAGE_KEY, applyStoredTheme } from './theme-init';
 afterEach(() => {
   window.localStorage.clear();
   document.documentElement.classList.remove('dark', 'light');
-  delete document.documentElement.dataset.mode;
+  document.documentElement.removeAttribute('data-mode');
 });
 
 describe('applyStoredTheme', () => {
@@ -13,7 +13,7 @@ describe('applyStoredTheme', () => {
     const media = { matches: false };
     applyStoredTheme(document.documentElement, storage, media);
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(document.documentElement.dataset.mode).toBe('dark');
+    expect(document.documentElement.getAttribute('data-mode')).toBe('dark');
   });
 
   it('applies stored light even when the system prefers dark', () => {
@@ -22,7 +22,7 @@ describe('applyStoredTheme', () => {
     applyStoredTheme(document.documentElement, storage, media);
     expect(document.documentElement.classList.contains('dark')).toBe(false);
     expect(document.documentElement.classList.contains('light')).toBe(true);
-    expect(document.documentElement.dataset.mode).toBe('light');
+    expect(document.documentElement.getAttribute('data-mode')).toBe('light');
   });
 
   it('falls back to system preference when the key is missing', () => {

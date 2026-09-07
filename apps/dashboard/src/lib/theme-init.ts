@@ -17,5 +17,5 @@ export function applyStoredTheme(
   const isDark = stored === 'dark' || (stored !== 'light' && prefersDark);
   root.classList.toggle('dark', isDark);
   root.classList.toggle('light', !isDark);
-  root.dataset.mode = isDark ? 'dark' : 'light';
+  root.setAttribute('data-mode', isDark ? 'dark' : 'light');
 }
