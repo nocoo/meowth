@@ -3,15 +3,15 @@ import { describe, expect, it } from 'vitest';
 import OverviewSkeleton from './OverviewSkeleton';
 
 describe('OverviewSkeleton (Stage C1)', () => {
-  it('renders 4 placeholder tiles with the L2 surface class', () => {
+  it('renders metric and activity placeholders with the L2 surface class', () => {
     const { container } = render(<OverviewSkeleton />);
     const tiles = container.querySelectorAll('[data-basalt-surface]');
-    expect(tiles.length).toBe(4);
+    expect(tiles.length).toBe(6);
   });
 
-  it('each tile has 2 animate-pulse skeleton bars (title + value)', () => {
+  it('reserves metric values and recent activity rows', () => {
     const { container } = render(<OverviewSkeleton />);
     const pulses = container.querySelectorAll('.animate-pulse');
-    expect(pulses.length).toBe(8);
+    expect(pulses.length).toBe(16);
   });
 });

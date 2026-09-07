@@ -17,8 +17,12 @@ export default function SessionsListPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="sessions-heading">
-      <PageHeader title="Sessions" headingId="sessions-heading" />
+    <section className="space-y-6" aria-labelledby="sessions-heading">
+      <PageHeader
+        description="Browse recent runs and inspect their output."
+        title="Sessions"
+        headingId="sessions-heading"
+      />
       {vm.status.kind === 'loading' ? (
         <SessionsListSkeleton />
       ) : vm.status.kind === 'error' ? (

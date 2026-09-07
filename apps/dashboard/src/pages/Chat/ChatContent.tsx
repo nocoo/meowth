@@ -1,7 +1,7 @@
 import { EmptyState } from '@/components/ui/empty-state';
 import type { ChatTurn } from '@/viewmodels/useChatViewModel';
 import type { ChatViewModel } from '@/viewmodels/useChatViewModel';
-import { Bot } from 'lucide-react';
+import { Bot, SquarePen } from 'lucide-react';
 import AgentPicker from './AgentPicker';
 import ChatComposer from './ChatComposer';
 import MessageList from './MessageList';
@@ -43,18 +43,35 @@ export default function ChatContent({ vm }: ChatContentProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col" data-slot="chat-shell">
-      <header className="flex shrink-0 justify-center px-4 pt-4 pb-2">
-        <div className="flex w-full max-w-3xl items-center" data-slot="chat-column">
-          <AgentPicker
-            agents={vm.agentsStatus.agents}
-            selectedAgent={vm.selectedAgent}
-            onChange={vm.setSelectedAgent}
-          />
+      <header className="flex shrink-0 justify-center border-b border-basalt-border/60 px-4 py-3">
+        <div
+          className="flex w-full max-w-3xl items-center justify-between gap-3"
+          data-slot="chat-column"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-medium text-basalt-muted-foreground">Agent</span>
+            <AgentPicker
+              agents={vm.agentsStatus.agents}
+              selectedAgent={vm.selectedAgent}
+              onChange={vm.setSelectedAgent}
+            />
+          </div>
+          <Button
+            variant="ghost"
+            size="xs"
+            aria-label="New chat"
+            title="New chat"
+            disabled={vm.turns.length === 0}
+            onClick={vm.reset}
+          >
+            <SquarePen className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+            <span className="hidden sm:inline">New chat</span>
+          </Button>
         </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto" data-slot="chat-message-area">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4" data-slot="chat-message-area">
         <div
-          className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 py-4"
+          className="mx-auto flex min-h-full w-full max-w-3xl flex-col py-6"
           data-slot="chat-column"
         >
           <MessageList turns={vm.turns} />
@@ -68,3 +85,4 @@ export default function ChatContent({ vm }: ChatContentProps) {
     </div>
   );
 }
+import { Button } from '@/components/ui/button';

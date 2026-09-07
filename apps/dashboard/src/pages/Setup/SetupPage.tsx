@@ -64,7 +64,7 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="bg-basalt-background relative flex min-h-screen flex-col overflow-hidden">
+    <div className="bg-basalt-background relative flex min-h-dvh flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-0" style={{ background: RADIAL_GLOW }} />
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
@@ -87,7 +87,7 @@ export default function SetupPage() {
                   }}
                 />
                 <div className="flex items-center gap-2">
-                  <img src="/logo-24.png" alt="" width={16} height={16} className="shrink-0" />
+                  <BrandMark size={16} />
                   <span className="text-basalt-primary-foreground text-sm font-semibold">
                     Meowth
                   </span>
@@ -109,13 +109,7 @@ export default function SetupPage() {
             <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 pt-6 pb-14">
               <h1 className="sr-only">Meowth - Setup</h1>
               <div className="bg-basalt-secondary ring-basalt-border flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full p-5 ring-1">
-                <img
-                  src="/logo-80.png"
-                  alt=""
-                  width={56}
-                  height={56}
-                  className="h-full w-full object-contain"
-                />
+                <BrandMark size={56} className="h-full w-full" />
               </div>
               <div className="bg-basalt-border mt-5 h-px w-full" />
               <div className="flex-1" />
@@ -219,3 +213,4 @@ export default function SetupPage() {
     </div>
   );
 }
+import BrandMark from '@/components/BrandMark';

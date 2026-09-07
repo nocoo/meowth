@@ -86,4 +86,15 @@ describe('ChatComposer', () => {
     });
     expect(submit).not.toHaveBeenCalled();
   });
+
+  it('Enter confirms an IME composition before it can send a message', () => {
+    const submit = vi.fn();
+    render(<ChatComposer composer={makeComposer({ input: '你好', submit })} isStreaming={false} />);
+    const input = screen.getByLabelText('Message');
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+    fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 });
+    expect(submit).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(submit).toHaveBeenCalledTimes(1);
+  });
 });

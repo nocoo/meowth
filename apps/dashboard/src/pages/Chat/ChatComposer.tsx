@@ -17,7 +17,7 @@ export interface ChatComposerProps {
 
 export default function ChatComposer({ composer, isStreaming }: ChatComposerProps) {
   const submitIfAllowed = () => {
-    if (composer.canSend) composer.submit();
+    if (!isStreaming && composer.canSend) composer.submit();
   };
 
   return (
@@ -28,11 +28,13 @@ export default function ChatComposer({ composer, isStreaming }: ChatComposerProp
       }}
       className="w-full"
     >
-      <div className="flex items-end gap-2 rounded-[1.5rem] bg-[color-mix(in_oklch,hsl(var(--basalt-foreground))_6%,hsl(var(--basalt-card)))] px-3 py-2 focus-within:bg-[color-mix(in_oklch,hsl(var(--basalt-foreground))_9%,hsl(var(--basalt-card)))]">
+      <div className="flex items-end gap-2 rounded-2xl border border-basalt-border bg-basalt-control p-2 shadow-sm transition-[border-color,box-shadow] focus-within:border-basalt-ring focus-within:ring-2 focus-within:ring-basalt-ring/15">
         <Textarea
+          rows={1}
           value={composer.input}
           onChange={(e) => composer.setInput(e.target.value)}
           onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               submitIfAllowed();
@@ -41,32 +43,32 @@ export default function ChatComposer({ composer, isStreaming }: ChatComposerProp
           disabled={isStreaming}
           placeholder="Message…"
           aria-label="Message"
-          className="max-h-40 min-h-10 flex-1 resize-none border-0 bg-transparent px-2 py-2 shadow-none focus-visible:ring-0"
+          className="field-sizing-content max-h-40 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 shadow-none focus-visible:ring-0"
         />
         {isStreaming ? (
           <Button
             type="button"
             variant="secondary"
-            size="icon"
-            className="h-9 w-9 shrink-0 rounded-xl"
+            size="icon-sm"
+            className="mb-1 shrink-0 rounded-basalt-widget"
             aria-label="Cancel"
             onClick={() => composer.cancel()}
           >
-            <Square className="h-3.5 w-3.5 fill-current" strokeWidth={0} />
+            <Square className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
           </Button>
         ) : (
           <Button
             type="submit"
-            size="icon"
-            className="h-9 w-9 shrink-0 rounded-xl"
+            size="icon-sm"
+            className="mb-1 shrink-0 rounded-basalt-widget"
             disabled={!composer.canSend}
             aria-label="Send"
           >
-            <ArrowUp className="h-4 w-4" strokeWidth={2.25} />
+            <ArrowUp className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
           </Button>
         )}
       </div>
-      <p className="text-basalt-muted-foreground mt-1.5 px-1 text-[11px]">
+      <p className="text-basalt-muted-foreground mt-2 px-1 text-xs">
         Enter to send · Shift+Enter for newline
       </p>
     </form>

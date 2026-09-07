@@ -17,10 +17,14 @@ export default function SettingsPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="settings-heading">
-      <PageHeader title="Settings" headingId="settings-heading" />
-      <Card className="space-y-4 p-6">
-        <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-[auto,1fr]">
+    <section className="space-y-6" aria-labelledby="settings-heading">
+      <PageHeader
+        description="Dashboard version and daemon connection."
+        title="Settings"
+        headingId="settings-heading"
+      />
+      <Card className="max-w-3xl space-y-5 p-6">
+        <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-[10rem_1fr]">
           <dt className="text-basalt-muted-foreground">Dashboard build</dt>
           <dd className="font-mono">{vm.version}</dd>
         </dl>

@@ -1,5 +1,5 @@
 import MessageText from '@/components/MessageText';
-import { Badge } from '@/components/ui/badge';
+import SessionStatusBadge from '@/components/SessionStatusBadge';
 import { Card } from '@/components/ui/card';
 import type { SessionInfo, SessionMessageRow } from '@/viewmodels/useSessionDetailViewModel';
 
@@ -11,13 +11,6 @@ export interface SessionDetailContentProps {
 function payloadString(payload: Record<string, unknown>, key: string): string | null {
   const value = payload[key];
   return typeof value === 'string' ? value : null;
-}
-
-function statusVariant(status: string): 'success' | 'destructive' | 'info' | 'secondary' {
-  if (status === 'completed') return 'success';
-  if (status === 'failed' || status === 'error') return 'destructive';
-  if (status === 'running') return 'info';
-  return 'secondary';
 }
 
 function MessageEnvelope({ env }: { env: SessionMessageRow }) {
@@ -83,7 +76,7 @@ export default function SessionDetailContent({ session, messages }: SessionDetai
         </p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <strong>{session.backend_type}</strong>
-          <Badge variant={statusVariant(session.status)}>{session.status}</Badge>
+          <SessionStatusBadge status={session.status} />
           <span className="text-basalt-muted-foreground">{session.model}</span>
         </div>
         <p className="text-basalt-muted-foreground text-xs">

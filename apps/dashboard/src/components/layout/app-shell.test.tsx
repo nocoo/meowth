@@ -56,8 +56,8 @@ describe('AppShell (Stage B1) — desktop layout', () => {
   it('renders the floating island wrapper around the route Outlet', () => {
     const { container } = render(<ShellWithChildPage child={<div>page-body</div>} />);
     expect(screen.getByText('page-body')).toBeInTheDocument();
-    // The L1 floating-island wrapper carries rounded-basalt-island + bg-basalt-card.
-    const island = container.querySelector('.rounded-basalt-island.bg-basalt-card');
+    // Basalt owns the island surface; the route remains inside that root.
+    const island = container.querySelector('[data-basalt-surface-root]');
     expect(island).toBeTruthy();
     expect(island?.className ?? '').toContain('w-full');
   });
@@ -91,13 +91,13 @@ describe('AppShell (Stage B1) — desktop layout', () => {
     const rel = link.getAttribute('rel') ?? '';
     expect(rel).toContain('noopener');
     expect(rel).toContain('noreferrer');
-    // Inline svg uses h-[18px] w-[18px] (surety idiom) and is
+    // Inline svg uses h-4 w-4 (surety idiom) and is
     // decorative — aria-hidden=true.
     const svg = link.querySelector('svg');
     expect(svg).not.toBeNull();
     expect(svg?.getAttribute('aria-hidden')).toBe('true');
-    expect(svg?.getAttribute('class') ?? '').toContain('h-[18px]');
-    expect(svg?.getAttribute('class') ?? '').toContain('w-[18px]');
+    expect(svg?.getAttribute('class') ?? '').toContain('h-4');
+    expect(svg?.getAttribute('class') ?? '').toContain('w-4');
   });
 
   it('header right also renders the ThemeToggle button next to the GitHub link', () => {

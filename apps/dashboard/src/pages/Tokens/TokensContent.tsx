@@ -50,9 +50,15 @@ export default function TokensContent({ tokens, onRevoke }: TokensContentProps) 
             {tokens.map((tok) => (
               <TableRow key={tok.id}>
                 <TableCell>{tok.name}</TableCell>
-                <TableCell className="font-mono text-xs">{tok.prefix}</TableCell>
-                <TableCell className="font-mono text-xs">{tok.created_at}</TableCell>
-                <TableCell className="font-mono text-xs">{tok.last_used_at ?? '—'}</TableCell>
+                <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                  {tok.prefix}
+                </TableCell>
+                <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                  {tok.created_at}
+                </TableCell>
+                <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                  {tok.last_used_at ?? '—'}
+                </TableCell>
                 <TableCell className="text-right">
                   <Button
                     type="button"

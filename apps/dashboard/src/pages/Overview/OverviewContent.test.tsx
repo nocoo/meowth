@@ -1,7 +1,13 @@
 import type { OverviewData } from '@/viewmodels/useOverviewViewModel';
-import { render, screen } from '@testing-library/react';
+import { render as renderUi, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import OverviewContent from './OverviewContent';
+
+function render(element: ReactElement) {
+  return renderUi(element, { wrapper: MemoryRouter });
+}
 
 function makeData(over: Partial<OverviewData> = {}): OverviewData {
   return {

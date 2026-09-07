@@ -10,10 +10,11 @@ describe('ChatSkeleton', () => {
     expect(container.querySelector('[data-slot="skeleton-composer"]')).not.toBeNull();
   });
 
-  it('uses the rounded-basalt-card / bg-basalt-secondary L2 surface class', () => {
+  it('reserves the full chat column while loading', () => {
     const { container } = render(<ChatSkeleton />);
     const wrapper = container.querySelector('[data-slot="chat-skeleton"]') as HTMLElement;
     expect(wrapper).toBeTruthy();
-    expect(wrapper).toHaveAttribute('data-basalt-surface');
+    expect(wrapper).toHaveAttribute('aria-busy', 'true');
+    expect(wrapper.className).toContain('h-full');
   });
 });

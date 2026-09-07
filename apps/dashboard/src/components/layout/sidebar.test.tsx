@@ -114,13 +114,15 @@ describe('Sidebar (Stage B1)', () => {
     expect(wrapper?.className ?? '').toContain('pl-6');
   });
 
-  it('expanded groups collapse with aria-expanded and keep links in the tree', async () => {
+  it('collapsed groups hide their links from keyboard navigation', async () => {
     const user = userEvent.setup();
     renderSidebar();
-    const dashboard = screen.getByTestId('sidebar-group-dashboard');
+    const dashboard = screen.getByRole('button', { name: 'Dashboard' });
     expect(dashboard).toHaveAttribute('aria-expanded', 'true');
     await user.click(dashboard);
     expect(dashboard).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
+    await user.click(dashboard);
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
   });
 

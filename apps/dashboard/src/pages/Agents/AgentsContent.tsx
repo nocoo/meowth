@@ -52,14 +52,18 @@ export default function AgentsContent({ agents }: AgentsContentProps) {
         <TableBody>
           {agents.map((agent) => (
             <TableRow key={agent.type}>
-              <TableCell className="font-mono">{agent.type}</TableCell>
+              <TableCell className="font-medium">{agent.type}</TableCell>
               <TableCell>
-                <Badge variant={agent.installed ? 'success' : 'outline'}>
+                <Badge variant={agent.installed ? 'success' : 'outline'} dot>
                   {agent.installed ? 'yes' : 'no'}
                 </Badge>
               </TableCell>
-              <TableCell className="font-mono text-xs">{agent.executable}</TableCell>
-              <TableCell className="font-mono text-xs">{agent.version}</TableCell>
+              <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                {agent.executable || '—'}
+              </TableCell>
+              <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                {agent.version || '—'}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

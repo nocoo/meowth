@@ -1,16 +1,10 @@
 import ThemeToggle from '@/components/ThemeToggle';
 import { Github } from '@/components/icons/github';
+import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { activeNavItem } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import {
-  Button,
-  ContentIsland,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from '@nocoo/basalt';
+import { ContentIsland, Sheet, SheetContent, SheetDescription, SheetTitle } from '@nocoo/basalt';
 import { AppHeader } from '@nocoo/basalt/components/app-header';
 import {
   AppMain,
@@ -47,7 +41,7 @@ function AppShellInner() {
   }, [mobileOpen]);
 
   return (
-    <BasaltAppShell>
+    <BasaltAppShell className="h-dvh">
       <AppSkipLink>Skip to main content</AppSkipLink>
       {!isMobile && <Sidebar />}
 
@@ -76,12 +70,11 @@ function AppShellInner() {
                 ref={menuTriggerRef}
                 type="button"
                 variant="ghost"
-                size="icon"
-                className="h-8 w-8"
+                size="icon-sm"
                 onClick={() => setMobileOpen(true)}
                 aria-label="Open navigation"
               >
-                <Menu className="h-5 w-5" aria-hidden="true" strokeWidth={1.5} />
+                <Menu className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
               </Button>
             ) : null
           }
@@ -90,15 +83,22 @@ function AppShellInner() {
           actions={
             <>
               <RefreshButton />
-              <a
-                href={GITHUB_REPO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="GitHub repository"
-                className="text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+              <Button
+                asChild
+                variant="ghost"
+                size="icon-sm"
+                className="text-basalt-muted-foreground"
               >
-                <Github className="h-[18px] w-[18px]" aria-hidden="true" strokeWidth={1.5} />
-              </a>
+                <a
+                  href={GITHUB_REPO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="GitHub repository"
+                  title="GitHub repository"
+                >
+                  <Github className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+                </a>
+              </Button>
               <ThemeToggle />
             </>
           }
@@ -106,7 +106,7 @@ function AppShellInner() {
         <div className="flex min-h-0 flex-1 flex-col px-2 pb-2 md:px-3 md:pb-3">
           <ContentIsland
             className={cn(
-              'rounded-basalt-island bg-basalt-card h-full w-full',
+              'h-full w-full',
               pathname === '/chat' ? 'flex flex-col overflow-hidden p-0 md:p-0' : undefined,
             )}
           >

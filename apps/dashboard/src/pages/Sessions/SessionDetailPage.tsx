@@ -21,8 +21,12 @@ export default function SessionDetailPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="session-detail-heading">
-      <PageHeader title="Session" headingId="session-detail-heading" />
+    <section className="space-y-6" aria-labelledby="session-detail-heading">
+      <PageHeader
+        description="Run details and captured agent output."
+        title="Session"
+        headingId="session-detail-heading"
+      />
       {vm.status.kind === 'loading' ? (
         <SessionDetailSkeleton />
       ) : vm.status.kind === 'error' ? (

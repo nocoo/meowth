@@ -180,7 +180,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
     expect(screen.getByText('upstream failed')).toBeInTheDocument();
   });
 
-  it('session_ended completed + duration_ms → "✓ completed in 4.2s"', () => {
+  it('session_ended completed + duration_ms → "completed in 4.2s"', () => {
     renderBubble(
       makeEnvelope({
         type: 'session_ended',
@@ -191,11 +191,11 @@ describe('MessageBubble dispatch (§5.1)', () => {
         },
       }),
     );
-    expect(screen.getByText(/✓ completed/)).toBeInTheDocument();
+    expect(screen.getByText(/completed/)).toBeInTheDocument();
     expect(screen.getByText(/in 4\.2s/)).toBeInTheDocument();
   });
 
-  it('session_ended failed + error → "✗ failed: <error>"', () => {
+  it('session_ended failed + error → "failed: <error>"', () => {
     renderBubble(
       makeEnvelope({
         type: 'session_ended',
@@ -205,18 +205,18 @@ describe('MessageBubble dispatch (§5.1)', () => {
         },
       }),
     );
-    expect(screen.getByText(/✗ failed/)).toBeInTheDocument();
+    expect(screen.getByText(/failed/)).toBeInTheDocument();
     expect(screen.getByText(/backend stream closed early/)).toBeInTheDocument();
   });
 
-  it('session_ended cancelled → "⊘ cancelled" (no duration suffix)', () => {
+  it('session_ended cancelled → "cancelled" (no duration suffix)', () => {
     renderBubble(
       makeEnvelope({
         type: 'session_ended',
         payload: { status: 'cancelled' },
       }),
     );
-    expect(screen.getByText(/⊘ cancelled/)).toBeInTheDocument();
+    expect(screen.getByText(/cancelled/)).toBeInTheDocument();
   });
 
   it('session_ended completed without duration_ms → prefix only, no "in"', () => {
@@ -226,7 +226,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { status: 'completed' },
       }),
     );
-    expect(screen.getByText('✓ completed')).toBeInTheDocument();
+    expect(screen.getByText('completed')).toBeInTheDocument();
     expect(screen.queryByText(/in /)).toBeNull();
   });
 });

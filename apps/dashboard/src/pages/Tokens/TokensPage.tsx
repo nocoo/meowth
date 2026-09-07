@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useTokensViewModel from '@/viewmodels/useTokensViewModel';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Plus } from 'lucide-react';
 import TokensContent from './TokensContent';
 import TokensCreateDialog from './TokensCreateDialog';
 import TokensSkeleton from './TokensSkeleton';
@@ -22,12 +22,14 @@ export default function TokensPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="tokens-heading">
+    <section className="space-y-6" aria-labelledby="tokens-heading">
       <PageHeader
         title="Tokens"
+        description="Manage access for the dashboard, CLI, and other clients."
         headingId="tokens-heading"
         actions={
           <Button type="button" size="xs" onClick={vm.openCreateModal}>
+            <Plus className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
             Create token
           </Button>
         }

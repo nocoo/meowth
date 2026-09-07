@@ -1,6 +1,6 @@
 import type { ChatTurn } from '@/viewmodels/useChatViewModel';
 import type { ChatAgentsStatus, ChatViewModel } from '@/viewmodels/useChatViewModel';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import ChatContent from './ChatContent';
@@ -117,5 +117,12 @@ describe('ChatContent', () => {
     const vm = makeVM({ agentsStatus: { kind: 'loading' } });
     const { container } = renderContent(vm);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('starts a fresh conversation through the existing reset action', () => {
+    const reset = vi.fn();
+    renderContent(makeVM({ reset, turns: [streamingTurn()] }));
+    fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+    expect(reset).toHaveBeenCalledTimes(1);
   });
 });

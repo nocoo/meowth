@@ -149,8 +149,8 @@ describe('TokensPage (shell, Stage C4)', () => {
     const { rerender } = render(<TokensPage />);
     expect(screen.getByRole('dialog', { name: 'Create token' })).toBeInTheDocument();
     // Radix modal marks the page inert, so table cells are not
-    // exposed as roles. Query the table slots directly.
-    const tableCells = () => Array.from(document.querySelectorAll('[data-slot="table-cell"]'));
+    // exposed as roles. Query the semantic table cells directly.
+    const tableCells = () => Array.from(document.querySelectorAll('tbody td'));
     expect(tableCells().some((el) => el.textContent === 'ci-bot')).toBe(true);
     expect(tableCells().some((el) => el.textContent === 'mwt_ABCDE')).toBe(true);
     expect(document.body.textContent).not.toContain(SECRET);

@@ -1,3 +1,4 @@
+import BrandMark from '@/components/BrandMark';
 import { NAV_GROUPS, NAV_ITEMS, type NavGroup, isItemActive } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/lib/version';
@@ -7,6 +8,7 @@ import {
   Sidebar as BasaltSidebar,
   Button,
   SidebarFooter,
+  SidebarGroup,
   SidebarHeader,
   SidebarNav,
   SidebarUser,
@@ -15,8 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@nocoo/basalt';
-import { ChevronUp, PanelLeft } from 'lucide-react';
-import { useState } from 'react';
+import { PanelLeft } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router';
 import { useSidebar } from './sidebar-context';
 
@@ -34,7 +35,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
       <BasaltSidebar
         collapsed={isCollapsed}
         aria-label="Primary navigation"
-        className={mobile ? 'h-full' : undefined}
+        className={cn('motion-reduce:transition-none', mobile && 'h-full')}
       >
         {isCollapsed ? (
           <CollapsedView pathname={pathname} toggle={toggle} />
@@ -50,7 +51,7 @@ function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => v
   return (
     <>
       <SidebarHeader className="justify-start px-0 pl-6 pr-3">
-        <img src="/logo-24.png" alt="Meowth" width={24} height={24} className="shrink-0" />
+        <BrandMark alt="Meowth" />
       </SidebarHeader>
 
       <Button
@@ -73,7 +74,7 @@ function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => v
                 aria-label={item.label}
                 className={({ isActive }) =>
                   cn(
-                    'flex h-10 w-10 items-center justify-center rounded-lg transition-colors self-center',
+                    'flex h-10 w-10 items-center justify-center self-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-basalt-ring motion-reduce:transition-none',
                     isActive || isItemActive(item, pathname)
                       ? 'bg-basalt-primary/10 text-basalt-primary'
                       : 'text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground',
@@ -110,10 +111,10 @@ function ExpandedView({
 }) {
   return (
     <>
-      <SidebarHeader>
-        <div className="flex w-full items-center justify-between px-3">
+      <SidebarHeader className="pl-6 pr-3">
+        <div className="flex w-full items-center justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <img src="/logo-24.png" alt="Meowth" width={24} height={24} className="shrink-0" />
+            <BrandMark alt="Meowth" />
             <span className="truncate text-sm font-semibold tracking-tight">Meowth</span>
             <VersionPill />
           </div>
@@ -154,64 +155,33 @@ function ExpandedView({
 }
 
 function NavGroupSection({ group, pathname }: { group: NavGroup; pathname: string }) {
-  const [open, setOpen] = useState(true);
   const slug = group.label.toLowerCase();
   return (
-    <div className="mt-1 px-3">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        data-testid={`sidebar-group-${slug}`}
-        className="flex w-full items-center justify-between px-3 py-2"
-      >
-        <span
-          data-testid={`sidebar-group-label-${slug}`}
-          className="text-basalt-muted-foreground text-xs font-semibold"
-        >
+    <SidebarGroup
+      label={
+        <span data-testid={`sidebar-group-label-${slug}`} className="text-xs font-medium">
           {group.label}
         </span>
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-          <ChevronUp
-            className={cn(
-              'text-basalt-muted-foreground/50 h-3.5 w-3.5 transition-transform duration-200',
-              !open && 'rotate-180',
-            )}
-            strokeWidth={1.5}
-            aria-hidden="true"
-          />
-        </span>
-      </button>
-      <div
-        className="grid overflow-hidden"
-        style={{
-          gridTemplateRows: open ? '1fr' : '0fr',
-          transition: 'grid-template-rows 200ms ease-out',
-        }}
-      >
-        <div className="min-h-0 overflow-hidden">
-          <div className="flex flex-col gap-0.5 px-3">
-            {group.items.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-normal transition-colors',
-                    isActive || isItemActive(item, pathname)
-                      ? 'bg-basalt-primary/10 font-medium text-basalt-primary'
-                      : 'text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground',
-                  )
-                }
-              >
-                <item.Icon className="h-4 w-4 shrink-0" aria-hidden="true" strokeWidth={1.5} />
-                <span className="flex-1 text-left">{item.label}</span>
-              </NavLink>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+      }
+    >
+      {group.items.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          className={({ isActive }) =>
+            cn(
+              'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-basalt-ring motion-reduce:transition-none',
+              isActive || isItemActive(item, pathname)
+                ? 'bg-basalt-primary/10 font-medium text-basalt-primary'
+                : 'text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground',
+            )
+          }
+        >
+          <item.Icon className="h-4 w-4 shrink-0" aria-hidden="true" strokeWidth={1.5} />
+          <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+        </NavLink>
+      ))}
+    </SidebarGroup>
   );
 }
 

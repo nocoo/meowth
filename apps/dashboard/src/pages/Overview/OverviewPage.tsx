@@ -16,8 +16,12 @@ export default function OverviewPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="overview-heading">
-      <PageHeader title="Overview" headingId="overview-heading" />
+    <section className="space-y-6" aria-labelledby="overview-heading">
+      <PageHeader
+        description="A snapshot of your local coding agents and activity."
+        title="Overview"
+        headingId="overview-heading"
+      />
       {vm.status.kind === 'loading' ? (
         <OverviewSkeleton />
       ) : vm.status.kind === 'error' ? (

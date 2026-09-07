@@ -1,5 +1,8 @@
 import MessageText from '@/components/MessageText';
+import { Notice } from '@/components/ui/notice';
 import type { Envelope } from '@/viewmodels/useChatViewModel';
+import { LayerCard } from '@nocoo/basalt';
+import { Check, CircleDot, CircleSlash, Clock, type LucideIcon, X } from 'lucide-react';
 import { Link } from 'react-router';
 
 // docs/features/03 §5.1 dispatch table + §5.2 sanitizer rule +
@@ -50,15 +53,16 @@ interface TruncatedTextProps {
   content: string;
   cap: number;
   sessionId: string;
+  className?: string;
 }
 
-function TruncatedText({ content, cap, sessionId }: TruncatedTextProps) {
+function TruncatedText({ content, cap, sessionId, className = '' }: TruncatedTextProps) {
   if (content.length <= cap) {
-    return <MessageText content={content} />;
+    return <MessageText content={content} className={className} />;
   }
   return (
     <div>
-      <MessageText content={content.slice(0, cap)} />
+      <MessageText content={content.slice(0, cap)} className={className} />
       <div className="text-basalt-muted-foreground text-xs mt-1">
         …(truncated,{' '}
         <Link to={`/sessions/${sessionId}`} className="underline">
@@ -111,37 +115,32 @@ interface SessionEndedFooterProps {
   envelope: Envelope;
 }
 
+const STATUS_ICONS: Record<string, LucideIcon> = {
+  completed: Check,
+  failed: X,
+  cancelled: CircleSlash,
+  aborted: CircleSlash,
+  timeout: Clock,
+};
+
 function SessionEndedFooter({ envelope }: SessionEndedFooterProps) {
   const status = payloadString(envelope, 'status');
   const error = payloadString(envelope, 'error');
   const rawDuration = readField(readPayload(envelope), 'duration_ms');
   const durationMs = payloadNumber(rawDuration);
 
-  let prefix = '';
-  let suffix = '';
-  if (status === 'completed') {
-    prefix = '✓ completed';
-    if (durationMs > 0) suffix = ` in ${formatDuration(durationMs)}`;
-  } else if (status === 'failed') {
-    prefix = '✗ failed';
-    if (error.length > 0) suffix = `: ${error}`;
-  } else if (status === 'cancelled') {
-    prefix = '⊘ cancelled';
-  } else if (status === 'aborted') {
-    prefix = '⊘ aborted';
-  } else if (status === 'timeout') {
-    prefix = '⏱ timeout';
-  } else {
-    prefix = status;
-  }
+  const Icon = STATUS_ICONS[status] ?? CircleDot;
+  let label = status;
+  if (status === 'completed' && durationMs > 0) label += ` in ${formatDuration(durationMs)}`;
+  if (status === 'failed' && error.length > 0) label += `: ${error}`;
 
   return (
     <div
       data-bubble-kind="session-ended"
-      className="text-basalt-muted-foreground mt-1 text-xs leading-5 tabular-nums"
+      className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-basalt-muted-foreground tabular-nums"
     >
-      {prefix}
-      {suffix.length > 0 ? <MessageText content={suffix} /> : null}
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+      <MessageText content={label} className="font-basalt-sans text-xs leading-5" />
     </div>
   );
 }
@@ -154,7 +153,12 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     const content = payloadString(envelope, 'content');
     return (
       <div data-bubble-kind="text" className="text-basalt-foreground text-[15px] leading-7">
-        <TruncatedText content={content} cap={TEXT_CONTENT_CAP} sessionId={sessionId} />
+        <TruncatedText
+          content={content}
+          cap={TEXT_CONTENT_CAP}
+          sessionId={sessionId}
+          className="font-basalt-sans text-[15px] leading-7"
+        />
       </div>
     );
   }
@@ -163,8 +167,8 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     const content = payloadString(envelope, 'content');
     return (
       <details data-bubble-kind="thinking" className="text-basalt-muted-foreground">
-        <summary>Thinking...</summary>
-        <MessageText content={content} />
+        <summary className="cursor-pointer text-xs font-medium">Thinking...</summary>
+        <MessageText content={content} className="mt-2 font-basalt-sans text-sm" />
       </details>
     );
   }
@@ -180,26 +184,38 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
       }
     })();
     return (
-      <div
+      <LayerCard
         data-bubble-kind="tool-use"
-        className="bg-basalt-muted/70 text-basalt-muted-foreground rounded-xl px-3 py-2 text-xs leading-5"
+        padding="sm"
+        className="text-xs leading-5 text-basalt-muted-foreground"
       >
-        <div className="text-basalt-foreground/70 mb-1 font-medium">tool: {tool}</div>
-        <TruncatedText content={serialized} cap={TOOL_USE_INPUT_CAP} sessionId={sessionId} />
-      </div>
+        <div className="mb-1 font-medium">tool: {tool}</div>
+        <TruncatedText
+          content={serialized}
+          cap={TOOL_USE_INPUT_CAP}
+          sessionId={sessionId}
+          className="text-xs"
+        />
+      </LayerCard>
     );
   }
 
   if (kind === 'tool-result') {
     const output = payloadString(envelope, 'output');
     return (
-      <div
+      <LayerCard
         data-bubble-kind="tool-result"
-        className="bg-basalt-muted/70 text-basalt-muted-foreground rounded-xl px-3 py-2 text-xs leading-5"
+        padding="sm"
+        className="text-xs leading-5 text-basalt-muted-foreground"
       >
-        <div className="text-basalt-foreground/70 mb-1 font-medium">tool result</div>
-        <TruncatedText content={output} cap={TOOL_RESULT_OUTPUT_CAP} sessionId={sessionId} />
-      </div>
+        <div className="mb-1 font-medium">tool result</div>
+        <TruncatedText
+          content={output}
+          cap={TOOL_RESULT_OUTPUT_CAP}
+          sessionId={sessionId}
+          className="text-xs"
+        />
+      </LayerCard>
     );
   }
 
@@ -214,14 +230,11 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     const title = payloadString(envelope, 'title');
     const detail = payloadString(envelope, 'detail');
     return (
-      <div
-        data-bubble-kind="error"
-        className="rounded-basalt-widget border border-basalt-danger/20 bg-basalt-danger-tint p-3 text-basalt-danger"
-      >
+      <Notice data-bubble-kind="error" variant="destructive" role="alert">
         {content.length > 0 ? <MessageText content={content} /> : null}
         {title.length > 0 ? <MessageText content={title} /> : null}
         {detail.length > 0 ? <MessageText content={detail} /> : null}
-      </div>
+      </Notice>
     );
   }
 
@@ -229,8 +242,8 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     const content = payloadString(envelope, 'content');
     return (
       <details data-bubble-kind="log" className="text-basalt-muted-foreground text-xs">
-        <summary>log</summary>
-        <MessageText content={content} />
+        <summary className="cursor-pointer font-medium">log</summary>
+        <MessageText content={content} className="mt-2 text-xs" />
       </details>
     );
   }
@@ -260,22 +273,13 @@ export default function MessageBubble({ envelope }: MessageBubbleProps) {
       const code = payloadString(envelope, 'code');
       const title = payloadString(envelope, 'title');
       return (
-        <div
-          data-bubble-kind="protocol-error"
-          className="rounded-basalt-widget border border-basalt-warning/20 bg-basalt-warning-tint p-3 text-basalt-warning"
-        >
+        <Notice data-bubble-kind="protocol-error" variant="warning" role="alert">
           {code.length > 0 ? <MessageText content={code} /> : null}
           {title.length > 0 ? <MessageText content={title} /> : null}
-        </div>
+        </Notice>
       );
     }
     case 'session_ended': {
-      // 02 §5.5 — `payload.status` is the daemon's terminal value;
-      // `duration_ms` and `error` are siblings. The §5.1 dispatch
-      // table promises a short status row with shape
-      // `✓ completed in 4.2s` / `✗ failed: <error>` / `⊘ cancelled`;
-      // we render the closest deterministic equivalent without
-      // pulling in icon components.
       return <SessionEndedFooter envelope={envelope} />;
     }
     default:

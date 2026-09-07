@@ -16,8 +16,12 @@ export default function AgentsPage() {
   useRegisterRefresh(vm.refresh);
 
   return (
-    <section aria-labelledby="agents-heading">
-      <PageHeader title="Agents" headingId="agents-heading" />
+    <section className="space-y-6" aria-labelledby="agents-heading">
+      <PageHeader
+        description="Coding backends available on this machine."
+        title="Agents"
+        headingId="agents-heading"
+      />
       {vm.status.kind === 'loading' ? (
         <AgentsSkeleton />
       ) : vm.status.kind === 'error' ? (

@@ -1,4 +1,5 @@
-import { Button } from '@nocoo/basalt';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Loader2, RotateCw } from 'lucide-react';
 import { useRefresh } from './refresh-context';
 
@@ -14,8 +15,8 @@ export default function RefreshButton({ className }: RefreshButtonProps) {
     <Button
       type="button"
       variant="ghost"
-      size="icon"
-      className={className}
+      size="icon-sm"
+      className={cn('text-basalt-muted-foreground', className)}
       onClick={() => {
         void trigger();
       }}

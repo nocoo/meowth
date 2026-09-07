@@ -16,9 +16,15 @@ export interface MessageListProps {
 export default function MessageList({ turns }: MessageListProps) {
   if (turns.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-basalt-muted-foreground text-sm" data-slot="chat-empty-hint">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-basalt-card bg-basalt-secondary text-basalt-muted-foreground ring-1 ring-basalt-border/50">
+          <MessageSquare className="h-6 w-6" strokeWidth={1.5} aria-hidden="true" />
+        </span>
+        <p className="text-base font-medium" data-slot="chat-empty-hint">
           Start a conversation.
+        </p>
+        <p className="max-w-sm text-sm leading-6 text-basalt-muted-foreground">
+          Choose a local agent and send a message to get started.
         </p>
       </div>
     );
@@ -64,9 +70,16 @@ export default function MessageList({ turns }: MessageListProps) {
             className="space-y-4"
           >
             <div className="flex justify-end">
-              <div className="max-w-[min(36rem,85%)] rounded-[1.35rem] bg-[color-mix(in_oklch,hsl(var(--basalt-foreground))_8%,hsl(var(--basalt-card)))] px-4 py-2.5 text-[15px] leading-6 text-basalt-foreground">
-                <MessageText content={turn.userPrompt} />
-              </div>
+              <LayerCard
+                padding="none"
+                outlined
+                className="max-w-[min(36rem,85%)] rounded-2xl px-4 py-3"
+              >
+                <MessageText
+                  content={turn.userPrompt}
+                  className="font-basalt-sans text-[15px] leading-6"
+                />
+              </LayerCard>
             </div>
             {overflow ? <CapBanner sessionId={turn.sessionId} /> : null}
             {groups.map((env, i) => (
@@ -122,3 +135,5 @@ function CapBanner({ sessionId }: CapBannerProps) {
     </div>
   );
 }
+import { LayerCard } from '@nocoo/basalt';
+import { MessageSquare } from 'lucide-react';

@@ -1,5 +1,5 @@
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Button } from '@nocoo/basalt';
 import { type BasaltTheme, useTheme } from '@nocoo/basalt/providers/theme';
 import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -36,8 +36,8 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
     <Button
       type="button"
       variant="ghost"
-      size="icon"
-      className={cn('h-8 w-8', className)}
+      size="icon-sm"
+      className={cn('text-basalt-muted-foreground', className)}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       aria-label={label}
       title={label}

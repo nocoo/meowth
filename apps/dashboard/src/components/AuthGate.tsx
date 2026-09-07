@@ -84,10 +84,6 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   if (phase === 'ok') return <>{children}</>;
   if (phase === 'unreachable') return <DaemonUnreachable onRetry={onRetry} />;
-  return (
-    <LoadingScreen
-      label="Verifying token..."
-      mark={<img src="/logo-80.png" alt="" width={32} height={32} />}
-    />
-  );
+  return <LoadingScreen label="Verifying token..." mark={<BrandMark size={32} />} />;
 }
+import BrandMark from '@/components/BrandMark';

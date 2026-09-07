@@ -1,7 +1,13 @@
 import type { OverviewViewModel } from '@/viewmodels/useOverviewViewModel';
-import { render, screen } from '@testing-library/react';
+import { render as renderUi, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import OverviewPage from './OverviewPage';
+
+function render(element: ReactElement) {
+  return renderUi(element, { wrapper: MemoryRouter });
+}
 
 // Page shell tests for Phase 2 Stage C1. The shell owns three
 // branches (loading / error / ready) over `useOverviewViewModel`;
@@ -44,9 +50,9 @@ describe('OverviewPage (shell, Stage C1)', () => {
   it('loading branch shows the OverviewSkeleton placeholders', () => {
     mockUseOverview.mockReturnValue(vm({ kind: 'loading' }));
     const { container } = render(<OverviewPage />);
-    // 4 skeleton tiles × 2 Skeleton spans each = 8 animate-pulse nodes
+    // Four metrics plus two activity panels reserve the content layout.
     const pulses = container.querySelectorAll('.animate-pulse');
-    expect(pulses.length).toBe(8);
+    expect(pulses.length).toBe(16);
     expect(screen.queryByText('Reachable')).not.toBeInTheDocument();
   });
 
