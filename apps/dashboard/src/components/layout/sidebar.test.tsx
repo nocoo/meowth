@@ -102,17 +102,16 @@ describe('Sidebar (Stage B1)', () => {
     expect(screen.getByAltText('Meowth')).toBeInTheDocument();
   });
 
-  it('collapsed mode centers the logo on the 68px rail', async () => {
+  it('collapsed mode keeps the logo left-aligned so it does not jump', async () => {
     const user = userEvent.setup();
     renderSidebar();
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
     const logoImg = screen.getByAltText('Meowth');
     const wrapper = logoImg.parentElement;
     expect(wrapper).not.toBeNull();
-    expect(wrapper?.className ?? '').toContain('justify-center');
     expect(wrapper?.className ?? '').toContain('h-14');
-    expect(wrapper?.className ?? '').not.toContain('justify-start');
-    expect(wrapper?.className ?? '').not.toContain('pl-6');
+    expect(wrapper?.className ?? '').toContain('justify-start');
+    expect(wrapper?.className ?? '').toContain('pl-6');
   });
 
   it('expanded groups collapse with aria-expanded and keep links in the tree', async () => {
