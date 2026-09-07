@@ -59,7 +59,7 @@ function TruncatedText({ content, cap, sessionId }: TruncatedTextProps) {
   return (
     <div>
       <MessageText content={content.slice(0, cap)} />
-      <div className="text-muted-foreground text-xs mt-1">
+      <div className="text-basalt-muted-foreground text-xs mt-1">
         …(truncated,{' '}
         <Link to={`/sessions/${sessionId}`} className="underline">
           view in Sessions detail
@@ -78,14 +78,14 @@ function UsageBadge({ envelope }: UsageBadgeProps) {
   const payload = readPayload(envelope);
   const modelsRaw = readField(payload, 'models');
   if (modelsRaw === null || typeof modelsRaw !== 'object') {
-    return <span className="text-xs text-muted-foreground font-mono">-</span>;
+    return <span className="text-xs text-basalt-muted-foreground font-mono">-</span>;
   }
   const entries = Object.values(modelsRaw as Record<string, unknown>);
   if (entries.length === 0) {
     // §5.4 allows the map itself to be present but empty (no model
     // ever produced usage in this session, e.g. copilot mid-session
     // gap). Show `-` to match the missing-map case.
-    return <span className="text-xs text-muted-foreground font-mono">-</span>;
+    return <span className="text-xs text-basalt-muted-foreground font-mono">-</span>;
   }
   let totalIn = 0;
   let totalOut = 0;
@@ -96,7 +96,7 @@ function UsageBadge({ envelope }: UsageBadgeProps) {
     totalOut += payloadNumber(readField(m, 'output_tokens'));
   }
   return (
-    <span className="text-xs text-muted-foreground font-mono">
+    <span className="text-xs text-basalt-muted-foreground font-mono">
       {formatTokens(totalIn)} in / {formatTokens(totalOut)} out
     </span>
   );
@@ -138,7 +138,7 @@ function SessionEndedFooter({ envelope }: SessionEndedFooterProps) {
   return (
     <div
       data-bubble-kind="session-ended"
-      className="text-muted-foreground/60 mt-1 text-[11px] leading-5 tabular-nums"
+      className="text-basalt-muted-foreground mt-1 text-xs leading-5 tabular-nums"
     >
       {prefix}
       {suffix.length > 0 ? <MessageText content={suffix} /> : null}
@@ -153,7 +153,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
   if (kind === 'text') {
     const content = payloadString(envelope, 'content');
     return (
-      <div data-bubble-kind="text" className="text-foreground text-[15px] leading-7">
+      <div data-bubble-kind="text" className="text-basalt-foreground text-[15px] leading-7">
         <TruncatedText content={content} cap={TEXT_CONTENT_CAP} sessionId={sessionId} />
       </div>
     );
@@ -162,7 +162,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
   if (kind === 'thinking') {
     const content = payloadString(envelope, 'content');
     return (
-      <details data-bubble-kind="thinking" className="text-muted-foreground">
+      <details data-bubble-kind="thinking" className="text-basalt-muted-foreground">
         <summary>Thinking...</summary>
         <MessageText content={content} />
       </details>
@@ -182,9 +182,9 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     return (
       <div
         data-bubble-kind="tool-use"
-        className="bg-muted/70 text-muted-foreground rounded-xl px-3 py-2 text-xs leading-5"
+        className="bg-basalt-muted/70 text-basalt-muted-foreground rounded-xl px-3 py-2 text-xs leading-5"
       >
-        <div className="text-foreground/70 mb-1 font-medium">tool: {tool}</div>
+        <div className="text-basalt-foreground/70 mb-1 font-medium">tool: {tool}</div>
         <TruncatedText content={serialized} cap={TOOL_USE_INPUT_CAP} sessionId={sessionId} />
       </div>
     );
@@ -195,9 +195,9 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     return (
       <div
         data-bubble-kind="tool-result"
-        className="bg-muted/70 text-muted-foreground rounded-xl px-3 py-2 text-xs leading-5"
+        className="bg-basalt-muted/70 text-basalt-muted-foreground rounded-xl px-3 py-2 text-xs leading-5"
       >
-        <div className="text-foreground/70 mb-1 font-medium">tool result</div>
+        <div className="text-basalt-foreground/70 mb-1 font-medium">tool result</div>
         <TruncatedText content={output} cap={TOOL_RESULT_OUTPUT_CAP} sessionId={sessionId} />
       </div>
     );
@@ -216,7 +216,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     return (
       <div
         data-bubble-kind="error"
-        className="bg-destructive/10 text-destructive rounded-md p-2 border border-destructive/40"
+        className="rounded-basalt-widget border border-basalt-danger/20 bg-basalt-danger-tint p-3 text-basalt-danger"
       >
         {content.length > 0 ? <MessageText content={content} /> : null}
         {title.length > 0 ? <MessageText content={title} /> : null}
@@ -228,7 +228,7 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
   if (kind === 'log') {
     const content = payloadString(envelope, 'content');
     return (
-      <details data-bubble-kind="log" className="text-muted-foreground text-xs">
+      <details data-bubble-kind="log" className="text-basalt-muted-foreground text-xs">
         <summary>log</summary>
         <MessageText content={content} />
       </details>
@@ -262,7 +262,7 @@ export default function MessageBubble({ envelope }: MessageBubbleProps) {
       return (
         <div
           data-bubble-kind="protocol-error"
-          className="bg-yellow-100 text-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-100 rounded-md p-2 border border-yellow-400"
+          className="rounded-basalt-widget border border-basalt-warning/20 bg-basalt-warning-tint p-3 text-basalt-warning"
         >
           {code.length > 0 ? <MessageText content={code} /> : null}
           {title.length > 0 ? <MessageText content={title} /> : null}

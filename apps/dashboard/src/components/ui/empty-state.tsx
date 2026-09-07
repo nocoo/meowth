@@ -28,7 +28,7 @@ export function EmptyState({
         {...(action ? { action } : {})}
         icon={
           <Icon
-            className={cn('h-10 w-10', tone === 'error' ? 'text-destructive-text' : 'text-primary')}
+            className={cn('h-10 w-10', tone === 'error' ? 'text-basalt-danger' : 'text-basalt-primary')}
             strokeWidth={1.5}
           />
         }

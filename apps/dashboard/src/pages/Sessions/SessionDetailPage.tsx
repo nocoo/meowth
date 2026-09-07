@@ -27,7 +27,10 @@ export default function SessionDetailPage() {
         <SessionDetailSkeleton />
       ) : vm.status.kind === 'error' ? (
         <>
-          <p className="text-muted-foreground font-mono text-xs" data-testid="session-detail-id">
+          <p
+            className="text-basalt-muted-foreground font-mono text-xs"
+            data-testid="session-detail-id"
+          >
             {vm.sessionId}
           </p>
           <EmptyState

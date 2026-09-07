@@ -14,7 +14,7 @@ import {
 // pre-data layout reserves the same footprint. 5 placeholder rows
 // matches the typical "a few recent sessions" surface.
 //
-// Bug fix Commit 2 — wraps the same `rounded-card bg-secondary
+// Bug fix Commit 2 — wraps the same `rounded-basalt-card bg-basalt-secondary
 // overflow-hidden` L2 surface so the placeholder matches the
 // resolved table tier.
 

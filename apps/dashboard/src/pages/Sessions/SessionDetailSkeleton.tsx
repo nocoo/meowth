@@ -18,7 +18,7 @@ export default function SessionDetailSkeleton() {
       </div>
       <div>
         {MESSAGE_ROW_KEYS.map((row) => (
-          <div key={row} className="border-border space-y-2 border-t py-2">
+          <div key={row} className="border-basalt-border space-y-2 border-t py-2">
             <Skeleton className="h-3 w-32" />
             <Skeleton className="h-4 w-full" />
           </div>

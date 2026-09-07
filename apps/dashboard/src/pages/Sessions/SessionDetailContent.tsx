@@ -23,8 +23,8 @@ function statusVariant(status: string): 'success' | 'destructive' | 'info' | 'se
 function MessageEnvelope({ env }: { env: SessionMessageRow }) {
   const text = payloadString(env.payload, 'content') ?? payloadString(env.payload, 'output') ?? '';
   return (
-    <div className="border-border border-t py-3 first:border-t-0 first:pt-0">
-      <div className="text-muted-foreground text-xs">
+    <div className="border-basalt-border border-t py-3 first:border-t-0 first:pt-0">
+      <div className="text-basalt-muted-foreground text-xs">
         seq {env.seq} · {env.ts}
       </div>
       <MessageText content={text} />
@@ -38,10 +38,10 @@ function StatusRow({ env, label }: { env: SessionMessageRow; label: string }) {
   const value = detail ?? reason;
   return (
     <div
-      className="border-border border-t py-3 text-sm first:border-t-0 first:pt-0"
+      className="border-basalt-border border-t py-3 text-sm first:border-t-0 first:pt-0"
       data-testid={`status-row-${env.type}`}
     >
-      <span className="text-muted-foreground text-xs">
+      <span className="text-basalt-muted-foreground text-xs">
         seq {env.seq} · {env.ts}
       </span>
       <p>
@@ -75,15 +75,18 @@ export default function SessionDetailContent({ session, messages }: SessionDetai
   return (
     <div className="space-y-4">
       <Card className="space-y-3 p-6">
-        <p className="text-muted-foreground font-mono text-xs" data-testid="session-detail-id">
+        <p
+          className="text-basalt-muted-foreground font-mono text-xs"
+          data-testid="session-detail-id"
+        >
           {session.id}
         </p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <strong>{session.backend_type}</strong>
           <Badge variant={statusVariant(session.status)}>{session.status}</Badge>
-          <span className="text-muted-foreground">{session.model}</span>
+          <span className="text-basalt-muted-foreground">{session.model}</span>
         </div>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-basalt-muted-foreground text-xs">
           Started {session.started_at}
           {session.ended_at !== null ? ` · ended ${session.ended_at}` : ''}
         </p>

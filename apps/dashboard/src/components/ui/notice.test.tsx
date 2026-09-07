@@ -8,21 +8,18 @@ describe('Notice (G2 smoke)', () => {
     expect(screen.getByText('plain-notice-body')).toBeInTheDocument();
   });
 
-  it('success variant uses text-success-text token utility', () => {
-    // The copied notice.tsx routes success variant to text-success-text;
-    // pin both the CVA helper and rendered DOM so the index.css
-    // `--success-text` token always has a runtime consumer.
+  it('success variant uses text-basalt-heatmap-green-4 token utility', () => {
     const cls = noticeVariants({ variant: 'success' });
-    expect(cls).toContain('text-success-text');
+    expect(cls).toContain('text-basalt-heatmap-green-4');
 
     const { container } = render(<Notice variant="success">success-body</Notice>);
     expect(screen.getByText('success-body')).toBeInTheDocument();
-    expect(container.innerHTML).toContain('text-success-text');
+    expect(container.innerHTML).toContain('text-basalt-heatmap-green-4');
   });
 
-  it('destructive/warning/info variants route to their respective -text tokens', () => {
-    expect(noticeVariants({ variant: 'destructive' })).toContain('text-destructive-text');
-    expect(noticeVariants({ variant: 'warning' })).toContain('text-warning-text');
-    expect(noticeVariants({ variant: 'info' })).toContain('text-info-text');
+  it('destructive/warning/info variants use Basalt semantic colors', () => {
+    expect(noticeVariants({ variant: 'destructive' })).toContain('text-basalt-danger');
+    expect(noticeVariants({ variant: 'warning' })).toContain('text-basalt-warning');
+    expect(noticeVariants({ variant: 'info' })).toContain('text-basalt-info');
   });
 });

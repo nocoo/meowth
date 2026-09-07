@@ -19,7 +19,7 @@ describe('SessionsListSkeleton (Stage C3a)', () => {
     expect(pulses.length).toBe(5 * 5);
   });
 
-  it('wraps the placeholder table in a rounded-card bg-secondary L2 surface', () => {
+  it('wraps the placeholder table in a rounded-basalt-card bg-basalt-secondary L2 surface', () => {
     const { container } = render(<SessionsListSkeleton />);
     const wrap = container.querySelector('[data-basalt-surface]');
     expect(wrap).not.toBeNull();

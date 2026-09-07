@@ -32,8 +32,8 @@ function statusVariant(status: string): 'success' | 'destructive' | 'info' | 'se
 // empty list. No SortHeader (reviewer correction #5: real sort
 // state + tests would be a separate commit).
 //
-// Bug fix Commit 2 — wraps the table in a `rounded-card
-// bg-secondary overflow-hidden` L2 surface so the data table
+// Bug fix Commit 2 — wraps the table in a `rounded-basalt-card
+// bg-basalt-secondary overflow-hidden` L2 surface so the data table
 // sits on the white/secondary tier defined by 06 §5.1. The
 // Link semantics + cell content are unchanged.
 
@@ -67,7 +67,10 @@ export default function SessionsListContent({ sessions }: SessionsListContentPro
           {sessions.map((session) => (
             <TableRow key={session.id}>
               <TableCell className="font-mono">
-                <Link to={`/sessions/${session.id}`} className="text-primary hover:underline">
+                <Link
+                  to={`/sessions/${session.id}`}
+                  className="text-basalt-primary hover:underline"
+                >
                   {session.backend_type}
                 </Link>
               </TableCell>

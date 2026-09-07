@@ -30,7 +30,7 @@ describe('ansiToReactNodes', () => {
     const { container } = render(<div>{nodes}</div>);
     const span = container.querySelector('span');
     expect(span).not.toBeNull();
-    expect(span?.className).toContain('text-red-600');
+    expect(span?.className).toContain('text-basalt-danger');
     expect(container.textContent).toBe('hello world');
   });
 
@@ -39,9 +39,9 @@ describe('ansiToReactNodes', () => {
     const { container } = render(<div>{nodes}</div>);
     const spans = Array.from(container.querySelectorAll('span'));
     expect(spans).toHaveLength(2);
-    expect(spans[0]?.className).toContain('text-red-600');
+    expect(spans[0]?.className).toContain('text-basalt-danger');
     expect(spans[0]?.className).toContain('font-bold');
-    expect(spans[1]?.className).toContain('text-red-600');
+    expect(spans[1]?.className).toContain('text-basalt-danger');
     expect(spans[1]?.className).not.toContain('font-bold');
     expect(container.textContent).toBe('AB');
   });
@@ -50,7 +50,7 @@ describe('ansiToReactNodes', () => {
     const nodes = ansiToReactNodes(`${ESC}[38;5;196mX${ESC}[0m`);
     const { container } = render(<div>{nodes}</div>);
     const span = container.querySelector('span');
-    expect(span?.className).toMatch(/text-(red|brightRed)/i);
+    expect(span?.className).toMatch(/text-basalt-danger/);
     expect(container.textContent).toBe('X');
   });
 
@@ -108,8 +108,8 @@ describe('ansiToReactNodes', () => {
     const nodes = ansiToReactNodes(`${ESC}[31;42;7mX${ESC}[0m`);
     const { container } = render(<div>{nodes}</div>);
     const span = container.querySelector('span');
-    expect(span?.className).toContain('text-green-600');
-    expect(span?.className).toContain('bg-red-600');
+    expect(span?.className).toContain('text-basalt-heatmap-green-4');
+    expect(span?.className).toContain('bg-basalt-danger-tint');
   });
 
   it('resets cleanly between styled runs', () => {
@@ -117,8 +117,8 @@ describe('ansiToReactNodes', () => {
     const { container } = render(<div>{nodes}</div>);
     const spans = Array.from(container.querySelectorAll('span'));
     expect(spans).toHaveLength(2);
-    expect(spans[0]?.className).toContain('text-red-600');
-    expect(spans[1]?.className).toContain('text-blue-600');
+    expect(spans[0]?.className).toContain('text-basalt-danger');
+    expect(spans[1]?.className).toContain('text-basalt-info');
     expect(container.textContent).toBe('ABC');
   });
 
@@ -128,7 +128,7 @@ describe('ansiToReactNodes', () => {
     const spans = Array.from(container.querySelectorAll('span'));
     expect(spans).toHaveLength(1);
     const first = spans[0];
-    expect(first?.className).toContain('text-red-600');
+    expect(first?.className).toContain('text-basalt-danger');
     expect(first?.textContent).toBe('A');
     expect(container.textContent).toBe('AB');
   });

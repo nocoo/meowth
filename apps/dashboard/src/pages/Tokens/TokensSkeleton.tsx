@@ -13,7 +13,7 @@ import {
 // Pre-data placeholder for TokensContent. Mirrors the 5-column
 // table layout (Name / Prefix / Created / Last used / Revoke).
 //
-// Bug fix Commit 2 — wraps the same `rounded-card bg-secondary
+// Bug fix Commit 2 — wraps the same `rounded-basalt-card bg-basalt-secondary
 // overflow-hidden` L2 surface so the placeholder and the resolved
 // table sit on the same surface tier.
 

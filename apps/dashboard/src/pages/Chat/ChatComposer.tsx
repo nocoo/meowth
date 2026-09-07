@@ -28,7 +28,7 @@ export default function ChatComposer({ composer, isStreaming }: ChatComposerProp
       }}
       className="w-full"
     >
-      <div className="flex items-end gap-2 rounded-[1.5rem] bg-[color-mix(in_oklch,hsl(var(--foreground))_6%,hsl(var(--card)))] px-3 py-2 focus-within:bg-[color-mix(in_oklch,hsl(var(--foreground))_9%,hsl(var(--card)))]">
+      <div className="flex items-end gap-2 rounded-[1.5rem] bg-[color-mix(in_oklch,hsl(var(--basalt-foreground))_6%,hsl(var(--basalt-card)))] px-3 py-2 focus-within:bg-[color-mix(in_oklch,hsl(var(--basalt-foreground))_9%,hsl(var(--basalt-card)))]">
         <Textarea
           value={composer.input}
           onChange={(e) => composer.setInput(e.target.value)}
@@ -66,7 +66,7 @@ export default function ChatComposer({ composer, isStreaming }: ChatComposerProp
           </Button>
         )}
       </div>
-      <p className="text-muted-foreground mt-1.5 px-1 text-[11px]">
+      <p className="text-basalt-muted-foreground mt-1.5 px-1 text-[11px]">
         Enter to send · Shift+Enter for newline
       </p>
     </form>

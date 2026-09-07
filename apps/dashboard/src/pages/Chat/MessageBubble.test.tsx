@@ -138,7 +138,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
     );
     const node = document.querySelector('[data-bubble-kind="error"]') as HTMLElement;
     expect(node).toBeTruthy();
-    expect(node.className).toMatch(/destructive/);
+    expect(node.className).toMatch(/basalt-danger/);
     expect(screen.getByText('boom from backend')).toBeInTheDocument();
   });
 
@@ -151,7 +151,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
     );
     const node = document.querySelector('[data-bubble-kind="error"]') as HTMLElement;
     expect(node).toBeTruthy();
-    expect(node.className).toMatch(/destructive/);
+    expect(node.className).toMatch(/basalt-danger/);
     expect(screen.getByText('boom')).toBeInTheDocument();
     expect(screen.getByText('context')).toBeInTheDocument();
   });
@@ -175,7 +175,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
     );
     const node = document.querySelector('[data-bubble-kind="protocol-error"]') as HTMLElement;
     expect(node).toBeTruthy();
-    expect(node.className).toMatch(/yellow/);
+    expect(node.className).toMatch(/basalt-warning/);
     expect(screen.getByText('BAD_GATEWAY')).toBeInTheDocument();
     expect(screen.getByText('upstream failed')).toBeInTheDocument();
   });

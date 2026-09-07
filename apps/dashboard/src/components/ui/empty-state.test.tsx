@@ -30,6 +30,6 @@ describe('EmptyState', () => {
   it('applies error tone class when tone="error"', () => {
     const { container } = render(<EmptyState icon={Inbox} title="Error state" tone="error" />);
     expect(screen.getByText('Error state')).toBeInTheDocument();
-    expect(container.innerHTML).toContain('text-destructive-text');
+    expect(container.innerHTML).toContain('text-basalt-danger');
   });
 });

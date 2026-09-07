@@ -18,7 +18,7 @@ describe('TokensSkeleton (Stage C4)', () => {
     expect(container.querySelectorAll('.animate-pulse').length).toBe(5 * 5);
   });
 
-  it('wraps the placeholder table in a rounded-card bg-secondary L2 surface', () => {
+  it('wraps the placeholder table in a rounded-basalt-card bg-basalt-secondary L2 surface', () => {
     const { container } = render(<TokensSkeleton />);
     const wrap = container.querySelector('[data-basalt-surface]');
     expect(wrap).not.toBeNull();

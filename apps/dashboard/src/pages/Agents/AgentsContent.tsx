@@ -19,7 +19,7 @@ import { Bot } from 'lucide-react';
 // the daemon legitimately returns zero agents.
 //
 // Bug fix Commit 2 — wraps the data table in a
-// `rounded-card bg-secondary overflow-hidden` L2 surface so the
+// `rounded-basalt-card bg-basalt-secondary overflow-hidden` L2 surface so the
 // table visually sits on the white/secondary tier, matching the
 // surface ladder enforced by 06 §5.1. The cell semantics (role,
 // content) are unchanged.

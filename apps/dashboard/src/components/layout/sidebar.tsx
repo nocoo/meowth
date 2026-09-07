@@ -75,8 +75,8 @@ function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => v
                   cn(
                     'flex h-10 w-10 items-center justify-center rounded-lg transition-colors self-center',
                     isActive || isItemActive(item, pathname)
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                      ? 'bg-basalt-primary/10 text-basalt-primary'
+                      : 'text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground',
                   )
                 }
               >
@@ -199,8 +199,8 @@ function NavGroupSection({ group, pathname }: { group: NavGroup; pathname: strin
                   cn(
                     'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-normal transition-colors',
                     isActive || isItemActive(item, pathname)
-                      ? 'bg-primary/10 font-medium text-primary'
-                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                      ? 'bg-basalt-primary/10 font-medium text-basalt-primary'
+                      : 'text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground',
                   )
                 }
               >

@@ -21,7 +21,7 @@ export default function SettingsPage() {
       <PageHeader title="Settings" headingId="settings-heading" />
       <Card className="space-y-4 p-6">
         <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-[auto,1fr]">
-          <dt className="text-muted-foreground">Dashboard build</dt>
+          <dt className="text-basalt-muted-foreground">Dashboard build</dt>
           <dd className="font-mono">{vm.version}</dd>
         </dl>
         {vm.status.kind === 'loading' ? (

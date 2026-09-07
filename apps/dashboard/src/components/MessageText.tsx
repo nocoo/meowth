@@ -12,7 +12,7 @@ export interface MessageTextProps {
 
 export default function MessageText({ content }: MessageTextProps) {
   return (
-    <pre className="text-foreground whitespace-pre-wrap font-mono text-sm">
+    <pre className="min-w-0 whitespace-pre-wrap font-mono text-sm leading-relaxed [overflow-wrap:anywhere]">
       {ansiToReactNodes(content)}
     </pre>
   );

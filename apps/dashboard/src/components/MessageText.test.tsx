@@ -21,7 +21,7 @@ describe('MessageText', () => {
     const { container } = render(<MessageText content={`${ESC}[31mERR${ESC}[0m`} />);
     const span = container.querySelector('pre > span');
     expect(span).not.toBeNull();
-    expect(span?.className).toContain('text-red-600');
+    expect(span?.className).toContain('text-basalt-danger');
     expect(span?.textContent).toBe('ERR');
   });
 

@@ -61,7 +61,7 @@ describe('AgentsContent (Stage C2)', () => {
     expect(screen.queryByRole('columnheader', { name: 'Type' })).not.toBeInTheDocument();
   });
 
-  it('wraps the populated table in a rounded-card bg-secondary L2 surface', () => {
+  it('wraps the populated table in a rounded-basalt-card bg-basalt-secondary L2 surface', () => {
     const { container } = render(
       <AgentsContent
         agents={makeAgents([{ type: 'claude', installed: true, executable: '/c', version: '1' }])}

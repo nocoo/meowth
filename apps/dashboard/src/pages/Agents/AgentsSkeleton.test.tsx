@@ -17,7 +17,7 @@ describe('AgentsSkeleton (Stage C2)', () => {
     expect(pulses.length).toBe(5 * 4);
   });
 
-  it('wraps the placeholder table in a rounded-card bg-secondary L2 surface', () => {
+  it('wraps the placeholder table in a rounded-basalt-card bg-basalt-secondary L2 surface', () => {
     const { container } = render(<AgentsSkeleton />);
     const wrap = container.querySelector('[data-basalt-surface]');
     expect(wrap).not.toBeNull();

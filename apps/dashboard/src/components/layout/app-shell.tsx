@@ -95,7 +95,7 @@ function AppShellInner() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="GitHub repository"
-                className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+                className="text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
               >
                 <Github className="h-[18px] w-[18px]" aria-hidden="true" strokeWidth={1.5} />
               </a>
@@ -106,7 +106,7 @@ function AppShellInner() {
         <div className="flex min-h-0 flex-1 flex-col px-2 pb-2 md:px-3 md:pb-3">
           <ContentIsland
             className={cn(
-              'rounded-island bg-card h-full w-full',
+              'rounded-basalt-island bg-basalt-card h-full w-full',
               pathname === '/chat' ? 'flex flex-col overflow-hidden p-0 md:p-0' : undefined,
             )}
           >

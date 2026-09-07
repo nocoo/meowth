@@ -26,13 +26,13 @@ describe('Sidebar (Stage B1)', () => {
   it('marks the active route via NavLink isActive style', () => {
     renderSidebar({ route: '/agents' });
     const active = screen.getByRole('link', { name: 'Agents' });
-    expect(active.className).toContain('bg-primary/10');
+    expect(active.className).toContain('bg-basalt-primary/10');
   });
 
   it('keeps Sessions highlighted under /sessions/<id> via isItemActive', () => {
     renderSidebar({ route: '/sessions/abc' });
     const sessions = screen.getByRole('link', { name: 'Sessions' });
-    expect(sessions.className).toContain('bg-primary/10');
+    expect(sessions.className).toContain('bg-basalt-primary/10');
   });
 
   it('renders an "M" Avatar fallback at the bottom (no user data)', () => {

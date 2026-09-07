@@ -53,7 +53,7 @@ describe('SessionsListContent (props, Stage C3a)', () => {
     expect(screen.queryByRole('columnheader', { name: 'Backend' })).not.toBeInTheDocument();
   });
 
-  it('wraps the populated table in a rounded-card bg-secondary L2 surface', () => {
+  it('wraps the populated table in a rounded-basalt-card bg-basalt-secondary L2 surface', () => {
     const { container } = renderContent([makeSession('sid-x')]);
     const wrap = container.querySelector('[data-basalt-surface]');
     expect(wrap).not.toBeNull();

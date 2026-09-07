@@ -107,7 +107,7 @@ export default function SecretReveal({
       <output
         id={fieldId}
         data-testid="secret-reveal-value"
-        className="bg-muted text-foreground block w-full break-all rounded-md px-3 py-2 font-mono text-sm"
+        className="bg-basalt-muted text-basalt-foreground block w-full break-all rounded-md px-3 py-2 font-mono text-sm"
       >
         {display}
       </output>
@@ -125,7 +125,10 @@ export default function SecretReveal({
           Copy
         </Button>
         {feedback !== null ? (
-          <output data-testid="secret-reveal-feedback" className="text-muted-foreground text-xs">
+          <output
+            data-testid="secret-reveal-feedback"
+            className="text-basalt-muted-foreground text-xs"
+          >
             {feedback}
           </output>
         ) : null}

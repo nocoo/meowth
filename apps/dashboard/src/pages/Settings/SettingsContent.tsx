@@ -33,7 +33,7 @@ export default function SettingsContent({ status }: SettingsContentProps) {
       ) : (
         <Notice variant="warning">Daemon unreachable.</Notice>
       )}
-      <p className="text-muted-foreground text-xs">
+      <p className="text-basalt-muted-foreground text-xs">
         Daemon configuration (bind address, remote-access mode, log level) is not exposed in this
         page. Read <code>~/.meowth/config.toml</code> or the daemon startup log to inspect it.
       </p>

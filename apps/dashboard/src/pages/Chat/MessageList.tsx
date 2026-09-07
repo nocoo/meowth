@@ -17,7 +17,7 @@ export default function MessageList({ turns }: MessageListProps) {
   if (turns.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-muted-foreground text-sm" data-slot="chat-empty-hint">
+        <p className="text-basalt-muted-foreground text-sm" data-slot="chat-empty-hint">
           Start a conversation.
         </p>
       </div>
@@ -64,7 +64,7 @@ export default function MessageList({ turns }: MessageListProps) {
             className="space-y-4"
           >
             <div className="flex justify-end">
-              <div className="max-w-[min(36rem,85%)] rounded-[1.35rem] bg-[color-mix(in_oklch,hsl(var(--foreground))_8%,hsl(var(--card)))] px-4 py-2.5 text-[15px] leading-6 text-foreground">
+              <div className="max-w-[min(36rem,85%)] rounded-[1.35rem] bg-[color-mix(in_oklch,hsl(var(--basalt-foreground))_8%,hsl(var(--basalt-card)))] px-4 py-2.5 text-[15px] leading-6 text-basalt-foreground">
                 <MessageText content={turn.userPrompt} />
               </div>
             </div>
@@ -92,7 +92,7 @@ function PendingBubble() {
   return (
     <div
       data-bubble-kind="streaming-pending"
-      className="text-muted-foreground text-[15px] leading-7"
+      className="text-basalt-muted-foreground text-[15px] leading-7"
       aria-label="Waiting for response"
     >
       <span className="inline-block animate-pulse">…</span>
@@ -109,7 +109,7 @@ function CapBanner({ sessionId }: CapBannerProps) {
     <div
       role="alert"
       data-slot="chat-cap-banner"
-      className="bg-yellow-100 text-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-100 border border-yellow-400 rounded-md p-2 text-xs"
+      className="rounded-basalt-widget border border-basalt-warning/20 bg-basalt-warning-tint p-3 text-sm text-basalt-warning"
     >
       Cumulative envelope cap (1000) reached;{' '}
       {sessionId !== null ? (

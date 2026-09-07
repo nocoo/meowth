@@ -56,8 +56,8 @@ describe('AppShell (Stage B1) — desktop layout', () => {
   it('renders the floating island wrapper around the route Outlet', () => {
     const { container } = render(<ShellWithChildPage child={<div>page-body</div>} />);
     expect(screen.getByText('page-body')).toBeInTheDocument();
-    // The L1 floating-island wrapper carries rounded-island + bg-card.
-    const island = container.querySelector('.rounded-island.bg-card');
+    // The L1 floating-island wrapper carries rounded-basalt-island + bg-basalt-card.
+    const island = container.querySelector('.rounded-basalt-island.bg-basalt-card');
     expect(island).toBeTruthy();
     expect(island?.className ?? '').toContain('w-full');
   });
