@@ -1,6 +1,6 @@
 # 07 · Dashboard migrate to `@nocoo/basalt` 2.1.0
 
-> Status: in progress.
+> Status: landed (2026-09-07).
 > History: `git log -- docs/features/07-dashboard-basalt-package.md`
 > Companion: [`architecture/06`](../architecture/06-dashboard-mvvm-and-basalt.md) (MVVM + chrome contract), [`02`](./02-dashboard-redesign-to-basalt-gen2.md) (Gen 2 shell), [`04`](./04-dashboard-control-alignment.md) (local primitives), [`05`](./05-dashboard-visual-align-whiteboard.md) (logo / island / chat chrome).
 > Upstream: `~/workspace/personal/basalt/INTEGRATION.md`, catalog https://basaltui.com, live consumer `~/workspace/personal/zhe` (`@nocoo/basalt@2.1.0`).

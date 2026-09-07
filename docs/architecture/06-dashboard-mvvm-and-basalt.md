@@ -1,7 +1,8 @@
 # Architecture · 06 · Dashboard MVVM & basalt
 
-> **更新规则**：本文档定义 `apps/dashboard/` 的目录结构、basalt 设计系统的源码复制方式、Vite + Tailwind v4 + React 19 工程接入、MVVM 三段式分层、5 个核心页面 + `/setup` 入口判定。
-> 任何 dashboard 目录拓扑、basalt copy 清单、MVVM 边界、`/setup` 决策树的改动，必须先回到这里更新，再向下推进。
+> **更新规则**：本文档定义 `apps/dashboard/` 的目录结构、basalt 接入、Vite + Tailwind v4 + React 19 工程接入、MVVM 三段式分层、核心页面 + `/setup` 入口判定。
+> 任何 dashboard 目录拓扑、basalt 接入方式、MVVM 边界、`/setup` 决策树的改动，必须先回到这里更新，再向下推进。
+> Chrome 与常见控件现从 **`@nocoo/basalt@2.1.0` npm 包**导入（[`features/07`](../features/07-dashboard-basalt-package.md)）。下文 §4 的 source-copy 清单是历史记录，不再是落地路径。
 > 历史在 `git log -- docs/architecture/06-dashboard-mvvm-and-basalt.md`。
 
 > 上层依据：[`docs/01-project-overview.md`](../01-project-overview.md) §7.5、§9.2 Phase 3.13–3.20。
@@ -20,7 +21,7 @@
 本文档管：
 
 - `apps/dashboard/` 的目录拓扑与构建产物
-- basalt 设计系统的**源码复制**（source copy，不是 npm 依赖）清单与 upstream 锁定方式
+- basalt 设计系统接入：`@nocoo/basalt` npm 包 + 仅保留的 meowth-only 适配层（见 [`features/07`](../features/07-dashboard-basalt-package.md)）
 - Vite + Tailwind v4 + React 19 + React Router 8 接入细节
 - MVVM 三段式（`models/` / `viewmodels/` / `pages/`）的分层规则与可执行约束
 - 5 个核心页面 + `/setup` 的 page→viewmodel→model 映射
@@ -104,23 +105,22 @@ apps/dashboard/
     │   ├── types.ts                 wire types (manually authored or generated from openapi.yaml)
     │   └── envelope.ts              NDJSON envelope decoder
     ├── components/
-    │   ├── ui/                      source-copy/source-derived primitives — see §4.1
-    │   │   ├── button.tsx
-    │   │   ├── input.tsx
-    │   │   ├── dialog.tsx
-    │   │   ├── skeleton.tsx
-    │   │   ├── notice.tsx           inline status block (info/success/warning/destructive)
-    │   │   ├── empty-state.tsx      icon + title + description placeholder
-    │   │   └── ...                  add more on demand
-    │   ├── layout/                  Gen 2 app shell (replaces Gen 1 DashboardLayout)
-    │   │   ├── app-shell.tsx        page chrome + Sheet-driven mobile sidebar
-    │   │   ├── sidebar.tsx          floating-island L1 navigation
-    │   │   ├── sidebar-context.tsx  collapsed/open state shared via context
-    │   │   ├── breadcrumbs.tsx
+    │   ├── basalt-providers.tsx     ThemeProvider + AccentProvider + LinkProvider
+    │   ├── ui/                      thin Basalt re-exports + meowth-only adapters
+    │   │   ├── button.tsx           wraps @nocoo/basalt Button (xs / icon-sm map)
+    │   │   ├── page-header.tsx      wraps Basalt PageHeader
+    │   │   ├── card.tsx             wraps LayerCard
+    │   │   ├── notice.tsx           meowth-only inline status (no Basalt Notice)
+    │   │   ├── empty-state.tsx      LayerCard.Empty adapter
+    │   │   ├── table.tsx            meowth-only table (Basalt has DataTable only)
+    │   │   └── ...
+    │   ├── layout/
+    │   │   ├── app-shell.tsx        Basalt AppShell / AppHeader / ContentIsland
+    │   │   ├── sidebar.tsx          Basalt Sidebar rail; collapsed logo pl-6
+    │   │   ├── sidebar-context.tsx  collapsed + mobileOpen
     │   │   └── index.ts
-    │   ├── StatCard.tsx             Overview metric card (title/body/optional icon)
-    │   ├── ThemeToggle.tsx          meowth-local (adapted from basalt; uses dark variant token)
-    │   ├── Spinner.tsx              meowth-local (basalt has no Spinner; uses lucide-react Loader2)
+    │   ├── StatCard.tsx             Overview metric LayerCard
+    │   ├── ThemeToggle.tsx          meowth-local; storage key meowth_theme
     │   ├── SecretReveal.tsx         meowth-local (see 07)
     │   └── ...
     └── lib/
@@ -142,13 +142,13 @@ apps/dashboard/
 
 **dependencies**：
 
+- `@nocoo/basalt` — 钉死 **2.1.0**。Chrome、常见控件、主题 / accent provider 都从这里来。
 - `react`、`react-dom`
 - `react-router`
 - `clsx`
 - `tailwind-merge`
-- `class-variance-authority`
+- `class-variance-authority` — 仅 `notice.tsx` 仍用 `cva()`
 - `lucide-react`
-- `radix-ui` — Radix primitives 走**聚合包**（aggregate package），不再逐包 `@radix-ui/react-<x>` 增量添加。所有 source-copy 的 ui 文件（`dialog.tsx` / `sheet.tsx` / `tooltip.tsx` / `dropdown-menu.tsx` / `select.tsx` 等）统一从 `radix-ui` 命名空间 import；详 §4.1.5 / §4.3。
 
 **devDependencies**：
 
@@ -168,7 +168,7 @@ apps/dashboard/
 - React **19** 系
 - React Router **8** 系
 - Tailwind **v4**（必须用 `@tailwindcss/vite` 插件路径，不用 PostCSS 路径）
-- Radix 用 **`radix-ui` 聚合包**，**不**用单包 `@radix-ui/react-<x>`
+- UI chrome 用 **`@nocoo/basalt`**，不 source-copy、不并行第二套 token
 
 其它包的精确版本号由 `pnpm-lock.yaml` 锁定；与 basalt/surety 当前版本可不完全一致（两个 upstream 都是参考工程，meowth 选自己 toolchain 兼容的版本即可）。
 
