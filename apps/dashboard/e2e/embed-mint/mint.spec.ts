@@ -14,7 +14,9 @@ import { pasteAndMint } from './_fixtures';
 
 test('paste setup-code → mint → /overview → /agents authenticates', async ({ page }) => {
   await pasteAndMint(page);
-  await expect(page.getByRole('heading', { level: 2, name: 'Overview' })).toBeVisible();
+  await expect(
+    page.locator('[data-basalt-surface-root]').getByRole('heading', { name: 'Overview' }),
+  ).toBeVisible();
   await page.getByRole('link', { name: /Agents/ }).click();
   await page.waitForURL(/\/agents$/);
   // Fake backend → all 5 backends installed; assert one as a

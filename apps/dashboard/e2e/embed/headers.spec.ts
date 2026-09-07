@@ -128,5 +128,7 @@ test('handpasted root token still works after header probes (no session pollutio
   // they don't share state with the page, but pin that the embed
   // fixture is still healthy enough to drive a normal login flow.
   await handpasteToken(page);
-  await expect(page.getByRole('heading', { level: 2, name: 'Overview' })).toBeVisible();
+  await expect(
+    page.locator('[data-basalt-surface-root]').getByRole('heading', { name: 'Overview' }),
+  ).toBeVisible();
 });

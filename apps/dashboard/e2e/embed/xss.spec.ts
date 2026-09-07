@@ -67,7 +67,9 @@ test('payload <script> is rendered as text, not executed', async ({ page }) => {
   const sessionId = await execWithPrompt(page, PROMPT_SCRIPT);
 
   await page.goto(`/sessions/${sessionId}`);
-  await expect(page.getByRole('heading', { level: 2, name: 'Session' })).toBeVisible();
+  await expect(
+    page.locator('[data-basalt-surface-root]').getByRole('heading', { name: 'Session' }),
+  ).toBeVisible();
   const messagesContainer = page.getByTestId('session-messages');
   await expect(messagesContainer).toBeVisible();
 

@@ -8,10 +8,14 @@ import { handpasteToken } from './_fixtures';
 
 test('handpaste token → /overview → /agents lists 5 fake backends', async ({ page }) => {
   await handpasteToken(page);
-  await expect(page.getByRole('heading', { level: 2, name: 'Overview' })).toBeVisible();
+  await expect(
+    page.locator('[data-basalt-surface-root]').getByRole('heading', { name: 'Overview' }),
+  ).toBeVisible();
   await page.getByRole('link', { name: /Agents/ }).click();
   await page.waitForURL(/\/agents$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Agents' })).toBeVisible();
+  await expect(
+    page.locator('[data-basalt-surface-root]').getByRole('heading', { name: 'Agents' }),
+  ).toBeVisible();
   for (const t of ['claude', 'copilot', 'codex', 'hermes', 'pi']) {
     await expect(page.getByRole('cell', { name: t }).first()).toBeVisible();
   }

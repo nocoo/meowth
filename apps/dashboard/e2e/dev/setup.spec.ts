@@ -14,7 +14,9 @@ import { handpasteToken } from './_fixtures';
 
 test('handpaste token lands on /overview and renders the product nav', async ({ page }) => {
   await handpasteToken(page);
-  await expect(page.getByRole('heading', { level: 2, name: 'Overview' })).toBeVisible();
+  await expect(
+    page.locator('[data-basalt-surface-root]').getByRole('heading', { name: 'Overview' }),
+  ).toBeVisible();
   await expect(page.getByRole('complementary', { name: 'Primary navigation' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Pages' })).toBeVisible();
 });
