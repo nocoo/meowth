@@ -54,6 +54,7 @@ Windows 支持目前仅覆盖原生构建以及核心 `init` / `serve` 流程，
 | [`docs/01-project-overview.md`](docs/01-project-overview.md) | 项目定位 / 架构 / Phase 计划（先读这篇） |
 | [`docs/architecture/`](docs/architecture/README.md) | 8 篇系统架构:SDK / HTTP / SQLite / mint / 远程 / dashboard / 安全 / 6DQ |
 | [`docs/features/`](docs/features/README.md) | 功能迭代（如端口迁移到 Hexly Caddy） |
+| [`docs/features/08-dashboard-theme-and-vite.md`](docs/features/08-dashboard-theme-and-vite.md) | Dashboard 主题统一与 Vite 热更新开发 |
 | [`CHANGELOG.md`](CHANGELOG.md) | 版本历史 |
 
 ## License
