@@ -3,9 +3,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useSessionDetailViewModel from '@/viewmodels/useSessionDetailViewModel';
 import { AlertCircle } from 'lucide-react';
+import { Suspense, lazy } from 'react';
 import { useParams } from 'react-router';
-import SessionDetailContent from './SessionDetailContent';
 import SessionDetailSkeleton from './SessionDetailSkeleton';
+
+const SessionDetailContent = lazy(() => import('./SessionDetailContent'));
 
 // docs/architecture/06 §7.3 + features/02 §4.4 — Phase 2 Stage C3b.
 // Page shell: route-param + viewmodel + branch only. Business
@@ -22,7 +24,7 @@ export default function SessionDetailPage() {
   return (
     <section className="space-y-6" aria-labelledby="session-detail-heading">
       <PageHeader
-        description="Run details and captured agent output."
+        description="Conversation and run details."
         title="Session"
         headingId="session-detail-heading"
       />
@@ -49,7 +51,9 @@ export default function SessionDetailPage() {
           />
         </>
       ) : (
-        <SessionDetailContent session={vm.status.session} messages={vm.status.messages} />
+        <Suspense fallback={<SessionDetailSkeleton />}>
+          <SessionDetailContent session={vm.status.session} messages={vm.status.messages} />
+        </Suspense>
       )}
     </section>
   );

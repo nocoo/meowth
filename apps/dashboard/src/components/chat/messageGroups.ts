@@ -1,4 +1,4 @@
-import type { Envelope } from '@/viewmodels/useChatViewModel';
+import type { Envelope } from '@/models/types';
 
 export function messageField(env: Envelope, key: string): unknown {
   return env.payload[key];

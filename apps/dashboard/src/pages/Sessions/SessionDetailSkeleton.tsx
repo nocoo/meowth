@@ -1,29 +1,25 @@
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// docs/architecture/06 §7.3 + features/02 §4.4 — Phase 2 Stage C3b.
-// Pre-data placeholder for SessionDetail. Mirrors the visible
-// footprint of SessionDetailContent: id row, meta row, then
-// three envelope-sized rows. No table/card wrappers — the real
-// content is a stack of bordered divs, not a table.
+import '@/components/chat/chat-transcript.css';
 
 const MESSAGE_ROW_KEYS = ['m1', 'm2', 'm3'] as const;
 
 export default function SessionDetailSkeleton() {
   return (
-    <>
-      <div className="space-y-1 text-sm">
+    <div className="chat-reading-column mx-auto min-w-0 w-full space-y-8">
+      <Card className="space-y-3 p-4 sm:p-6">
         <Skeleton className="h-3 w-40" />
         <Skeleton className="h-4 w-64" />
         <Skeleton className="h-3 w-52" />
-      </div>
-      <div>
+      </Card>
+      <div className="space-y-6">
         {MESSAGE_ROW_KEYS.map((row) => (
-          <div key={row} className="border-basalt-border space-y-2 border-t py-2">
+          <div key={row} className="space-y-3">
             <Skeleton className="h-3 w-32" />
             <Skeleton className="h-4 w-full" />
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }

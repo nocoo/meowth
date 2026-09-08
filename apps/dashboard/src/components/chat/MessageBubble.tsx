@@ -2,7 +2,7 @@ import MessageMarkdown from '@/components/MessageMarkdown';
 import MessageText from '@/components/MessageText';
 import { Notice } from '@/components/ui/notice';
 import { displayLabel } from '@/lib/labels';
-import type { Envelope } from '@/viewmodels/useChatViewModel';
+import type { Envelope } from '@/models/types';
 import {
   Brain,
   Check,
@@ -28,6 +28,7 @@ import ActivityDisclosure from './ActivityDisclosure';
 export interface MessageBubbleProps {
   envelope: Envelope;
   expanded?: boolean;
+  fullOutput?: boolean;
 }
 
 // §5.3 client-side render caps. Hard caps; oversize text is
@@ -66,6 +67,7 @@ interface TruncatedTextProps {
   sessionId: string;
   className?: string;
   markdown?: boolean;
+  fullOutput?: boolean;
 }
 
 function TruncatedText({
@@ -74,9 +76,10 @@ function TruncatedText({
   sessionId,
   className = '',
   markdown = false,
+  fullOutput = false,
 }: TruncatedTextProps) {
   const Renderer = markdown ? MessageMarkdown : MessageText;
-  if (content.length <= cap) {
+  if (fullOutput || content.length <= cap) {
     return <Renderer content={content} className={className} />;
   }
   return (
@@ -164,7 +167,7 @@ function SessionEndedFooter({ envelope }: SessionEndedFooterProps) {
   );
 }
 
-function MessageEnvelope({ envelope, expanded = false }: MessageBubbleProps) {
+function MessageEnvelope({ envelope, expanded = false, fullOutput = false }: MessageBubbleProps) {
   const kind = payloadString(envelope, 'kind');
   const sessionId = envelope.session_id;
 
@@ -177,6 +180,7 @@ function MessageEnvelope({ envelope, expanded = false }: MessageBubbleProps) {
           cap={TEXT_CONTENT_CAP}
           sessionId={sessionId}
           markdown
+          fullOutput={fullOutput}
           className="font-basalt-sans text-base leading-7"
         />
       </div>
@@ -216,6 +220,7 @@ function MessageEnvelope({ envelope, expanded = false }: MessageBubbleProps) {
             }
             sessionId={sessionId}
             markdown={thinking}
+            fullOutput={fullOutput}
             className={thinking ? 'text-sm text-basalt-muted-foreground' : 'text-xs leading-5'}
           />
         </div>
@@ -258,14 +263,18 @@ function MessageEnvelope({ envelope, expanded = false }: MessageBubbleProps) {
   return null;
 }
 
-export default function MessageBubble({ envelope, expanded = false }: MessageBubbleProps) {
+export default function MessageBubble({
+  envelope,
+  expanded = false,
+  fullOutput = false,
+}: MessageBubbleProps) {
   switch (envelope.type) {
     case 'session_started':
       return null;
     case 'heartbeat':
       return null;
     case 'message':
-      return <MessageEnvelope envelope={envelope} expanded={expanded} />;
+      return <MessageEnvelope envelope={envelope} expanded={expanded} fullOutput={fullOutput} />;
     case 'usage':
       return (
         <div data-bubble-kind="usage" className="flex justify-end">
@@ -277,10 +286,12 @@ export default function MessageBubble({ envelope, expanded = false }: MessageBub
       // distinct from `message.kind=error` which is red.
       const code = payloadString(envelope, 'code');
       const title = payloadString(envelope, 'title');
+      const detail = payloadString(envelope, 'detail');
       return (
         <Notice data-bubble-kind="protocol-error" variant="warning" role="alert">
           {code.length > 0 ? <MessageText content={code} /> : null}
           {title.length > 0 ? <MessageText content={title} /> : null}
+          {detail.length > 0 ? <MessageText content={detail} /> : null}
         </Notice>
       );
     }

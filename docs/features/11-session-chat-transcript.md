@@ -1,5 +1,7 @@
 # 11 · Shared Chat rendering for session details
 
+> Status: implemented and verified (2026-09-08).
+
 ## Design
 
 Session detail routes currently render individual envelopes as plain text rows.
@@ -10,6 +12,8 @@ text coalescing, safe Markdown, code copying, and closed thinking/tool details.
   controls into `apps/dashboard/src/components/chat/`. Chat keeps its composer,
   conversation state, user prompts, and retry behavior; both pages consume the
   shared response renderer and 760 px reading-column styles.
+- Load the shared response bundle on demand in both consumers; session loading
+  placeholders retain the same column width before the rich renderer loads.
 - Preserve session metadata and the existing paginated snapshot loader.
   Recorded sessions contain agent events, without the original user prompt;
   show the recorded response without inventing user bubbles or sending actions.
@@ -50,3 +54,28 @@ text coalescing, safe Markdown, code copying, and closed thinking/tool details.
 | G1 | Biome, TypeScript, import boundaries, source checks, and dashboard/embedded builds. |
 | G2 | Reuse safe Markdown and literal tool output; preserve CSP and avoid remote image fetching. |
 | D1 | Read normal session data without changing it. Keep browser fixtures and artifacts isolated; reuse Vite on the canonical development URL. |
+
+## Results
+
+Chat and session details now use `components/chat/AgentResponse.tsx`, the same
+Markdown/code controls, event grouping, activity disclosures, and reading-column
+styles. The former sequence/timestamp rows and duplicate session renderer are
+removed. Session metadata remains above the transcript, and loading/empty/error
+states remain available.
+
+Session transcripts retain complete text, thinking, input, and result payloads.
+Chat keeps its existing preview limits, retry actions, and detail links; session
+details provide the complete destination output. Protocol error details remain
+visible. The UI fixture now uses the actual paginated snapshot response shape.
+
+| Check | Result |
+| --- | --- |
+| Unit tests | 511 dashboard and 1 shared passed; statement/line coverage 95.37%; per-file gate passed. |
+| Browser regression | 18 Chat/session cases passed; all 6 session cases also passed after introducing on-demand response loading. |
+| Session rendering | Split Markdown across snapshot pages, code clipboard, aligned tables, closed tool results, and complete long output passed in light/dark themes at 1440, 390, and 320 px. |
+| Requested session | Read-only snapshot of Pi session `01a07e92-2284-735b-a9b0-cbbd98098bd4`: 30 envelopes, with 22 text deltas rendered as one response and both tool calls/results accessible. Copied response matched all original text bytes. |
+| Actual-record visual review | Snapshot replayed through the canonical HTTPS Vite page in isolated browser contexts at 1440/390 px in both themes; 760 px desktop column, responsive mobile layout, closed activity, and no page errors confirmed. Original session data was unchanged. |
+| Static/build checks | Dashboard G1, import boundaries, source scan, D1, and dashboard/embedded builds passed. Both routes load the same response chunk; the main bundle remains approximately 545 kB before gzip. |
+
+The canonical development page updates through the running Vite service. This
+change uses existing recorded events and does not require running agents again.

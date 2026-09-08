@@ -1,5 +1,5 @@
 import { displayLabel } from '@/lib/labels';
-import type { Envelope } from '@/viewmodels/useChatViewModel';
+import type { Envelope } from '@/models/types';
 import { Brain, ListChecks, Terminal } from 'lucide-react';
 import ActivityDisclosure from './ActivityDisclosure';
 import MessageBubble from './MessageBubble';
@@ -10,11 +10,13 @@ export default function MessageActivity({
   streaming,
   turnEnded,
   resultCallIds,
+  fullOutput = false,
 }: {
   envelopes: readonly Envelope[];
   streaming: boolean;
   turnEnded: boolean;
   resultCallIds: ReadonlySet<unknown>;
+  fullOutput?: boolean;
 }) {
   const steps = groupActivitySteps(envelopes);
   const tools = steps.filter((step) =>
@@ -40,7 +42,14 @@ export default function MessageActivity({
       {steps.map(({ envelope, results }) => {
         const kind = messageKind(envelope);
         if (kind !== 'tool-use') {
-          return <MessageBubble key={envelope.seq} envelope={envelope} expanded />;
+          return (
+            <MessageBubble
+              key={envelope.seq}
+              envelope={envelope}
+              expanded
+              fullOutput={fullOutput}
+            />
+          );
         }
         const rawTool = messageField(envelope, 'tool');
         const tool = typeof rawTool === 'string' && rawTool ? displayLabel(rawTool) : 'Tool call';
@@ -54,9 +63,11 @@ export default function MessageActivity({
             icon={Terminal}
             kind="tool-call"
           >
-            {hasInput ? <MessageBubble envelope={envelope} expanded /> : null}
+            {hasInput ? (
+              <MessageBubble envelope={envelope} expanded fullOutput={fullOutput} />
+            ) : null}
             {results.map((result) => (
-              <MessageBubble key={result.seq} envelope={result} expanded />
+              <MessageBubble key={result.seq} envelope={result} expanded fullOutput={fullOutput} />
             ))}
             {results.length === 0 ? (
               <p className="text-xs leading-5 text-basalt-muted-foreground">

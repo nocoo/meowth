@@ -1,4 +1,4 @@
-import type { Envelope } from '@/viewmodels/useChatViewModel';
+import type { Envelope } from '@/models/types';
 import { describe, expect, it } from 'vitest';
 import { groupActivitySteps, groupEnvelopes, groupMessageActivity } from './messageGroups';
 

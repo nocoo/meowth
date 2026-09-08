@@ -74,7 +74,7 @@ describe('SessionDetailPage (shell, Stage C3b)', () => {
     expect(screen.getByText('detail-boom')).toBeInTheDocument();
   });
 
-  it('ready branch hands session + messages to SessionDetailContent', () => {
+  it('ready branch hands session + messages to SessionDetailContent', async () => {
     mockUseDetail.mockImplementation((sid: string) =>
       vmFor(sid, {
         kind: 'ready',
@@ -95,14 +95,14 @@ describe('SessionDetailPage (shell, Stage C3b)', () => {
             ts: '2026-06-22T00:00:01Z',
             session_id: sid,
             type: 'message',
-            payload: { content: 'hi from c3b' },
+            payload: { kind: 'text', content: 'hi from c3b' },
           },
         ],
       }),
     );
     renderShellAt('/sessions/sid-ok');
+    expect(await screen.findByText('hi from c3b')).toBeInTheDocument();
     expect(screen.getByTestId('session-detail-id').textContent).toBe('sid-ok');
     expect(screen.getByTestId('session-messages')).toBeInTheDocument();
-    expect(screen.getByText('hi from c3b')).toBeInTheDocument();
   });
 });

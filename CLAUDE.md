@@ -119,6 +119,8 @@ See [feature 08](docs/features/08-dashboard-theme-and-vite.md) for routing and
 [feature 09](docs/features/09-chat-workspace-and-ui-polish.md) for Chat and
 real-agent verification. [Feature 10](docs/features/10-chat-reading-and-interaction.md)
 records the current Chat layout, tool disclosures, and agent compatibility checks.
+Chat and session details share response controls in
+`apps/dashboard/src/components/chat/`; see [feature 11](docs/features/11-session-chat-transcript.md).
 
 ## 常用命令
 

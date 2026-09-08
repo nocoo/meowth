@@ -94,7 +94,14 @@ export async function mockDashboard(
     } else if (pathname === '/v1/sessions') {
       await route.fulfill({ json: { sessions: overrides.sessions ?? SESSIONS } });
     } else if (pathname.endsWith('/messages')) {
-      await route.fulfill({ json: { messages: MESSAGES } });
+      await route.fulfill({
+        json: {
+          session_id: 'ui-session-1',
+          events: MESSAGES,
+          next_after_seq: MESSAGES.at(-1)?.seq ?? -1,
+          has_more: false,
+        },
+      });
     } else if (pathname === '/v1/sessions/ui-session-1') {
       await route.fulfill({ json: SESSIONS[0] });
     } else {

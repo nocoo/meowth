@@ -56,10 +56,6 @@
   color: hsl(var(--basalt-foreground));
 }
 
-.chat-reading-column {
-  max-width: 760px;
-}
-
 .chat-main[data-empty="true"] {
   overflow-y: auto;
 }
@@ -161,20 +157,6 @@
   color: hsl(var(--basalt-muted-foreground));
   font-size: 0.6875rem;
   pointer-events: none;
-}
-
-.chat-user-bubble {
-  background: hsl(var(--basalt-secondary));
-  color: hsl(var(--basalt-foreground));
-  border-radius: 1.375rem;
-  box-shadow: none;
-}
-
-.chat-response {
-  padding: 0;
-  background: transparent;
-  border-radius: 0;
-  box-shadow: none;
 }
 
 .chat-inbox > button {

@@ -36,7 +36,7 @@ conversation, cancellation, retry, or continuation contracts.
 | Area | Files |
 |---|---|
 | Workspace and picker | `apps/dashboard/src/pages/Chat/ChatContent.tsx`, `ChatSidebar.tsx`, `AgentPicker.tsx` |
-| Responses and activity | `apps/dashboard/src/pages/Chat/MessageList.tsx`, `MessageBubble.tsx`, `messageGroups.ts`, new activity components |
+| Responses and activity | `apps/dashboard/src/pages/Chat/MessageList.tsx`; shared `apps/dashboard/src/components/chat/` controls (feature 11) |
 | Rich content | `apps/dashboard/src/components/MessageMarkdown.tsx`, `message-markdown.css`, `CopyButton.tsx` |
 | State and transport | `apps/dashboard/src/viewmodels/useChatViewModel.ts`, `models/chat.ts` |
 | Hermes tool notifications | `daemon/pkg/agent/hermes.go`, `daemon/pkg/agent/hermes_test.go` |
