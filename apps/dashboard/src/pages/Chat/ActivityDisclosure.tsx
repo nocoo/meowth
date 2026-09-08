@@ -28,6 +28,7 @@ export default function ActivityDisclosure({
         <Button
           variant="ghost"
           size="xs"
+          aria-label={label}
           className="group -ml-2 h-auto min-h-9 max-w-full justify-start gap-2 px-2 py-1.5 text-left font-normal text-basalt-muted-foreground hover:text-basalt-foreground"
         >
           <Icon

@@ -38,9 +38,9 @@ function renderList(turns: readonly ChatTurn[], onRetry = vi.fn()) {
 }
 
 describe('MessageList', () => {
-  it('empty turns → renders the bare "Start a conversation." hint', () => {
+  it('welcomes a new conversation with the selected agent', () => {
     renderList([]);
-    expect(screen.getByText('Start a conversation.')).toBeInTheDocument();
+    expect(screen.getByText('What can we work on?')).toBeInTheDocument();
   });
 
   it('renders the userPrompt of each turn through MessageText', () => {

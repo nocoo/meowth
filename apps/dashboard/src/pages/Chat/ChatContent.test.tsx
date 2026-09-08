@@ -68,8 +68,8 @@ describe('Chat workspace', () => {
   it('shows the inbox, conversation header, and template composer', () => {
     renderContent(makeVM());
     expect(screen.getByRole('navigation', { name: 'Conversations' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Backend agent')).toBeInTheDocument();
-    expect(screen.getByText('Start a conversation.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Choose agent')).toBeInTheDocument();
+    expect(screen.getByText('What can we work on?')).toBeInTheDocument();
     expect(screen.getByRole('log', { name: 'Conversation' })).toHaveAttribute('aria-busy', 'false');
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
     expect(screen.getByRole('textbox', { name: 'Message' })).toBeEnabled();
@@ -109,6 +109,19 @@ describe('Chat workspace', () => {
       'missing',
     );
     expect(within(drawer).getByText('No conversations found.')).toBeInTheDocument();
+  });
+
+  it('collapses the desktop conversation list without losing an unsent draft', () => {
+    renderContent(makeVM());
+    const field = screen.getByRole('textbox', { name: 'Message' });
+    fireEvent.change(field, { target: { value: 'Keep this draft' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Hide conversations' }));
+    expect(screen.queryByRole('navigation', { name: 'Conversations' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'New chat' })).toBeVisible();
+    expect(field).toHaveValue('Keep this draft');
+    fireEvent.click(screen.getByRole('button', { name: 'Show conversations' }));
+    expect(screen.getByRole('navigation', { name: 'Conversations' })).toBeVisible();
+    expect(field).toHaveValue('Keep this draft');
   });
 
   it('hides controls until availability has loaded', () => {

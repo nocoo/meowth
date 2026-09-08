@@ -100,7 +100,7 @@ describe('ChatPage', () => {
         <ChatPage />
       </MemoryRouter>,
     );
-    expect(screen.getByLabelText('Backend agent')).toBeInTheDocument();
+    expect(screen.getByLabelText('Choose agent')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
   });
 });

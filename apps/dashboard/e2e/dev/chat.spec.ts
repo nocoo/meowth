@@ -21,7 +21,7 @@ test('chat: navigates to /chat, picker lists installed backends', async ({ page 
   await page.getByRole('link', { name: 'Chat' }).click();
   await page.waitForURL(/\/chat$/);
   await expect(page.getByRole('heading', { level: 2, name: 'Chat' })).toBeVisible();
-  const picker = page.getByRole('combobox', { name: 'Backend agent' });
+  const picker = page.getByRole('combobox', { name: 'Choose agent' });
   await expect(picker).toBeVisible();
   await picker.click();
   await expect(page.getByRole('option', { name: 'Claude' })).toBeVisible();

@@ -39,9 +39,9 @@ test.describe('desktop chat workspace', () => {
     await submit(page, 'First Claude question');
     const log = page.getByRole('log', { name: 'Conversation' });
     await expect(log.getByText('First Claude question', { exact: true })).toHaveCount(2);
-    await page.getByRole('combobox', { name: 'Backend agent' }).click();
+    await page.getByRole('combobox', { name: 'Choose agent' }).click();
     await page.getByRole('option', { name: 'Codex', exact: true }).click();
-    await expect(log.getByText('Start a conversation.')).toBeVisible();
+    await expect(log.getByText('What can we work on?')).toBeVisible();
     await submit(page, 'Second Codex question');
     await expect(log.locator('[data-bubble-kind="session-ended"]')).toContainText('Completed');
     const inbox = page.getByRole('navigation', { name: 'Conversations' });
@@ -49,7 +49,7 @@ test.describe('desktop chat workspace', () => {
     await page.getByRole('textbox', { name: 'Search conversations' }).fill('Claude');
     await expect(inbox.getByRole('button')).toHaveCount(1);
     await inbox.getByRole('button', { name: /First Claude question/ }).click();
-    await expect(page.getByRole('combobox', { name: 'Backend agent' })).toContainText('Claude');
+    await expect(page.getByRole('combobox', { name: 'Choose agent' })).toContainText('Claude');
     await expect(log.getByText('Second Codex question')).toHaveCount(0);
     await submit(page, 'Continue Claude');
     await expect(log.getByRole('article')).toHaveCount(2);
@@ -62,7 +62,7 @@ test.describe('desktop chat workspace', () => {
       'context-1',
     ]);
     await page.getByRole('button', { name: 'New chat', exact: true }).click();
-    await expect(log.getByText('Start a conversation.')).toBeVisible();
+    await expect(log.getByText('What can we work on?')).toBeVisible();
     await expect(inbox.getByRole('button')).toHaveCount(2);
   });
 
@@ -195,7 +195,7 @@ for (const width of [320, 390, 1024]) {
       );
       await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toBeVisible();
       await page.getByRole('button', { name: 'New chat', exact: true }).click();
-      await expect(page.getByText('Start a conversation.')).toBeVisible();
+      await expect(page.getByText('What can we work on?')).toBeVisible();
     });
   });
 }

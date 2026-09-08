@@ -177,7 +177,7 @@ async function checkAgent(agent: Agent, base: string, bearer: string, browser: B
   page.on('pageerror', (error) => browserErrors.push(error.message));
   try {
     await page.goto('/chat');
-    await page.getByRole('combobox', { name: 'Backend agent' }).click();
+    await page.getByRole('combobox', { name: 'Choose agent' }).click();
     const agentLabel =
       agent.type === 'pi' ? 'Pi' : agent.type[0]?.toUpperCase() + agent.type.slice(1);
     await page.getByRole('option', { name: agentLabel, exact: true }).click();

@@ -190,7 +190,7 @@ for (const theme of ['light', 'dark'] as const) {
         animations: 'disabled',
       });
       await page.getByRole('button', { name: 'New chat' }).click();
-      await expect(page.getByText('Start a conversation.', { exact: true })).toBeVisible();
+      await expect(page.getByText('What can we work on?', { exact: true })).toBeVisible();
       await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toHaveValue('');
     });
   });

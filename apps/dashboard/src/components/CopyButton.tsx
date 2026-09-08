@@ -2,7 +2,11 @@ import { Button } from '@/components/ui/button';
 import { Check, Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-export default function CopyButton({ text, label }: { text: string; label: string }) {
+export default function CopyButton({
+  text,
+  label,
+  iconOnly = false,
+}: { text: string; label: string; iconOnly?: boolean }) {
   const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle');
 
   useEffect(() => {
@@ -15,8 +19,17 @@ export default function CopyButton({ text, label }: { text: string; label: strin
     <Button
       type="button"
       variant="ghost"
-      size="xs"
+      size={iconOnly ? 'icon-sm' : 'xs'}
       aria-label={label}
+      title={
+        iconOnly
+          ? status === 'copied'
+            ? 'Copied'
+            : status === 'error'
+              ? 'Copy failed · Retry'
+              : label
+          : undefined
+      }
       className="shrink-0 text-basalt-muted-foreground"
       onClick={async () => {
         try {
@@ -32,7 +45,7 @@ export default function CopyButton({ text, label }: { text: string; label: strin
       ) : (
         <Copy className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
       )}
-      <span aria-live="polite">
+      <span aria-live="polite" className={iconOnly ? 'sr-only' : undefined}>
         {status === 'copied' ? 'Copied' : status === 'error' ? 'Copy failed · Retry' : label}
       </span>
     </Button>

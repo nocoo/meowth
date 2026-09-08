@@ -171,13 +171,13 @@ function MessageEnvelope({ envelope, expanded = false }: MessageBubbleProps) {
   if (kind === 'text') {
     const content = payloadString(envelope, 'content');
     return (
-      <div data-bubble-kind="text" className="text-basalt-foreground text-[15px] leading-7">
+      <div data-bubble-kind="text" className="text-basalt-foreground text-base leading-7">
         <TruncatedText
           content={content}
           cap={TEXT_CONTENT_CAP}
           sessionId={sessionId}
           markdown
-          className="font-basalt-sans text-[15px] leading-7"
+          className="font-basalt-sans text-base leading-7"
         />
       </div>
     );

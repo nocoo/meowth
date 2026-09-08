@@ -1,6 +1,6 @@
 .chat-markdown {
   font-family: var(--basalt-font-sans), sans-serif;
-  font-size: 15px;
+  font-size: inherit;
   line-height: 1.75;
   overflow-wrap: anywhere;
 }

@@ -59,7 +59,7 @@ describe('chat activity', () => {
     fireEvent.click(activity);
     expect(screen.getByText('source').tagName).toBe('STRONG');
     expect(screen.queryByText(/README.md/)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Read Input & result' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Read' }));
     expect(screen.getByText(/README.md/)).toBeVisible();
     expect(screen.getByText('<script>alert(1)</script>')).toBeVisible();
     expect(document.querySelector('script')).toBeNull();
@@ -80,7 +80,7 @@ describe('chat activity', () => {
       'true',
     );
     expect(screen.getByText('First thought.')).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: 'Bash Input' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bash' }));
     rerender(
       content(
         [...deltas, event('tool-result', 4, { call_id: 'shell', output: '/project' })],
@@ -91,10 +91,7 @@ describe('chat activity', () => {
       'aria-expanded',
       'true',
     );
-    expect(screen.getByRole('button', { name: 'Bash Input & result' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
+    expect(screen.getByRole('button', { name: 'Bash' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('/project')).toBeVisible();
   });
 
