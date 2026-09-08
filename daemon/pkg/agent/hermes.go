@@ -972,10 +972,12 @@ func (c *hermesClient) handleToolCallStart(data json.RawMessage) {
 		Name       string            `json:"name"`
 		Title      string            `json:"title"`
 		Kind       string            `json:"kind"`
+		Status     string            `json:"status"`
 		RawInput   map[string]any    `json:"rawInput"`
 		Input      map[string]any    `json:"input"`
 		Parameters map[string]any    `json:"parameters"`
 		Content    []json.RawMessage `json:"content"`
+		Locations  []json.RawMessage `json:"locations"`
 	}
 	if err := json.Unmarshal(data, &msg); err != nil {
 		return
@@ -993,11 +995,17 @@ func (c *hermesClient) handleToolCallStart(data json.RawMessage) {
 		rawInput = msg.Parameters
 	}
 
-	// Hermes pre-populates rawInput on the initial tool_call — emit
-	// MessageToolUse immediately so the UI can show the tool invocation
-	// live. Record the emission so handleToolCallUpdate doesn't re-emit
-	// on completion.
-	if rawInput != nil {
+	// Current Hermes omits rawInput for polished tools; their start event is complete.
+	if rawInput != nil || msg.Status != "in_progress" || len(msg.Locations) > 0 {
+		if rawInput == nil {
+			rawInput = parseToolArgsJSON(extractACPToolCallText(msg.Content))
+			if len(msg.Locations) > 0 {
+				if rawInput == nil {
+					rawInput = make(map[string]any)
+				}
+				rawInput["locations"] = msg.Locations
+			}
+		}
 		c.trackTool(msg.ToolCallID, &pendingToolCall{
 			toolName: toolName,
 			input:    rawInput,

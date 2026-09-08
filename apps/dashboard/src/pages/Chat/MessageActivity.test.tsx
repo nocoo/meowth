@@ -104,4 +104,32 @@ describe('chat activity', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Used 1 tool' }));
     expect(screen.getByText('Unpaired result')).toBeVisible();
   });
+
+  it('distinguishes a pending result from an agent that ended without reporting one', () => {
+    const events = [event('tool-use', 1, { tool: 'Read', call_id: 'missing' })];
+    const { rerender } = render(content(events));
+    fireEvent.click(screen.getByRole('button', { name: 'Working with 1 tool' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Read' }));
+    expect(screen.getByText('Waiting for a tool result…')).toBeVisible();
+    rerender(content(events, 'completed'));
+    expect(screen.getByText('No tool result was reported by this agent.')).toBeVisible();
+    expect(screen.queryByText('Waiting for a tool result…')).toBeNull();
+  });
+
+  it('recognizes a result that arrived after intervening prose', () => {
+    render(
+      content(
+        [
+          event('tool-use', 1, { tool: 'Read', call_id: 'separate' }),
+          event('text', 2, { content: 'Checking the result.' }),
+          event('tool-result', 3, { call_id: 'separate', output: 'Result received' }),
+        ],
+        'completed',
+      ),
+    );
+    fireEvent.click(screen.getAllByRole('button', { name: 'Used 1 tool' })[0] as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: 'Read' }));
+    expect(screen.getByText('Result recorded separately.')).toBeVisible();
+    expect(screen.queryByText('No tool result was reported by this agent.')).toBeNull();
+  });
 });

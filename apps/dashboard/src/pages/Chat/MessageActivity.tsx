@@ -7,9 +7,13 @@ import { groupActivitySteps, messageField, messageKind } from './messageGroups';
 export default function MessageActivity({
   envelopes,
   streaming,
+  turnEnded,
+  resultCallIds,
 }: {
   envelopes: readonly Envelope[];
   streaming: boolean;
+  turnEnded: boolean;
+  resultCallIds: ReadonlySet<unknown>;
 }) {
   const steps = groupActivitySteps(envelopes);
   const tools = steps.filter((step) =>
@@ -39,18 +43,29 @@ export default function MessageActivity({
         }
         const rawTool = messageField(envelope, 'tool');
         const tool = typeof rawTool === 'string' && rawTool ? rawTool : 'Tool call';
+        const hasInput = messageField(envelope, 'input') != null;
+        const reportedElsewhere = resultCallIds.has(messageField(envelope, 'call_id'));
         return (
           <ActivityDisclosure
             key={envelope.seq}
             label={tool}
-            description={results.length > 0 ? 'Input & result' : 'Input'}
+            description={results.length > 0 ? 'Input & result' : 'Details'}
             icon={Terminal}
             kind="tool-call"
           >
-            <MessageBubble envelope={envelope} expanded />
+            {hasInput ? <MessageBubble envelope={envelope} expanded /> : null}
             {results.map((result) => (
               <MessageBubble key={result.seq} envelope={result} expanded />
             ))}
+            {results.length === 0 ? (
+              <p className="text-xs leading-5 text-basalt-muted-foreground">
+                {reportedElsewhere
+                  ? 'Result recorded separately.'
+                  : turnEnded
+                    ? 'No tool result was reported by this agent.'
+                    : 'Waiting for a tool result…'}
+              </p>
+            ) : null}
           </ActivityDisclosure>
         );
       })}

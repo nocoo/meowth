@@ -9,7 +9,7 @@ import { ArrowUpRight, Bot, RotateCcw, Sparkles } from 'lucide-react';
 import { Link } from 'react-router';
 import MessageActivity from './MessageActivity';
 import MessageBubble from './MessageBubble';
-import { groupEnvelopes, groupMessageActivity, messageKind } from './messageGroups';
+import { groupEnvelopes, groupMessageActivity, messageField, messageKind } from './messageGroups';
 
 const MAX_ENVELOPES_PER_TURN = 1000;
 
@@ -71,6 +71,12 @@ export default function MessageList({ turns, agentName, onRetry }: MessageListPr
           lastContent !== undefined &&
           messageKind(lastContent) === 'text';
         const responseText = groups.map(textOf).filter(Boolean).join('\n\n');
+        const resultCallIds = new Set(
+          turn.envelopes
+            .filter((envelope) => messageKind(envelope) === 'tool-result')
+            .map((envelope) => messageField(envelope, 'call_id'))
+            .filter((id) => typeof id === 'string' && id.length > 0),
+        );
         const canRetry =
           index === turns.length - 1 && turn.status !== 'streaming' && turn.status !== 'completed';
         return (
@@ -103,6 +109,8 @@ export default function MessageList({ turns, agentName, onRetry }: MessageListPr
                         <MessageActivity
                           key={group.seq}
                           envelopes={group.envelopes}
+                          turnEnded={turn.status !== 'streaming'}
+                          resultCallIds={resultCallIds}
                           streaming={
                             turn.status === 'streaming' && groupIndex === allGroups.length - 1
                           }

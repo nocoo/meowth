@@ -2353,3 +2353,51 @@ func TestHermesKeepsRemoteMcpWhenCapabilityAdvertised(t *testing.T) {
 		t.Fatalf("session/new.mcpServers: got %d entries, want 3", len(servers))
 	}
 }
+
+func TestHermesClientToolStartWithoutRawInput(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		start string
+		input string
+	}{
+		{
+			name:  "file locations",
+			start: `{"sessionUpdate":"tool_call","toolCallId":"tc-read","kind":"read","title":"read: /tmp/fixture.txt","locations":[{"path":"/tmp/fixture.txt","line":1}]}`,
+			input: `{"locations":[{"path":"/tmp/fixture.txt","line":1}]}`,
+		},
+		{
+			name:  "terminal content",
+			start: `{"sessionUpdate":"tool_call","toolCallId":"tc-read","kind":"execute","title":"terminal: cat fixture.txt","content":[{"type":"content","content":{"type":"text","text":"$ cat fixture.txt"}}]}`,
+			input: `{"text":"$ cat fixture.txt"}`,
+		},
+		{
+			name:  "no arguments",
+			start: `{"sessionUpdate":"tool_call","toolCallId":"tc-read","name":"inspect","status":"pending"}`,
+			input: `null`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var messages []Message
+			client := &hermesClient{onMessage: func(message Message) { messages = append(messages, message) }}
+			notify := func(update string) {
+				client.handleLine(`{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"test","update":` + update + `}}`)
+			}
+			notify(tc.start)
+			if len(messages) != 1 || messages[0].Type != MessageToolUse {
+				t.Fatalf("tool invocation must be visible before completion: %+v", messages)
+			}
+			input, err := json.Marshal(messages[0].Input)
+			if err != nil || string(input) != tc.input {
+				t.Fatalf("input = %s, error = %v; want %s", input, err, tc.input)
+			}
+			notify(`{"sessionUpdate":"tool_call_update","toolCallId":"tc-read","status":"completed","content":[{"type":"content","content":{"type":"text","text":"fixture output"}}]}`)
+			if len(messages) != 2 || messages[1].Type != MessageToolResult || messages[1].Output != "fixture output" {
+				t.Fatalf("completion must append the result without repeating the call: %+v", messages)
+			}
+			if messages[0].CallID != messages[1].CallID {
+				t.Fatal("input and output lost their shared call ID")
+			}
+		})
+	}
+}
