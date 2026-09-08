@@ -1,6 +1,6 @@
 # 09 · Chat workspace and dashboard polish
 
-> Status: in progress (2026-09-08).
+> Status: complete (2026-09-08).
 > References: Basalt `INTEGRATION.md`, its Chat page, and the installed
 > `@nocoo/basalt@2.1.0` chat components.
 
@@ -59,6 +59,9 @@
 7. `test: verify chat with installed agents` — opt-in real-agent browser
    verification and recorded results. Split any discovered adapter fixes into
    their own tested commits.
+8. `docs: pin local startup ports and hostname` — record the verified startup
+   commands, canonical URL, fixed ports, and service reuse rules in root
+   `CLAUDE.md`, as requested during implementation.
 
 ## 6DQ quality plan
 
@@ -113,11 +116,43 @@ actual reason; do not count synthetic responses as live-agent verification.
   sending the next draft. `patches/@nocoo__basalt@2.1.0.patch` prevents the
   stop click's default action. The fix is installed through pnpm's locked
   patch mechanism, without copying the composer into the application.
-- All dashboard/shared unit tests and the per-file coverage gate passed;
+- All 499 dashboard and 1 shared unit tests and the per-file coverage gate passed;
   workspace browser checks (7) cover context switching, stop with a pending
   draft, retry, independent scrolling, and 320/390/1024px drawers. TypeScript,
   Biome, dependency boundaries, source scan, D1 isolation, and production build
   passed. Chat is loaded on demand as a separate approximately 212 kB JS
   chunk (65 kB gzip); the existing main bundle still exceeds Vite's 500 kB
   advisory threshold.
-- Real-agent verification harness and final results pending.
+- Final browser validation passed all 42 cases across UI, dev, embedded, and
+  first-run mint projects. Rich Markdown was checked at 320/390/1024/1440px
+  in both themes. Dashboard statement/line coverage is 95.07%.
+- Real browser chats passed for every installed agent through the production
+  daemon factory: Claude, Codex, Hermes, and Pi. Each completed a rich Markdown
+  response and a second turn recalling a random marker from the first turn.
+  Code copying, nested lists, emphasis, quotes, task lists, left/center/right
+  table cells, and mobile layout were verified against actual streamed output.
+  No tool calls occurred. Copilot was skipped because its CLI is not on PATH.
+- The final real-agent report is under
+  `scripts/run-l2-output/real-chat/2026-09-08T00-06-26.159Z/` (ignored runtime
+  artifacts). It contains summary JSON, the eight response streams, and
+  desktop/mobile screenshots. The harness uses a fresh test bearer, isolated
+  daemon data/workdir/Vite cache, and temporary loopback ports. Its file
+  watcher is disabled so unrelated edits cannot restart an active test page.
+- Trusted HTTPS HMR passed again on the canonical hostname: WSS connected,
+  an actual CSS edit updated the page, and both the document and unsent draft
+  survived. Main-origin and direct daemon health checks passed. Root
+  `CLAUDE.md` now records the verified local startup contract.
+
+## Repeat real-agent browser verification
+
+```bash
+MEOWTH_REAL_CHAT=1 pnpm dashboard:e2e:real
+```
+
+The command is opt-in and reuses installed CLI authentication. It creates and
+cleans up its own test services; it leaves normal ports 7040/37040 available.
+`MEOWTH_REAL_CHAT_AGENTS=codex,hermes` optionally narrows the inventory. Missing
+CLIs are recorded as skipped; installed agents with failed responses or failed
+render/continuation checks make the command exit nonzero. Reports are written
+to a timestamped directory under `scripts/run-l2-output/real-chat/`. The harness
+does not enable Playwright traces or videos containing browser authentication.

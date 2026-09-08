@@ -41,6 +41,7 @@
     "test:l2:embed": "tsx scripts/run-embed-l2.ts",
     "test:l2:real": "tsx scripts/run-real-backends-l2.ts",
     "dashboard:e2e": "pnpm --filter @meowth/dashboard e2e",
+    "dashboard:e2e:real": "pnpm --filter @meowth/dashboard exec tsx e2e/real/run-chat.ts",
     "sqlc:gen": "cd daemon/internal/store && go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1 generate",
     "scan:osv": "bash scripts/run-osv-scan.sh",
     "scan:gitleaks:staged": "go run github.com/zricethezav/gitleaks/v8@v8.30.1 protect --staged --redact --no-banner",

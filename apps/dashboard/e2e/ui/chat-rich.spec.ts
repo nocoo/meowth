@@ -13,7 +13,7 @@ const RICH_REPLY = [
 ].join('\n\n');
 
 for (const theme of ['light', 'dark'] as const) {
-  for (const width of [1440, 390]) {
+  for (const width of [1440, 1024, 390, 320]) {
     test.describe(`${theme} ${width}px`, () => {
       test.use({ colorScheme: theme, viewport: { width, height: 960 } });
 
