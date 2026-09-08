@@ -102,7 +102,8 @@ describe('MessageList', () => {
     // boundary, so no coalescing) + 500 tool-use. The dropped 1001st
     // is a text envelope (even index 1000).
     expect(container.querySelectorAll('[data-bubble-kind="text"]')).toHaveLength(500);
-    expect(container.querySelectorAll('[data-bubble-kind="tool-use"]')).toHaveLength(500);
+    expect(container.querySelectorAll('[data-bubble-kind="activity"]')).toHaveLength(500);
+    expect(container.querySelectorAll('[data-bubble-kind="tool-use"]')).toHaveLength(0);
   });
 
   it('coalesces consecutive text envelopes into one bubble (§5.1)', () => {

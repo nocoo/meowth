@@ -3,9 +3,19 @@ import MessageText from '@/components/MessageText';
 import { Notice } from '@/components/ui/notice';
 import { displayLabel } from '@/lib/labels';
 import type { Envelope } from '@/viewmodels/useChatViewModel';
-import { LayerCard } from '@nocoo/basalt';
-import { Check, CircleDot, CircleSlash, Clock, type LucideIcon, X } from 'lucide-react';
+import {
+  Brain,
+  Check,
+  CircleDot,
+  CircleSlash,
+  Clock,
+  type LucideIcon,
+  ScrollText,
+  Terminal,
+  X,
+} from 'lucide-react';
 import { Link } from 'react-router';
+import ActivityDisclosure from './ActivityDisclosure';
 
 // docs/features/03 §5.1 dispatch table + §5.2 sanitizer rule +
 // §5.3 truncation. Renders a single envelope. The wrapping turn
@@ -17,12 +27,13 @@ import { Link } from 'react-router';
 
 export interface MessageBubbleProps {
   envelope: Envelope;
+  expanded?: boolean;
 }
 
 // §5.3 client-side render caps. Hard caps; oversize text is
 // truncated and a "view in Sessions detail" Link is appended.
 const TEXT_CONTENT_CAP = 8 * 1024;
-const TOOL_USE_INPUT_CAP = 200;
+const TOOL_USE_INPUT_CAP = 4 * 1024;
 const TOOL_RESULT_OUTPUT_CAP = 4 * 1024;
 
 function readPayload(env: Envelope): Record<string, unknown> {
@@ -153,7 +164,7 @@ function SessionEndedFooter({ envelope }: SessionEndedFooterProps) {
   );
 }
 
-function MessageEnvelope({ envelope }: MessageBubbleProps) {
+function MessageEnvelope({ envelope, expanded = false }: MessageBubbleProps) {
   const kind = payloadString(envelope, 'kind');
   const sessionId = envelope.session_id;
 
@@ -172,59 +183,54 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     );
   }
 
-  if (kind === 'thinking') {
-    const content = payloadString(envelope, 'content');
-    return (
-      <details data-bubble-kind="thinking" className="text-basalt-muted-foreground">
-        <summary className="cursor-pointer text-xs font-medium">Thinking...</summary>
-        <MessageMarkdown content={content} className="mt-2 text-sm" />
-      </details>
-    );
-  }
-
-  if (kind === 'tool-use') {
+  if (kind === 'thinking' || kind === 'tool-use' || kind === 'tool-result' || kind === 'log') {
+    const thinking = kind === 'thinking';
+    const toolUse = kind === 'tool-use';
     const tool = payloadString(envelope, 'tool');
-    const input = readField(readPayload(envelope), 'input');
-    const serialized = (() => {
-      try {
-        return JSON.stringify(input ?? null);
-      } catch {
-        return '<unserializable>';
-      }
-    })();
-    return (
-      <LayerCard
-        data-bubble-kind="tool-use"
-        padding="sm"
-        className="text-xs leading-5 text-basalt-muted-foreground"
-      >
-        <div className="mb-1 font-medium">Tool: {tool}</div>
-        <TruncatedText
-          content={serialized}
-          cap={TOOL_USE_INPUT_CAP}
-          sessionId={sessionId}
-          className="text-xs"
-        />
-      </LayerCard>
+    const label = thinking
+      ? 'Thinking'
+      : toolUse
+        ? tool || 'Tool call'
+        : kind === 'log'
+          ? 'Log'
+          : 'Tool result';
+    const content = toolUse
+      ? JSON.stringify(readField(readPayload(envelope), 'input') ?? null, null, 2)
+      : payloadString(envelope, kind === 'tool-result' ? 'output' : 'content');
+    const body = (
+      <div className="min-w-0 space-y-2" data-bubble-kind={expanded ? kind : undefined}>
+        <p className="text-xs font-medium text-basalt-muted-foreground">
+          {toolUse ? 'Input' : label}
+        </p>
+        <div
+          className={`max-h-80 overflow-auto overscroll-contain ${thinking ? 'pr-2' : 'rounded-xl border border-basalt-border/60 bg-basalt-secondary/50 p-3'}`}
+        >
+          <TruncatedText
+            content={content}
+            cap={
+              thinking || kind === 'log'
+                ? TEXT_CONTENT_CAP
+                : toolUse
+                  ? TOOL_USE_INPUT_CAP
+                  : TOOL_RESULT_OUTPUT_CAP
+            }
+            sessionId={sessionId}
+            markdown={thinking}
+            className={thinking ? 'text-sm text-basalt-muted-foreground' : 'text-xs leading-5'}
+          />
+        </div>
+      </div>
     );
-  }
-
-  if (kind === 'tool-result') {
-    const output = payloadString(envelope, 'output');
-    return (
-      <LayerCard
-        data-bubble-kind="tool-result"
-        padding="sm"
-        className="text-xs leading-5 text-basalt-muted-foreground"
+    return expanded ? (
+      body
+    ) : (
+      <ActivityDisclosure
+        label={label}
+        icon={thinking ? Brain : kind === 'log' ? ScrollText : Terminal}
+        kind={kind}
       >
-        <div className="mb-1 font-medium">Tool result</div>
-        <TruncatedText
-          content={output}
-          cap={TOOL_RESULT_OUTPUT_CAP}
-          sessionId={sessionId}
-          className="text-xs"
-        />
-      </LayerCard>
+        {body}
+      </ActivityDisclosure>
     );
   }
 
@@ -247,29 +253,19 @@ function MessageEnvelope({ envelope }: MessageBubbleProps) {
     );
   }
 
-  if (kind === 'log') {
-    const content = payloadString(envelope, 'content');
-    return (
-      <details data-bubble-kind="log" className="text-basalt-muted-foreground text-xs">
-        <summary className="cursor-pointer font-medium">Log</summary>
-        <MessageText content={content} className="mt-2 text-xs" />
-      </details>
-    );
-  }
-
   // `status` (provisional backend_session_id only — never rendered)
   // and any unknown kind fall through to null.
   return null;
 }
 
-export default function MessageBubble({ envelope }: MessageBubbleProps) {
+export default function MessageBubble({ envelope, expanded = false }: MessageBubbleProps) {
   switch (envelope.type) {
     case 'session_started':
       return null;
     case 'heartbeat':
       return null;
     case 'message':
-      return <MessageEnvelope envelope={envelope} />;
+      return <MessageEnvelope envelope={envelope} expanded={expanded} />;
     case 'usage':
       return (
         <div data-bubble-kind="usage" className="flex justify-end">

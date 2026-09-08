@@ -1,55 +1,14 @@
 import type { Envelope } from '@/viewmodels/useChatViewModel';
 
-// docs/features/03 §5.1 — "多个 text 块合并为一条流".
-//
-// Chat backends differ wildly in text granularity: claude emits one
-// `message.kind=text` per content block, while pi / copilot emit one
-// per streamed token delta. Rendering each envelope as its own bubble
-// (the pre-fix behaviour) made pi/copilot output look shredded — every
-// few characters wrapped into a new bubble.
-//
-// This pure helper regroups a turn's envelopes for RENDERING only. The
-// raw `turn.envelopes` array is never mutated; resume-id / status /
-// Sessions-detail data keep reading the unmodified stream. Grouping
-// rule:
-//   - consecutive `message.kind=text` envelopes coalesce into ONE
-//     synthetic text envelope whose content is the concatenation;
-//   - a visible non-text envelope (tool-use / tool-result / thinking /
-//     error / log / usage / session_ended / type=error) is a boundary:
-//     it flushes the current text run and passes through unchanged;
-//   - an invisible envelope (session_started / heartbeat /
-//     message.kind=status, plus any unknown message kind that
-//     MessageBubble renders as null) is skipped entirely — it neither
-//     emits a bubble nor breaks a text run, so `text, heartbeat, text`
-//     still merges into a single block.
-//
-// The synthetic merged envelope keeps the FIRST text envelope's
-// metadata (seq / session_id / ts), so MessageBubble's existing
-// truncation + `/sessions/<id>` deep-link behaviour applies to the
-// merged content exactly as it did per-envelope.
-
-function readField(env: Envelope, key: string): unknown {
-  const payload = env.payload as Record<string, unknown> | null | undefined;
-  return payload?.[key];
+export function messageField(env: Envelope, key: string): unknown {
+  return env.payload[key];
 }
 
-function messageKind(env: Envelope): string {
-  const raw = readField(env, 'kind');
-  return typeof raw === 'string' ? raw : '';
+export function messageKind(env: Envelope): string {
+  const raw = messageField(env, 'kind');
+  return env.type === 'message' && typeof raw === 'string' ? raw : '';
 }
 
-function textContent(env: Envelope): string {
-  const raw = readField(env, 'content');
-  return typeof raw === 'string' ? raw : '';
-}
-
-function isTextEnvelope(env: Envelope): boolean {
-  return env.type === 'message' && messageKind(env) === 'text';
-}
-
-// Message kinds MessageBubble renders as visible content. Anything
-// outside this set (status, or a future unknown kind) renders as null,
-// so it is treated as invisible here to avoid empty bubbles.
 const VISIBLE_MESSAGE_KINDS = new Set([
   'text',
   'thinking',
@@ -59,50 +18,76 @@ const VISIBLE_MESSAGE_KINDS = new Set([
   'log',
 ]);
 
+const ACTIVITY_KINDS = new Set(['thinking', 'tool-use', 'tool-result', 'log']);
+
 function isInvisibleEnvelope(env: Envelope): boolean {
   if (env.type === 'session_started' || env.type === 'heartbeat') return true;
-  if (env.type === 'message') return !VISIBLE_MESSAGE_KINDS.has(messageKind(env));
-  return false;
+  return env.type === 'message' && !VISIBLE_MESSAGE_KINDS.has(messageKind(env));
 }
 
-function mergeTextRun(run: readonly Envelope[]): Envelope {
-  const first = run[0] as Envelope;
-  if (run.length === 1) return first;
-  const merged = run.map(textContent).join('');
-  return {
-    ...first,
-    payload: { ...(first.payload ?? {}), kind: 'text', content: merged },
-  };
-}
-
-/**
- * Regroup a turn's envelopes for rendering. Returns a new array; the
- * input is never mutated. Consecutive text envelopes are merged into a
- * single synthetic text envelope; invisible envelopes are dropped;
- * everything else passes through in order.
- */
+// Keep the first delta's identity so disclosures stay open as the stream grows.
 export function groupEnvelopes(envelopes: readonly Envelope[]): Envelope[] {
   const out: Envelope[] = [];
-  let textRun: Envelope[] = [];
-
-  const flush = (): void => {
-    if (textRun.length === 0) return;
-    out.push(mergeTextRun(textRun));
-    textRun = [];
-  };
-
   for (const env of envelopes) {
-    if (isTextEnvelope(env)) {
-      textRun.push(env);
-    } else if (!isInvisibleEnvelope(env)) {
-      // Visible non-text envelope is a boundary: flush the current
-      // text run, then emit it. Invisible envelopes (the implicit
-      // else) are skipped entirely so they neither emit a bubble
-      // nor break a surrounding text run.
-      flush();
+    if (isInvisibleEnvelope(env)) continue;
+    const kind = messageKind(env);
+    const previous = out.at(-1);
+    if (previous && (kind === 'text' || kind === 'thinking') && messageKind(previous) === kind) {
+      const previousContent = messageField(previous, 'content');
+      const nextContent = messageField(env, 'content');
+      const before = typeof previousContent === 'string' ? previousContent : '';
+      const next = typeof nextContent === 'string' ? nextContent : '';
+      out[out.length - 1] = {
+        ...previous,
+        payload: { ...previous.payload, content: before + next },
+      };
+    } else {
       out.push(env);
     }
   }
-  flush();
   return out;
+}
+
+export type MessageGroup =
+  | { kind: 'message'; seq: number; envelope: Envelope }
+  | { kind: 'activity'; seq: number; envelopes: Envelope[] };
+
+export function groupMessageActivity(envelopes: readonly Envelope[]): MessageGroup[] {
+  const groups: MessageGroup[] = [];
+  for (const envelope of envelopes) {
+    if (!ACTIVITY_KINDS.has(messageKind(envelope))) {
+      groups.push({ kind: 'message', seq: envelope.seq, envelope });
+      continue;
+    }
+    const last = groups.at(-1);
+    if (last?.kind === 'activity') {
+      last.envelopes.push(envelope);
+    } else {
+      groups.push({ kind: 'activity', seq: envelope.seq, envelopes: [envelope] });
+    }
+  }
+  return groups;
+}
+
+export interface ActivityStep {
+  envelope: Envelope;
+  results: Envelope[];
+}
+
+export function groupActivitySteps(envelopes: readonly Envelope[]): ActivityStep[] {
+  const steps: ActivityStep[] = [];
+  const calls = new Map<string, ActivityStep>();
+  for (const envelope of envelopes) {
+    const kind = messageKind(envelope);
+    const callId = messageField(envelope, 'call_id');
+    const call = typeof callId === 'string' && callId ? calls.get(callId) : undefined;
+    if (kind === 'tool-result' && call) {
+      call.results.push(envelope);
+      continue;
+    }
+    const step: ActivityStep = { envelope, results: [] };
+    steps.push(step);
+    if (kind === 'tool-use' && typeof callId === 'string' && callId) calls.set(callId, step);
+  }
+  return steps;
 }

@@ -7,8 +7,9 @@ import type { ChatTurn, Envelope } from '@/viewmodels/useChatViewModel';
 import { ChatBubble } from '@nocoo/basalt/components/chat-bubble';
 import { ArrowUpRight, Bot, MessageSquare, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router';
+import MessageActivity from './MessageActivity';
 import MessageBubble from './MessageBubble';
-import { groupEnvelopes } from './messageGroups';
+import { groupEnvelopes, groupMessageActivity } from './messageGroups';
 
 const MAX_ENVELOPES_PER_TURN = 1000;
 
@@ -96,9 +97,19 @@ export default function MessageList({ turns, agentName, onRetry }: MessageListPr
                   className="min-w-0 w-full max-w-full px-4 py-3.5 sm:px-5"
                 >
                   <div className="min-w-0 space-y-4">
-                    {content.map((envelope) => (
-                      <MessageBubble key={envelope.seq} envelope={envelope} />
-                    ))}
+                    {groupMessageActivity(content).map((group, groupIndex, allGroups) =>
+                      group.kind === 'activity' ? (
+                        <MessageActivity
+                          key={group.seq}
+                          envelopes={group.envelopes}
+                          streaming={
+                            turn.status === 'streaming' && groupIndex === allGroups.length - 1
+                          }
+                        />
+                      ) : (
+                        <MessageBubble key={group.seq} envelope={group.envelope} />
+                      ),
+                    )}
                     {pending ? (
                       <div
                         data-bubble-kind="streaming-pending"

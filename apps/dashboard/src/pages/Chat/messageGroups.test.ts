@@ -1,6 +1,6 @@
 import type { Envelope } from '@/viewmodels/useChatViewModel';
 import { describe, expect, it } from 'vitest';
-import { groupEnvelopes } from './messageGroups';
+import { groupActivitySteps, groupEnvelopes, groupMessageActivity } from './messageGroups';
 
 function makeEnvelope(over: Partial<Envelope> & Pick<Envelope, 'type'>): Envelope {
   return {
@@ -127,5 +127,82 @@ describe('groupEnvelopes (§5.1 text coalescing)', () => {
     groupEnvelopes(input);
     expect(JSON.stringify(input)).toBe(snapshot);
     expect(input).toHaveLength(2);
+  });
+
+  it('merges thinking deltas across heartbeats without changing the first identity', () => {
+    const first = makeEnvelope({
+      type: 'message',
+      seq: 1,
+      payload: { kind: 'thinking', content: 'Let me ' },
+    });
+    const second = makeEnvelope({
+      type: 'message',
+      seq: 3,
+      payload: { kind: 'thinking', content: 'check.' },
+    });
+    const input = [first, makeEnvelope({ type: 'heartbeat', seq: 2 }), second, text('Answer', 4)];
+    const snapshot = JSON.stringify(input);
+    const result = groupEnvelopes(input);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({
+      seq: 1,
+      payload: { kind: 'thinking', content: 'Let me check.' },
+    });
+    expect(JSON.stringify(input)).toBe(snapshot);
+  });
+});
+
+describe('activity grouping', () => {
+  const event = (kind: string, seq: number, payload = {}) =>
+    makeEnvelope({
+      type: 'message',
+      seq,
+      payload: { kind, ...payload },
+    });
+
+  it('keeps prose and errors outside activity in their original order', () => {
+    const input = [
+      event('thinking', 1),
+      event('tool-use', 2),
+      event('tool-result', 3),
+      text('Answer', 4),
+      event('log', 5),
+      event('error', 6),
+      makeEnvelope({ type: 'error', seq: 7 }),
+    ];
+    const result = groupMessageActivity(input);
+    expect(result.map((group) => [group.kind, group.seq])).toEqual([
+      ['activity', 1],
+      ['message', 4],
+      ['activity', 5],
+      ['message', 6],
+      ['message', 7],
+    ]);
+    expect(result[0]).toMatchObject({ envelopes: input.slice(0, 3) });
+  });
+
+  it('pairs concurrent calls by id even when results arrive out of order', () => {
+    const input = [
+      event('tool-use', 1, { call_id: 'a' }),
+      event('tool-use', 2, { call_id: 'b' }),
+      event('tool-result', 3, { call_id: 'b', output: 'B' }),
+      event('tool-result', 4, { call_id: 'a', output: 'A' }),
+    ];
+    const snapshot = JSON.stringify(input);
+    const steps = groupActivitySteps(input);
+    expect(steps).toEqual([
+      { envelope: input[0], results: [input[3]] },
+      { envelope: input[1], results: [input[2]] },
+    ]);
+    expect(JSON.stringify(input)).toBe(snapshot);
+  });
+
+  it('never guesses the owner of an unidentified or unmatched result', () => {
+    const input = [
+      event('tool-use', 1),
+      event('tool-result', 2),
+      event('tool-result', 3, { call_id: 'missing' }),
+    ];
+    expect(groupActivitySteps(input)).toEqual(input.map((envelope) => ({ envelope, results: [] })));
   });
 });

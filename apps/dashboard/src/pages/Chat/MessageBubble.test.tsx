@@ -1,5 +1,5 @@
 import type { Envelope } from '@/viewmodels/useChatViewModel';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import MessageBubble from './MessageBubble';
@@ -75,10 +75,14 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { kind: 'thinking', content: 'pondering' },
       }),
     );
-    expect(screen.getByText('Thinking...')).toBeInTheDocument();
+    const trigger = screen.getByRole('button', { name: 'Thinking' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('pondering')).toBeNull();
+    fireEvent.click(trigger);
+    expect(screen.getByText('pondering')).toBeVisible();
   });
 
-  it('message.kind=tool-use → shows tool name and JSON-stringified input', () => {
+  it('message.kind=tool-use → shows input only after expansion', () => {
     renderBubble(
       makeEnvelope({
         type: 'message',
@@ -89,12 +93,15 @@ describe('MessageBubble dispatch (§5.1)', () => {
         },
       }),
     );
-    expect(screen.getByText(/Tool: Bash/)).toBeInTheDocument();
-    expect(screen.getByText(/"cmd":"ls"/)).toBeInTheDocument();
+    const trigger = screen.getByRole('button', { name: 'Bash' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText(/"cmd"/)).toBeNull();
+    fireEvent.click(trigger);
+    expect(screen.getByText(/"cmd": "ls"/)).toBeVisible();
   });
 
-  it('message.kind=tool-use input > 200 char → truncated + Sessions link', () => {
-    const huge = { v: 'y'.repeat(500) };
+  it('large tool input stays bounded and links to the saved run', () => {
+    const huge = { v: 'y'.repeat(5 * 1024) };
     renderBubble(
       makeEnvelope({
         type: 'message',
@@ -102,18 +109,24 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { kind: 'tool-use', tool: 'X', input: huge },
       }),
     );
+    fireEvent.click(screen.getByRole('button', { name: 'X' }));
     expect(screen.getByText('View session details')).toBeInTheDocument();
     expect(screen.getByRole('link')).toHaveAttribute('href', '/sessions/sid-tu');
   });
 
-  it('message.kind=tool-result → shows output preview', () => {
+  it('message.kind=tool-result → output is collapsed initially', () => {
     renderBubble(
       makeEnvelope({
         type: 'message',
         payload: { kind: 'tool-result', output: '42\n' },
       }),
     );
-    expect(screen.getByText(/42/)).toBeInTheDocument();
+    expect(screen.queryByText(/42/)).toBeNull();
+    const trigger = screen.getByRole('button', { name: 'Tool result' });
+    fireEvent.click(trigger);
+    expect(screen.getByText(/42/)).toBeVisible();
+    fireEvent.click(trigger);
+    expect(screen.queryByText(/42/)).toBeNull();
   });
 
   it('message.kind=tool-result output > 4 KiB → truncated + Sessions link', () => {
@@ -125,6 +138,7 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { kind: 'tool-result', output: big },
       }),
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Tool result' }));
     expect(screen.getByText('View session details')).toBeInTheDocument();
     expect(screen.getByRole('link')).toHaveAttribute('href', '/sessions/sid-tr');
   });
@@ -163,7 +177,9 @@ describe('MessageBubble dispatch (§5.1)', () => {
         payload: { kind: 'log', content: 'diag' },
       }),
     );
-    expect(screen.getByText('Log')).toBeInTheDocument();
+    expect(screen.queryByText('diag')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Log' }));
+    expect(screen.getByText('diag')).toBeVisible();
   });
 
   it('envelope.type=error → yellow protocol-error style (distinct from kind=error red)', () => {
