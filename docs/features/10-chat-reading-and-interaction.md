@@ -49,7 +49,12 @@ conversation, cancellation, retry, or continuation contracts.
    details, stable streaming identity, and focused behavioral tests.
 3. `feat: give chat a focused reading layout` — template-based workspace,
    picker, welcome state, composer, response styling, and interaction coverage.
-4. `test: verify refined chat with local agents` — browser and real-agent
+4. `fix: retain hermes calls without raw input` — real validation found that
+   current Hermes omits `rawInput` on its complete tool-start notifications.
+   Emit those calls immediately with the available content/locations; keep
+   explicit `in_progress` argument streams buffered. Show an honest missing
+   result state when a backend ends the turn without a tool result.
+5. `test: verify refined chat with local agents` — browser and real-agent
    verification, any necessary harness updates, and recorded results. Fix
    independently discovered defects in separate atomic commits.
 
@@ -67,3 +72,15 @@ conversation, cancellation, retry, or continuation contracts.
 ## Results
 
 Pending implementation and verification.
+
+### Real-agent investigation
+
+The installed Hermes ACP runtime sends a `tool_call` for `read_file` with
+`locations` and no `rawInput` or `status`. The old adapter deferred it until a
+completion event, so a missing completion hid the entire invocation. A direct
+isolated ACP probe confirmed that the runtime omits `tool_call_update` for this
+read. Its completion formatter receives stringified arguments where it expects
+a dictionary. Keep invocation rendering correct in Meowth without modifying
+the user's global Hermes installation or inventing output. Verify real tool
+results with an explicit read-only terminal command, which that runtime can
+report, and cover missing-result presentation separately.
