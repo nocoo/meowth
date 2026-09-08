@@ -54,7 +54,9 @@ conversation, cancellation, retry, or continuation contracts.
    Emit those calls immediately with the available content/locations; keep
    explicit `in_progress` argument streams buffered. Show an honest missing
    result state when a backend ends the turn without a tool result.
-5. `test: verify refined chat with local agents` — browser and real-agent
+5. `fix: keep tool labels in sentence case` — use the existing display-label
+   formatter for backend tool identifiers, preserving raw event payloads.
+6. `test: verify refined chat with local agents` — browser and real-agent
    verification, any necessary harness updates, and recorded results. Fix
    independently discovered defects in separate atomic commits.
 

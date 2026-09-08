@@ -1,3 +1,4 @@
+import { displayLabel } from '@/lib/labels';
 import type { Envelope } from '@/viewmodels/useChatViewModel';
 import { Brain, ListChecks, Terminal } from 'lucide-react';
 import ActivityDisclosure from './ActivityDisclosure';
@@ -42,7 +43,7 @@ export default function MessageActivity({
           return <MessageBubble key={envelope.seq} envelope={envelope} expanded />;
         }
         const rawTool = messageField(envelope, 'tool');
-        const tool = typeof rawTool === 'string' && rawTool ? rawTool : 'Tool call';
+        const tool = typeof rawTool === 'string' && rawTool ? displayLabel(rawTool) : 'Tool call';
         const hasInput = messageField(envelope, 'input') != null;
         const reportedElsewhere = resultCallIds.has(messageField(envelope, 'call_id'));
         return (

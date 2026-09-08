@@ -190,7 +190,7 @@ function MessageEnvelope({ envelope, expanded = false }: MessageBubbleProps) {
     const label = thinking
       ? 'Thinking'
       : toolUse
-        ? tool || 'Tool call'
+        ? displayLabel(tool) || 'Tool call'
         : kind === 'log'
           ? 'Log'
           : 'Tool result';
