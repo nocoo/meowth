@@ -82,6 +82,5 @@ test('fake claude exec → session detail renders happy fixture content + sessio
   await expect(
     messagesContainer.getByText('All done. Closing out.', { exact: false }),
   ).toBeVisible();
-  // session_ended terminal state visible as a status row.
-  await expect(page.getByTestId('status-row-session_ended')).toBeVisible();
+  await expect(messagesContainer.locator('[data-bubble-kind="session-ended"]')).toBeVisible();
 });
