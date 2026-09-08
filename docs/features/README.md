@@ -16,6 +16,7 @@
 | 08 | [`08-dashboard-theme-and-vite.md`](./08-dashboard-theme-and-vite.md) | Dashboard 统一主题、布局修整与 Vite 热更新 | 已落地；UI、HTTPS/HMR 与嵌入式构建验证通过 |
 | 09 | [`09-chat-workspace-and-ui-polish.md`](./09-chat-workspace-and-ui-polish.md) | Chat 模板整合、富文本、单域名与全站 UI 规范 | 已落地 |
 | 10 | [`10-chat-reading-and-interaction.md`](./10-chat-reading-and-interaction.md) | Chat activity disclosures, focused reading layout, and refined controls | Implemented; UI and real-agent verification passed |
+| 11 | [`11-session-chat-transcript.md`](./11-session-chat-transcript.md) | Shared Chat response controls for session detail transcripts | Planned |
 
 ## 何时新建 features 文档
 

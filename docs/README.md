@@ -49,3 +49,4 @@ Meowth 项目的编号文档目录。所有架构决策、功能设计、长任�
 | Dashboard 主题统一 / 布局修整 / Vite 热更新开发 | [`features/08`](./features/08-dashboard-theme-and-vite.md) |
 | Chat 模板 / 富文本 / 本机 agents 验证 / 全站标签规范 | [`features/09`](./features/09-chat-workspace-and-ui-polish.md) |
 | Chat activity disclosures / focused layout / agent picker | [`features/10`](./features/10-chat-reading-and-interaction.md) |
+| Shared Chat rendering / complete session transcripts | [`features/11`](./features/11-session-chat-transcript.md) |
