@@ -44,6 +44,8 @@ const results: {
   status: 'pass' | 'fail' | 'skip';
   detail: string;
   durationMs?: number;
+  toolCalls?: number;
+  toolResults?: number;
 }[] = [];
 const selected = requestedAgents?.split(',');
 
@@ -166,6 +168,7 @@ async function checkAgent(agent: Agent, base: string, bearer: string, browser: B
   const context = await browser.newContext({
     baseURL: base,
     viewport: { width: 1440, height: 1000 },
+    reducedMotion: 'reduce',
     permissions: ['clipboard-read', 'clipboard-write'],
   });
   await context.addInitScript(
@@ -245,12 +248,90 @@ async function checkAgent(agent: Agent, base: string, bearer: string, browser: B
     const request = await requestPromise;
     expect(request.postDataJSON().resume_session_id).toBe(first.backendId);
     await expect(second.article.locator('[data-bubble-kind="text"]')).toContainText(marker);
+
+    log(`${agent.type}: continuation passed; testing a real tool result`);
+    const toolMarker = `tool-fixture-${randomUUID()}`;
+    const fixturePath = join(workdir, `${agent.type}-chat-fixture.txt`);
+    writeFileSync(fixturePath, `${toolMarker} <em>Literal tool output</em>\nconst value = 42;\n`, {
+      mode: 0o600,
+    });
+    const command = `cat -- '${fixturePath.replaceAll("'", "'\\''")}'`;
+    const third = await send(
+      page,
+      agent.type,
+      [
+        'This new turn is a terminal stdout verification.',
+        `Call ${agent.type === 'hermes' ? 'the tool named terminal' : 'your terminal or shell tool'} once with exactly this command: ${command}.`,
+        'This read-only command is explicitly authorized. Do not substitute a file-reading tool, because the purpose is to verify terminal stdout.',
+        'Do not modify any file or run any other command. Reply with the first whitespace-delimited word of stdout in bold. If terminal is unavailable, say so.',
+      ].join(' '),
+      3,
+    );
+    const toolUses = third.events.filter((event) => field(event, 'kind') === 'tool-use');
+    const toolResults = third.events.filter((event) => field(event, 'kind') === 'tool-result');
+    expect(toolUses.length).toBeGreaterThan(0);
+    expect(toolResults.map((event) => field(event, 'output')).join('\n')).toContain(toolMarker);
+    await expect(third.article.locator('[data-bubble-kind="text"] strong')).toContainText(
+      toolMarker,
+    );
+    const activitySummaries = third.article.getByRole('button', { name: /^Used \d+ tools?$/ });
+    expect(await activitySummaries.count()).toBeGreaterThan(0);
+    for (const summary of await activitySummaries.all()) {
+      await expect(summary).toHaveAttribute('aria-expanded', 'false');
+    }
+    await expect(third.article.locator('[data-bubble-kind="tool-result"]')).toHaveCount(0);
+    await activitySummaries.first().scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: join(output, `${agent.type}-tools-collapsed.png`),
+      animations: 'disabled',
+    });
+    for (const summary of await activitySummaries.all()) {
+      await summary.click();
+      await expect(summary).toHaveAttribute('aria-expanded', 'true');
+    }
+    for (const detail of await third.article
+      .locator('[data-bubble-kind="tool-call"] > button')
+      .all()) {
+      await detail.click();
+      await expect(detail).toHaveAttribute('aria-expanded', 'true');
+    }
+    await third.article.evaluate(async (element) => {
+      await Promise.allSettled(
+        element.getAnimations({ subtree: true }).map((animation) => animation.finished),
+      );
+    });
+    const outputBlocks = third.article.locator('[data-bubble-kind="tool-result"]');
+    expect((await outputBlocks.allTextContents()).join('\n')).toContain(toolMarker);
+    expect((await outputBlocks.allTextContents()).join('\n')).toContain(
+      '<em>Literal tool output</em>',
+    );
+    await expect(outputBlocks.locator('em')).toHaveCount(0);
+    await expect(outputBlocks.last()).toBeVisible();
+    await outputBlocks.last().scrollIntoViewIfNeeded();
+    await expect(outputBlocks.last()).toBeInViewport({ ratio: 1 });
+    await page.screenshot({
+      path: join(output, `${agent.type}-tools-expanded.png`),
+      animations: 'disabled',
+    });
+    await page.setViewportSize({ width: 390, height: 900 });
+    await outputBlocks.last().scrollIntoViewIfNeeded();
+    await expect(outputBlocks.last()).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({
+      path: join(output, `${agent.type}-tools-mobile.png`),
+      animations: 'disabled',
+    });
     expect(browserErrors).toEqual([]);
     results.push({
       agent: agent.type,
       status: 'pass',
-      detail: 'Real Markdown, code copy, table alignment, mobile layout, and continuation verified',
+      detail:
+        'Real Markdown, code copy, table alignment, mobile layout, continuation, and collapsed tool results verified',
       durationMs: Date.now() - start,
+      toolCalls: toolUses.length,
+      toolResults: toolResults.length,
     });
     log(`${agent.type}: PASS`);
   } catch (error) {
@@ -294,13 +375,14 @@ try {
     server: {
       port: vitePort,
       strictPort: true,
-      watch: null,
+      hmr: false,
       proxy: {
         '/v1': { target: daemonBase, changeOrigin: false },
         '/healthz': { target: daemonBase, changeOrigin: false },
       },
     },
   });
+  await vite.watcher.close();
   await vite.listen();
   browser = await chromium.launch();
   const response = await fetch(`${daemonBase}/v1/agents`, {

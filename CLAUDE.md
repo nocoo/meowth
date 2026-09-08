@@ -117,7 +117,8 @@ pnpm dashboard:dev      # Vite: 127.0.0.1:37040, strictPort enabled
 
 See [feature 08](docs/features/08-dashboard-theme-and-vite.md) for routing and
 [feature 09](docs/features/09-chat-workspace-and-ui-polish.md) for Chat and
-real-agent verification.
+real-agent verification. [Feature 10](docs/features/10-chat-reading-and-interaction.md)
+records the current Chat layout, tool disclosures, and agent compatibility checks.
 
 ## 常用命令
 
