@@ -4,6 +4,53 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-09-08
+
+Dashboard Chat is now a reading workspace: Basalt chat chrome, safe
+Markdown, collapsed tool activity, and the same transcript on session
+details. Minor bump for the Chat/session surfaces and the single
+canonical development hostname.
+
+### Added
+
+- Basalt Chat workspace (`ChatHeader`, inbox, bubbles, composer) with
+  a 760px reading column and a quiet agent picker.
+- Safe Markdown (`react-markdown` + `remark-gfm`): headings, lists,
+  tables, copyable code, and escaped raw HTML.
+- Collapsed activity disclosures for thinking and tool events;
+  unmatched Hermes tool-start events stay visible without raw input.
+- Shared chat transcript renderer on session detail routes.
+- Vite HMR through `https://meowth.dev.hexly.ai` (Caddy → 37040 / 7040).
+- Refined cat brand marks across dashboard and browser surfaces.
+
+### Changed
+
+- One development hostname: `meowth.dev.hexly.ai`. The Vite-only host
+  is retired; Vite binds `127.0.0.1:37040`.
+- Dashboard colors, layout, rail, and labels follow Basalt; visible
+  copy is sentence case.
+- Setup visitor-badge card (ISO ID-card proportions, punch hole).
+- Header refresh control removed.
+
+### Fixed
+
+- Vite on IPv6 loopback made Caddy return empty 200s.
+- Setup logo flattened into an oval; overlay text on Meowth blue is
+  white in dark mode.
+- Token dialogs restore focus on close.
+- Tool labels stay in sentence case for real-agent activity.
+
+### Tests
+
+- Real-agent Chat verification (claude / codex / hermes / pi) covering
+  tool output, collapsed defaults, rich replies, and continuation.
+
+### Removed
+
+- Obsolete dashboard token stylesheet and the Vite-only hostname.
+
+[0.7.0]: https://github.com/nocoo/meowth/releases/tag/v0.7.0
+
 ## [0.6.0] — 2026-09-08
 
 Dashboard chrome now imports the published `@nocoo/basalt@2.1.0`
