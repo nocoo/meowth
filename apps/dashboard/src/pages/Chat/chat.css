@@ -57,7 +57,7 @@
 }
 
 .chat-reading-column {
-  max-width: 46rem;
+  max-width: 760px;
 }
 
 .chat-main[data-empty="true"] {

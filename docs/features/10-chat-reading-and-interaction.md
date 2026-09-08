@@ -75,7 +75,7 @@ conversation, cancellation, retry, or continuation contracts.
 ## Results
 
 The workspace now uses Basalt's Chat shell, header, composer, selection, and
-collapsible primitives with a 46rem reading column. Thinking and consecutive
+collapsible primitives with a 760px reading column. Thinking and consecutive
 tool events share a closed activity summary. Each tool's input and result can
 be opened independently; expanded state survives incoming deltas. Backend
 tool identifiers use the shared sentence-case display formatter while the
