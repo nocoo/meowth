@@ -196,6 +196,7 @@ func New(cfg Config) (*Server, error) {
 		"apple-touch-icon.png",
 		"logo-24.png",
 		"logo-80.png",
+		"logo-192.png",
 		"og-image.png",
 		"theme-init.js",
 	} {

@@ -11,8 +11,8 @@ export default function BrandMark({
 }) {
   return (
     <img
-      src="/logo-80.png"
-      srcSet="/logo-24.png 24w, /logo-80.png 80w, /logo-192.png 192w"
+      src="/logo-80.png?v=5d7236ba"
+      srcSet="/logo-24.png?v=5d7236ba 24w, /logo-80.png?v=5d7236ba 80w, /logo-192.png?v=5d7236ba 192w"
       sizes={`${size}px`}
       width={size}
       height={size}

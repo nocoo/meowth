@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Generate all logo derivatives from root logo.png.
+Generate dashboard assets from the selected brand masters.
 
-Single-source pattern: one high-res logo (2048x2048 RGBA) → multiple
-sizes for favicon, sidebar, Apple touch icon, OG image, etc.
+Root logo.png is the transparent foreground for sidebar and browser marks.
+assets/brand/icon.png and icon-rounded.png supply touch and social images.
 
 Meowth is a Vite SPA (not Next.js), so derivatives land in
 apps/dashboard/public/ where Vite exposes them at the site root
@@ -21,6 +21,8 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "logo.png"
+ICON = ROOT / "assets" / "brand" / "icon.png"
+ROUNDED = ROOT / "assets" / "brand" / "icon-rounded.png"
 PUBLIC = ROOT / "apps" / "dashboard" / "public"
 
 # Background colour for the OG card. Matches the dark "L0 background"
@@ -53,30 +55,28 @@ def main() -> None:
 
     PUBLIC.mkdir(parents=True, exist_ok=True)
 
-    # In-app references (sidebar small icon, large display, and the
-    # 192px standard PWA / share-card asset added in Phase 2
-    # redesign Stage B2 even though no live consumer ships yet).
+    # Responsive sources for BrandMark, all with transparent backgrounds.
     for size in (24, 80, 192):
         out = PUBLIC / f"logo-{size}.png"
         resize_square(img, size).save(out, "PNG")
         print(f"  {out.relative_to(ROOT)} ({size}x{size})")
 
-    # Browser favicon (multi-size ICO, 16 + 32).
-    ico_16 = resize_square(img, 16)
-    ico_32 = resize_square(img, 32)
+    # Pillow derives every ICO entry from the full-size transparent master.
     ico_path = PUBLIC / "favicon.ico"
-    ico_16.save(ico_path, format="ICO", sizes=[(16, 16), (32, 32)], append_images=[ico_32])
-    print(f"  {ico_path.relative_to(ROOT)} (16+32 multi-size)")
+    img.save(ico_path, format="ICO", sizes=[(16, 16), (32, 32), (48, 48)])
+    print(f"  {ico_path.relative_to(ROOT)} (16+32+48 multi-size)")
 
     # Apple touch icon (iOS Safari pinned shortcut).
     apple_path = PUBLIC / "apple-touch-icon.png"
-    resize_square(img, 180).save(apple_path, "PNG")
+    with Image.open(ICON) as icon:
+        resize_square(icon.convert("RGB"), 180).save(apple_path, "PNG")
     print(f"  {apple_path.relative_to(ROOT)} (180x180)")
 
     # OG card for social previews of meowth.dev.hexly.ai and the
     # GitHub repo page.
     og_path = PUBLIC / "og-image.png"
-    create_og_image(img).save(og_path, "PNG")
+    with Image.open(ROUNDED) as rounded:
+        create_og_image(rounded.convert("RGBA")).save(og_path, "PNG")
     print(f"  {og_path.relative_to(ROOT)} (1200x630)")
 
     print("\nDone.")
