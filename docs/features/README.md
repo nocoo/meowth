@@ -14,7 +14,8 @@
 | 06 | [`06-experimental-windows.md`](./06-experimental-windows.md) | 实验性 Windows native build / init / serve（非一等公民） | 已落地 |
 | 07 | [`07-dashboard-basalt-package.md`](./07-dashboard-basalt-package.md) | Dashboard 从 source-copy 迁到 `@nocoo/basalt@2.1.0` | 已落地 |
 | 08 | [`08-dashboard-theme-and-vite.md`](./08-dashboard-theme-and-vite.md) | Dashboard 统一主题、布局修整与 Vite 热更新 | 已落地；UI、HTTPS/HMR 与嵌入式构建验证通过 |
-| 09 | [`09-chat-workspace-and-ui-polish.md`](./09-chat-workspace-and-ui-polish.md) | Chat 模板整合、富文本、单域名与全站 UI 规范 | 进行中 |
+| 09 | [`09-chat-workspace-and-ui-polish.md`](./09-chat-workspace-and-ui-polish.md) | Chat 模板整合、富文本、单域名与全站 UI 规范 | 已落地 |
+| 10 | [`10-chat-reading-and-interaction.md`](./10-chat-reading-and-interaction.md) | Chat activity disclosures, focused reading layout, and refined controls | In progress |
 
 ## 何时新建 features 文档
 

@@ -81,6 +81,7 @@ Windows 支持目前仅覆盖原生构建以及核心 `init` / `serve` 流程，
 | [`docs/features/`](docs/features/README.md) | 功能迭代（如端口迁移到 Hexly Caddy） |
 | [`docs/features/08-dashboard-theme-and-vite.md`](docs/features/08-dashboard-theme-and-vite.md) | Dashboard 主题统一与 Vite 热更新开发 |
 | [`docs/features/09-chat-workspace-and-ui-polish.md`](docs/features/09-chat-workspace-and-ui-polish.md) | Chat 模板整合、富文本与全站 UI 规范 |
+| [`docs/features/10-chat-reading-and-interaction.md`](docs/features/10-chat-reading-and-interaction.md) | Chat activity disclosures and focused reading layout |
 | [`CHANGELOG.md`](CHANGELOG.md) | 版本历史 |
 
 ## License
