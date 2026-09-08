@@ -1,29 +1,27 @@
-import type { ChatTurn } from '@/viewmodels/useChatViewModel';
-import type { ChatAgentsStatus, ChatViewModel } from '@/viewmodels/useChatViewModel';
-import { fireEvent, render, screen } from '@testing-library/react';
+import type { ChatTurn, ChatViewModel } from '@/viewmodels/useChatViewModel';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ChatContent from './ChatContent';
 
 function makeVM(over: Partial<ChatViewModel> = {}): ChatViewModel {
-  const status: ChatAgentsStatus = over.agentsStatus ?? {
-    kind: 'ready',
-    agents: [{ type: 'claude', installed: true, executable: '/usr/bin/claude', version: '1.0' }],
-  };
   return {
-    agentsStatus: status,
+    agentsStatus: {
+      kind: 'ready',
+      agents: [{ type: 'claude', installed: true, executable: '/usr/bin/claude', version: '1.0' }],
+    },
     selectedAgent: 'claude',
     setSelectedAgent: vi.fn(),
+    conversations: [],
+    activeConversationId: 'conversation-1',
+    selectConversation: vi.fn(),
+    search: '',
+    setSearch: vi.fn(),
     turns: [],
     resumeSessionId: null,
-    composer: {
-      input: '',
-      setInput: vi.fn(),
-      canSend: true,
-      submit: vi.fn(),
-      cancel: vi.fn(),
-    },
-    reset: vi.fn(),
+    composer: { canSend: true, submit: vi.fn(), cancel: vi.fn() },
+    newChat: vi.fn(),
+    retry: vi.fn(),
     refresh: vi.fn(),
     ...over,
   };
@@ -31,12 +29,13 @@ function makeVM(over: Partial<ChatViewModel> = {}): ChatViewModel {
 
 function streamingTurn(): ChatTurn {
   return {
+    id: 'turn-1',
     sessionId: 'sid-1',
     backendSessionId: null,
-    userPrompt: 'hi',
+    userPrompt: 'Hello',
     envelopes: [],
     status: 'streaming',
-    startedAt: '2026-06-30T07:00:00Z',
+    startedAt: '2026-09-08T08:00:00Z',
     endedAt: null,
   };
 }
@@ -49,80 +48,162 @@ function renderContent(vm: ChatViewModel) {
   );
 }
 
-describe('ChatContent', () => {
-  it('zero installed agents → renders "No agents installed" empty state', () => {
-    const vm = makeVM({
-      agentsStatus: {
-        kind: 'ready',
-        agents: [{ type: 'pi', installed: false, executable: '', version: '' }],
-      },
-      selectedAgent: null,
-    });
-    renderContent(vm);
+const originalWidth = window.innerWidth;
+beforeEach(() => {
+  window.innerWidth = 1440;
+});
+afterEach(() => {
+  window.innerWidth = originalWidth;
+  vi.restoreAllMocks();
+});
+
+describe('Chat workspace', () => {
+  it('links to agent setup when no agents are installed', () => {
+    renderContent(makeVM({ agentsStatus: { kind: 'ready', agents: [] }, selectedAgent: null }));
     expect(screen.getByText('No agents installed')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Backend agent')).toBeNull();
+    expect(screen.getByRole('link', { name: 'View agents' })).toHaveAttribute('href', '/agents');
+    expect(screen.queryByRole('textbox', { name: 'Message' })).toBeNull();
   });
 
-  it('ready with empty turns → picker + empty hint + composer Send button', () => {
-    const vm = makeVM();
-    renderContent(vm);
+  it('shows the inbox, conversation header, and template composer', () => {
+    renderContent(makeVM());
+    expect(screen.getByRole('navigation', { name: 'Conversations' })).toBeInTheDocument();
     expect(screen.getByLabelText('Backend agent')).toBeInTheDocument();
     expect(screen.getByText('Start a conversation.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
-    const columns = document.querySelectorAll('[data-slot="chat-column"]');
-    expect(columns.length).toBeGreaterThan(0);
-    for (const column of columns) {
-      expect(column.className).toMatch(/max-w-3xl/);
-    }
-  });
-
-  it('ready with a streaming turn → Composer flips to Cancel + Textarea disabled', () => {
-    const vm = makeVM({
-      turns: [streamingTurn()],
-      composer: {
-        input: '',
-        setInput: vi.fn(),
-        canSend: false,
-        submit: vi.fn(),
-        cancel: vi.fn(),
-      },
-    });
-    renderContent(vm);
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
-    expect(screen.getByLabelText('Message')).toBeDisabled();
-  });
-
-  it('ready + completed turn + canSend=false → Send is disabled (input empty)', () => {
-    const completedTurn: ChatTurn = {
-      ...streamingTurn(),
-      status: 'completed',
-      endedAt: '2026-06-30T07:00:05Z',
-    };
-    const vm = makeVM({
-      turns: [completedTurn],
-      composer: {
-        input: '',
-        setInput: vi.fn(),
-        canSend: false,
-        submit: vi.fn(),
-        cancel: vi.fn(),
-      },
-    });
-    renderContent(vm);
+    expect(screen.getByRole('log', { name: 'Conversation' })).toHaveAttribute('aria-busy', 'false');
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Message' })).toBeEnabled();
   });
 
-  it('non-ready vm (defensive null) → renders nothing', () => {
-    const vm = makeVM({ agentsStatus: { kind: 'loading' } });
-    const { container } = renderContent(vm);
+  it('wires new chat, search, and conversation selection to the workspace', () => {
+    const vm = makeVM({
+      conversations: [
+        {
+          id: 'older',
+          agent: 'claude',
+          title: 'Previous question',
+          status: 'completed',
+          updatedAt: '2026-09-08',
+          turnCount: 1,
+        },
+      ],
+    });
+    renderContent(vm);
+    fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+    expect(vm.newChat).toHaveBeenCalledTimes(1);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search conversations' }), {
+      target: { value: 'Previous' },
+    });
+    expect(vm.setSearch).toHaveBeenCalledWith('Previous');
+    fireEvent.click(screen.getByRole('button', { name: /Previous question/ }));
+    expect(vm.selectConversation).toHaveBeenCalledWith('older');
+  });
+
+  it('shows a searchable conversation drawer on compact screens', () => {
+    window.innerWidth = 390;
+    renderContent(makeVM({ search: 'missing' }));
+    expect(screen.queryByRole('navigation', { name: 'Conversations' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show conversations' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('textbox', { name: 'Search conversations' })).toHaveValue(
+      'missing',
+    );
+    expect(within(drawer).getByText('No conversations found.')).toBeInTheDocument();
+  });
+
+  it('hides controls until availability has loaded', () => {
+    const { container } = renderContent(makeVM({ agentsStatus: { kind: 'loading' } }));
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('starts a fresh conversation through the existing reset action', () => {
-    const reset = vi.fn();
-    renderContent(makeVM({ reset, turns: [streamingTurn()] }));
-    fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
-    expect(reset).toHaveBeenCalledTimes(1);
+  it('preserves the reader position until Jump to latest or a conversation switch', () => {
+    const vm = makeVM({ turns: [streamingTurn()] });
+    const { rerender } = renderContent(vm);
+    const log = screen.getByRole('log');
+    Object.defineProperties(log, {
+      scrollHeight: { configurable: true, value: 1200 },
+      clientHeight: { configurable: true, value: 400 },
+    });
+    const scrollTo = vi.fn();
+    log.scrollTo = scrollTo;
+    fireEvent.scroll(log, { target: { scrollTop: 100 } });
+    rerender(
+      <MemoryRouter>
+        <ChatContent vm={{ ...vm, turns: [...vm.turns] }} />
+      </MemoryRouter>,
+    );
+    expect(log.scrollTop).toBe(100);
+    fireEvent.click(screen.getByRole('button', { name: 'Jump to latest' }));
+    expect(scrollTo).toHaveBeenCalledWith({ top: 1200, behavior: 'instant' });
+    expect(screen.queryByRole('button', { name: 'Jump to latest' })).toBeNull();
+    fireEvent.scroll(log, { target: { scrollTop: 800 } });
+    rerender(
+      <MemoryRouter>
+        <ChatContent vm={{ ...vm, turns: [...vm.turns] }} />
+      </MemoryRouter>,
+    );
+    expect(log.scrollTop).toBe(1200);
+    fireEvent.scroll(log, { target: { scrollTop: 200 } });
+    rerender(
+      <MemoryRouter>
+        <ChatContent vm={{ ...vm, activeConversationId: 'other', turns: [] }} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('button', { name: 'Jump to latest' })).toBeNull();
+    expect(log.scrollTop).toBe(1200);
+  });
+});
+
+describe('Basalt composer integration', () => {
+  it('sends trimmed text with Enter and clears the draft', () => {
+    const vm = makeVM();
+    renderContent(vm);
+    const field = screen.getByRole('textbox', { name: 'Message' });
+    fireEvent.change(field, { target: { value: '  Hello\nworld  ' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(vm.composer.submit).toHaveBeenCalledWith('Hello\nworld');
+    expect(field).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+  });
+
+  it('ignores whitespace, Shift+Enter, and Enter during IME composition', () => {
+    const vm = makeVM();
+    renderContent(vm);
+    const field = screen.getByRole('textbox', { name: 'Message' });
+    fireEvent.change(field, { target: { value: ' \n ' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    fireEvent.change(field, { target: { value: '你好' } });
+    fireEvent.keyDown(field, { key: 'Enter', shiftKey: true });
+    fireEvent.compositionStart(field);
+    fireEvent.keyDown(field, { key: 'Enter' });
+    fireEvent.compositionEnd(field);
+    fireEvent.keyDown(field, { key: 'Enter', isComposing: true });
+    expect(vm.composer.submit).not.toHaveBeenCalled();
+    expect(field).toHaveValue('你好');
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    expect(vm.composer.submit).toHaveBeenCalledWith('你好');
+  });
+
+  it('allows drafting the next message while streaming and wires Stop', () => {
+    const vm = makeVM({ turns: [streamingTurn()] });
+    renderContent(vm);
+    const field = screen.getByRole('textbox', { name: 'Message' });
+    expect(field).toBeEnabled();
+    expect(screen.getByRole('log')).toHaveAttribute('aria-busy', 'true');
+    fireEvent.change(field, { target: { value: 'Next question' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(vm.composer.submit).not.toHaveBeenCalled();
+    expect(field).toHaveValue('Next question');
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+    expect(vm.composer.cancel).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+  });
+
+  it('disables sending when the selected agent is unavailable', () => {
+    const vm = makeVM();
+    vm.composer.canSend = false;
+    renderContent(vm);
+    expect(screen.getByRole('textbox', { name: 'Message' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
   });
 });

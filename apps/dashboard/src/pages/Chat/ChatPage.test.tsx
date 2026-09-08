@@ -1,5 +1,5 @@
 import type { ChatViewModel } from '@/viewmodels/useChatViewModel';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,16 +24,20 @@ function makeVM(over: Partial<ChatViewModel>): ChatViewModel {
     agentsStatus: { kind: 'loading' },
     selectedAgent: null,
     setSelectedAgent: vi.fn(),
+    conversations: [],
+    activeConversationId: null,
+    selectConversation: vi.fn(),
+    search: '',
+    setSearch: vi.fn(),
     turns: [],
     resumeSessionId: null,
     composer: {
-      input: '',
-      setInput: vi.fn(),
       canSend: false,
       submit: vi.fn(),
       cancel: vi.fn(),
     },
-    reset: vi.fn(),
+    newChat: vi.fn(),
+    retry: vi.fn(),
     refresh: vi.fn(),
     ...over,
   };
@@ -71,6 +75,8 @@ describe('ChatPage', () => {
     );
     expect(screen.getByText('Chat unavailable')).toBeInTheDocument();
     expect(screen.getByText('Daemon unreachable.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry connection' }));
+    expect(vmRef.current.refresh).toHaveBeenCalledTimes(1);
   });
 
   it('ready → renders ChatContent', async () => {
@@ -83,8 +89,6 @@ describe('ChatPage', () => {
       },
       selectedAgent: 'claude',
       composer: {
-        input: '',
-        setInput: vi.fn(),
         canSend: false,
         submit: vi.fn(),
         cancel: vi.fn(),

@@ -1,7 +1,7 @@
 import type { ChatTurn, Envelope } from '@/viewmodels/useChatViewModel';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import MessageList from './MessageList';
 
 function makeEnvelope(over: Partial<Envelope> & Pick<Envelope, 'type'>): Envelope {
@@ -17,6 +17,7 @@ function makeEnvelope(over: Partial<Envelope> & Pick<Envelope, 'type'>): Envelop
 
 function makeTurn(over: Partial<ChatTurn> = {}): ChatTurn {
   return {
+    id: crypto.randomUUID(),
     sessionId: null,
     backendSessionId: null,
     userPrompt: 'hi',
@@ -28,10 +29,10 @@ function makeTurn(over: Partial<ChatTurn> = {}): ChatTurn {
   };
 }
 
-function renderList(turns: readonly ChatTurn[]) {
+function renderList(turns: readonly ChatTurn[], onRetry = vi.fn()) {
   return render(
     <MemoryRouter>
-      <MessageList turns={turns} />
+      <MessageList turns={turns} agentName="Claude" onRetry={onRetry} />
     </MemoryRouter>,
   );
 }
@@ -94,7 +95,7 @@ describe('MessageList', () => {
     const banner = container.querySelector('[data-slot="chat-cap-banner"]') as HTMLElement;
     expect(banner).toBeTruthy();
     expect(banner).toHaveAttribute('role', 'alert');
-    expect(banner).toHaveTextContent('Cumulative envelope cap');
+    expect(banner).toHaveTextContent('This response is large.');
     const link = screen.getByRole('link', { name: 'View session details' });
     expect(link).toHaveAttribute('href', '/sessions/sid-cap');
     // 1000 kept raw envelopes: 500 text (each isolated by a tool-use
@@ -129,8 +130,51 @@ describe('MessageList', () => {
     const turn = makeTurn({ sessionId: null, envelopes });
     renderList([turn]);
     expect(screen.queryByRole('link', { name: 'View session details' })).toBeNull();
-    expect(screen.getByText(/Cumulative envelope cap/)).toBeInTheDocument();
+    expect(screen.getByText(/This response is large/)).toBeInTheDocument();
     expect(screen.getByText('View session details')).toBeInTheDocument();
+  });
+
+  it('shows terminal metadata once and offers copy and session details', () => {
+    const turn = makeTurn({
+      sessionId: 'sid-1',
+      envelopes: [
+        makeEnvelope({
+          type: 'message',
+          payload: { kind: 'text', content: '**Formatted** response' },
+        }),
+        makeEnvelope({ type: 'usage', seq: 1, payload: { input_tokens: 12, output_tokens: 8 } }),
+        makeEnvelope({
+          type: 'session_ended',
+          seq: 2,
+          payload: { status: 'completed', duration_ms: 500 },
+        }),
+      ],
+    });
+    const { container } = renderList([turn]);
+    expect(screen.getByText('Formatted').tagName).toBe('STRONG');
+    expect(screen.getByRole('button', { name: 'Copy response' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Session details' })).toHaveAttribute(
+      'href',
+      '/sessions/sid-1',
+    );
+    expect(container.querySelector('[data-slot="chat-turn-state"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry response' })).toBeNull();
+  });
+
+  it('shows local error text and only retries the latest unsuccessful turn', () => {
+    const retry = vi.fn();
+    renderList(
+      [
+        makeTurn({ status: 'network-aborted', error: 'Lost connection' }),
+        makeTurn({ status: 'aborted-by-client' }),
+      ],
+      retry,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Lost connection');
+    expect(screen.getByText('Connection lost')).toBeInTheDocument();
+    expect(screen.getByText('Stopped')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry response' }));
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 });
 

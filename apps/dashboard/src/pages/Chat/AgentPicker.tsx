@@ -46,7 +46,7 @@ export default function AgentPicker({
       }}
       disabled={disabled}
     >
-      <SelectTrigger aria-label="Backend agent" className="w-40">
+      <SelectTrigger aria-label="Backend agent" className="w-32 sm:w-36">
         <SelectValue placeholder="Select an agent" />
       </SelectTrigger>
       <SelectContent>

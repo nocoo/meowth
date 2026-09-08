@@ -14,6 +14,9 @@ overrides:
   brace-expansion@2: 2.1.4
   brace-expansion@5: 5.0.9
 
+patchedDependencies:
+  '@nocoo/basalt@2.1.0': 9969f5a78133bf58caec9b860a4e8993fccc5f829305522500c3c56eb819d0b2
+
 importers:
 
   .:
@@ -44,7 +47,7 @@ importers:
         version: link:../../packages/shared
       '@nocoo/basalt':
         specifier: 2.1.0
-        version: 2.1.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(lucide-react@1.21.0(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.1)
+        version: 2.1.0(patch_hash=9969f5a78133bf58caec9b860a4e8993fccc5f829305522500c3c56eb819d0b2)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(lucide-react@1.21.0(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.1)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3580,7 +3583,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@nocoo/basalt@2.1.0(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(lucide-react@1.21.0(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.1)':
+  '@nocoo/basalt@2.1.0(patch_hash=9969f5a78133bf58caec9b860a4e8993fccc5f829305522500c3c56eb819d0b2)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(lucide-react@1.21.0(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.1)':
     dependencies:
       '@radix-ui/react-accordion': 1.2.20(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@radix-ui/react-alert-dialog': 1.1.23(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

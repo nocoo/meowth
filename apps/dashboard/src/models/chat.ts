@@ -1,4 +1,4 @@
-import type { Envelope, ExecRequest } from './types';
+import type { Agent, Envelope, ExecRequest } from './types';
 
 // docs/features/03 commit #2 — Chat module pure types + helpers.
 //
@@ -100,6 +100,8 @@ function isDaemonTerminalStatus(value: unknown): value is DaemonTerminalStatus {
  * (see `ChatTurnStatus`).
  */
 export interface ChatTurn {
+  id: string;
+  error?: string;
   /**
    * daemon-side session id (from `session_started.session_id`).
    * `null` for the tiny window between `submit()` and the first
@@ -127,6 +129,52 @@ export interface ChatTurn {
   startedAt: string;
   /** ISO timestamp captured when `status` leaves `streaming`. */
   endedAt: string | null;
+}
+
+export interface ChatConversation {
+  id: string;
+  agent: Agent['type'];
+  turns: readonly ChatTurn[];
+}
+
+export interface ChatConversationSummary {
+  id: string;
+  agent: Agent['type'];
+  title: string;
+  status: ChatTurnStatus;
+  updatedAt: string;
+  turnCount: number;
+}
+
+export function conversationSummaries(
+  conversations: readonly ChatConversation[],
+): ChatConversationSummary[] {
+  return conversations
+    .flatMap((conversation) => {
+      const first = conversation.turns[0];
+      const last = conversation.turns.at(-1);
+      if (!first || !last) return [];
+      const title = first.userPrompt.trim().replace(/\s+/g, ' ');
+      return [
+        {
+          id: conversation.id,
+          agent: conversation.agent,
+          title,
+          status: last.status,
+          updatedAt: last.endedAt ?? last.startedAt,
+          turnCount: conversation.turns.length,
+        },
+      ];
+    })
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+}
+
+export function latestResumeSessionId(turns: readonly ChatTurn[]): string | null {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const id = turns[index]?.backendSessionId;
+    if (id) return id;
+  }
+  return null;
 }
 
 /** Input to `buildExecRequest` — keeps the call site explicit. */

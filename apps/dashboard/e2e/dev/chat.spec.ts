@@ -63,5 +63,5 @@ test('chat: composer flips back to Send after session_ended', async ({ page }) =
     timeout: 10_000,
   });
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Stop' })).toHaveCount(0);
 });

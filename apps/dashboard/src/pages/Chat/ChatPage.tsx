@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import useChatViewModel from '@/viewmodels/useChatViewModel';
 import { AlertCircle } from 'lucide-react';
@@ -25,6 +26,11 @@ export default function ChatPage() {
             title="Chat unavailable"
             description={vm.agentsStatus.message}
             tone="error"
+            action={
+              <Button size="xs" variant="outline" onClick={vm.refresh}>
+                Retry connection
+              </Button>
+            }
           />
         </div>
       ) : (

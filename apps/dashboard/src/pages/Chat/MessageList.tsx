@@ -1,99 +1,171 @@
+import CopyButton from '@/components/CopyButton';
 import MessageText from '@/components/MessageText';
-import type { ChatTurn } from '@/viewmodels/useChatViewModel';
+import { Button } from '@/components/ui/button';
+import { Notice } from '@/components/ui/notice';
+import { chatStatusLabel } from '@/lib/labels';
+import type { ChatTurn, Envelope } from '@/viewmodels/useChatViewModel';
+import { ChatBubble } from '@nocoo/basalt/components/chat-bubble';
+import { ArrowUpRight, Bot, MessageSquare, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router';
 import MessageBubble from './MessageBubble';
 import { groupEnvelopes } from './messageGroups';
 
-// docs/features/03 §5.3 — single-turn envelope cap. V1 stops
-// appending after 1000 envelopes per turn and surfaces a banner;
-// no virtual scroll, no infinite list (the doc is explicit).
 const MAX_ENVELOPES_PER_TURN = 1000;
 
 export interface MessageListProps {
   turns: readonly ChatTurn[];
+  agentName: string;
+  onRetry(): void;
 }
 
-export default function MessageList({ turns }: MessageListProps) {
+function textOf(envelope: Envelope): string {
+  const payload = envelope.payload as { kind?: string; content?: string };
+  return envelope.type === 'message' &&
+    payload.kind === 'text' &&
+    typeof payload.content === 'string'
+    ? payload.content
+    : '';
+}
+
+export default function MessageList({ turns, agentName, onRetry }: MessageListProps) {
   if (turns.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-basalt-card bg-basalt-secondary text-basalt-muted-foreground ring-1 ring-basalt-border/50">
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-3 pb-10 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-basalt-primary/10 text-basalt-primary ring-1 ring-basalt-primary/10">
           <MessageSquare className="h-6 w-6" strokeWidth={1.5} aria-hidden="true" />
         </span>
-        <p className="text-base font-medium" data-slot="chat-empty-hint">
-          Start a conversation.
-        </p>
-        <p className="max-w-sm text-sm leading-6 text-basalt-muted-foreground">
-          Choose a local agent and send a message to get started.
-        </p>
+        <div className="space-y-2">
+          <h3
+            className="text-xl font-semibold tracking-tight sm:text-2xl"
+            data-slot="chat-empty-hint"
+          >
+            Start a conversation.
+          </h3>
+          <p className="max-w-sm text-sm leading-6 text-basalt-muted-foreground">
+            Ask {agentName} a question, explore an idea, or work through a code snippet.
+          </p>
+        </div>
+        <div className="mt-2 flex flex-wrap justify-center gap-2 text-xs text-basalt-muted-foreground">
+          <span className="rounded-full border border-basalt-border/70 px-3 py-1.5">
+            Code & explanations
+          </span>
+          <span className="rounded-full border border-basalt-border/70 px-3 py-1.5">
+            Markdown & tables
+          </span>
+          <span className="rounded-full border border-basalt-border/70 px-3 py-1.5">
+            Contextual follow-ups
+          </span>
+        </div>
       </div>
     );
   }
+
   return (
-    <div className="mx-auto w-full space-y-6">
-      {turns.map((turn, ti) => {
+    <div className="w-full space-y-8">
+      {turns.map((turn, index) => {
         const overflow = turn.envelopes.length > MAX_ENVELOPES_PER_TURN;
-        // Apply the §5.3 hard cap on the RAW envelopes first, then
-        // coalesce consecutive text for rendering (§5.1). The cap
-        // counts raw envelopes so a chatty per-token backend can't
-        // dodge it by merging; grouping only changes how the capped
-        // window is displayed.
-        const capped = overflow ? turn.envelopes.slice(0, MAX_ENVELOPES_PER_TURN) : turn.envelopes;
-        const groups = groupEnvelopes(capped);
-        // §4.4 streaming state: while the LAST turn is streaming but
-        // no visible assistant content has arrived yet, show a
-        // restrained pending cursor. `groups` is already the
-        // visible-content projection (groupEnvelopes drops
-        // session_started / heartbeat / message.kind=status), so an
-        // empty groups list during streaming is exactly "submitted,
-        // nothing rendered yet" — the cold-start window where slow
-        // backends (copilot ~10s, hermes ~70s) would otherwise look
-        // dead. The first text/tool/thinking/error/log envelope
-        // populates `groups` and the pending bubble disappears.
-        //
-        // The `ti === turns.length - 1` guard enforces the render
-        // contract locally: only the final turn can show pending,
-        // even if an earlier (defensively) still-streaming turn
-        // somehow reaches the list — the viewmodel keeps only the
-        // last turn streaming, but MessageList does not rely on that.
-        const isLastTurn = ti === turns.length - 1;
-        const showPending = isLastTurn && turn.status === 'streaming' && groups.length === 0;
+        const groups = groupEnvelopes(turn.envelopes.slice(0, MAX_ENVELOPES_PER_TURN));
+        const content = groups.filter(
+          (envelope) => envelope.type !== 'session_ended' && envelope.type !== 'usage',
+        );
+        const metadata = groups.filter(
+          (envelope) => envelope.type === 'session_ended' || envelope.type === 'usage',
+        );
+        const pending =
+          turn.status === 'streaming' && index === turns.length - 1 && content.length === 0;
+        const responseText = groups.map(textOf).filter(Boolean).join('\n\n');
+        const canRetry =
+          index === turns.length - 1 && turn.status !== 'streaming' && turn.status !== 'completed';
         return (
-          <article
-            // The turn list is append-only within a chat; the
-            // index is a stable identifier for the turn's
-            // position. Slicing would shift indices but Chat V1
-            // never deletes a turn mid-list.
-            // biome-ignore lint/suspicious/noArrayIndexKey: turn list is append-only
-            key={ti}
-            aria-label={`Turn ${ti + 1}`}
-            className="space-y-4"
-          >
-            <div className="flex justify-end">
-              <LayerCard
-                padding="none"
-                outlined
-                className="max-w-[min(36rem,85%)] rounded-2xl px-4 py-3"
-              >
-                <MessageText
-                  content={turn.userPrompt}
-                  className="font-basalt-sans text-[15px] leading-6"
-                />
-              </LayerCard>
-            </div>
-            {overflow ? <CapBanner sessionId={turn.sessionId} /> : null}
-            {groups.map((env, i) => (
-              <MessageBubble
-                // Envelope `seq` is monotonic per session; the
-                // index suffix only matters for the single
-                // zero-seq case (session_started at seq=0 is
-                // unique anyway) and for merged text runs that
-                // reuse their first envelope's seq.
-                key={`${env.seq}-${i}`}
-                envelope={env}
+          <article key={turn.id} aria-label={`Turn ${index + 1}`} className="min-w-0 space-y-5">
+            <ChatBubble variant="user" className="max-w-[85%] px-4 py-3 text-[15px] leading-6">
+              <MessageText
+                content={turn.userPrompt}
+                className="font-basalt-sans text-[15px] leading-6"
               />
-            ))}
-            {showPending ? <PendingBubble /> : null}
+            </ChatBubble>
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2 px-1 text-xs font-medium text-basalt-muted-foreground">
+                <Bot className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                {agentName}
+              </div>
+              {content.length > 0 || pending ? (
+                <ChatBubble
+                  variant="assistant"
+                  streaming={turn.status === 'streaming' && !pending}
+                  className="min-w-0 w-full max-w-full px-4 py-3.5 sm:px-5"
+                >
+                  <div className="min-w-0 space-y-4">
+                    {content.map((envelope) => (
+                      <MessageBubble key={envelope.seq} envelope={envelope} />
+                    ))}
+                    {pending ? (
+                      <div
+                        data-bubble-kind="streaming-pending"
+                        aria-label="Waiting for response"
+                        className="flex items-center gap-2 text-sm text-basalt-muted-foreground"
+                      >
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-basalt-primary motion-reduce:animate-none" />
+                        {agentName} is thinking…
+                      </div>
+                    ) : null}
+                  </div>
+                </ChatBubble>
+              ) : null}
+              {overflow ? <CapBanner sessionId={turn.sessionId} /> : null}
+              {turn.error ? (
+                <Notice variant="destructive" role="alert">
+                  <MessageText content={turn.error} className="font-basalt-sans text-sm" />
+                </Notice>
+              ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  {metadata.map((envelope) => (
+                    <MessageBubble key={envelope.seq} envelope={envelope} />
+                  ))}
+                  {turn.status !== 'streaming' &&
+                  !metadata.some((envelope) => envelope.type === 'session_ended') ? (
+                    <span
+                      data-slot="chat-turn-state"
+                      className="text-xs text-basalt-muted-foreground"
+                    >
+                      {chatStatusLabel(turn.status)}
+                    </span>
+                  ) : null}
+                </div>
+                {turn.status !== 'streaming' ? (
+                  <div className="flex flex-wrap items-center gap-1">
+                    {responseText ? <CopyButton text={responseText} label="Copy response" /> : null}
+                    {canRetry ? (
+                      <Button variant="ghost" size="xs" onClick={onRetry}>
+                        <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
+                        Retry response
+                      </Button>
+                    ) : null}
+                    {turn.sessionId ? (
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-basalt-muted-foreground"
+                      >
+                        <Link
+                          to={`/sessions/${turn.sessionId}`}
+                          aria-label="Session details"
+                          title="Session details"
+                        >
+                          <ArrowUpRight
+                            className="h-3.5 w-3.5"
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          />
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </article>
         );
       })}
@@ -101,39 +173,18 @@ export default function MessageList({ turns }: MessageListProps) {
   );
 }
 
-function PendingBubble() {
+function CapBanner({ sessionId }: { sessionId: string | null }) {
   return (
-    <div
-      data-bubble-kind="streaming-pending"
-      className="text-basalt-muted-foreground text-[15px] leading-7"
-      aria-label="Waiting for response"
-    >
-      <span className="inline-block animate-pulse">…</span>
-    </div>
-  );
-}
-
-interface CapBannerProps {
-  sessionId: string | null;
-}
-
-function CapBanner({ sessionId }: CapBannerProps) {
-  return (
-    <div
-      role="alert"
-      data-slot="chat-cap-banner"
-      className="rounded-basalt-widget border border-basalt-warning/20 bg-basalt-warning-tint p-3 text-sm text-basalt-warning"
-    >
-      Cumulative envelope cap (1000) reached;{' '}
+    <Notice variant="warning" role="alert" data-slot="chat-cap-banner">
+      This response is large.{' '}
       {sessionId !== null ? (
         <Link to={`/sessions/${sessionId}`} className="underline">
           View session details
         </Link>
       ) : (
         <span>View session details</span>
-      )}
-    </div>
+      )}{' '}
+      for the full output.
+    </Notice>
   );
 }
-import { LayerCard } from '@nocoo/basalt';
-import { MessageSquare } from 'lucide-react';

@@ -20,6 +20,8 @@
    header, a readable message column, and a fixed composer. Conversation state,
    execution, retries, cancellation, and backend resume IDs stay in the
    viewmodel/model layers. Preserve messages when switching conversations.
+   The workspace is in memory while Chat is open; daemon runs remain saved
+   in Sessions. The conversation drawer is used below 1100px.
 5. Render assistant Markdown with `react-markdown` and `remark-gfm`, using
    Basalt code surfaces and controls. Support headings, emphasis, fenced and
    inline code, lists, quotes, tables with column alignment, and safe links.
@@ -100,4 +102,22 @@ actual reason; do not count synthetic responses as live-agent verification.
   passed. OSV reported no vulnerabilities across the 96 added package versions.
   The existing OpenAPI generator's TypeScript 5 peer range still disagrees with
   the project's installed TypeScript 7; the Markdown packages have no peer gap.
-- Chat workspace implementation pending.
+- Chat now uses all four Basalt chat components with a searchable conversation
+  list, compact drawer, bounded message column, and fixed composer. Switching
+  conversations preserves their agent, messages, and terminal resume IDs;
+  active streams continue in their owning conversation. Stop is immediate,
+  stale responses cannot overwrite a retry, and transport errors remain
+  distinguishable from daemon terminal statuses.
+- A browser regression exposed a Basalt 2.1.0 composer bug: stopping could
+  change the same DOM button to `type=submit` before click activation ended,
+  sending the next draft. `patches/@nocoo__basalt@2.1.0.patch` prevents the
+  stop click's default action. The fix is installed through pnpm's locked
+  patch mechanism, without copying the composer into the application.
+- All dashboard/shared unit tests and the per-file coverage gate passed;
+  workspace browser checks (7) cover context switching, stop with a pending
+  draft, retry, independent scrolling, and 320/390/1024px drawers. TypeScript,
+  Biome, dependency boundaries, source scan, D1 isolation, and production build
+  passed. Chat is loaded on demand as a separate approximately 212 kB JS
+  chunk (65 kB gzip); the existing main bundle still exceeds Vite's 500 kB
+  advisory threshold.
+- Real-agent verification harness and final results pending.
