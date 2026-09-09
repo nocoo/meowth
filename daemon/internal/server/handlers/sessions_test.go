@@ -301,6 +301,9 @@ func TestAgentsHandlerListsAllSupportedTypes(t *testing.T) {
 		if a["installed"] != true {
 			t.Fatalf("fake mode all installed=true; got %v", a)
 		}
+		if profiles, ok := a["profiles"].([]any); !ok || len(profiles) != 0 {
+			t.Fatalf("fake discovery must not read host profiles: %v", a["profiles"])
+		}
 	}
 }
 

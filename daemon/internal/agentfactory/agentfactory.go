@@ -45,6 +45,7 @@ type AgentInfo struct {
 	Installed  bool
 	Executable string
 	Version    string
+	Profiles   []AgentProfile
 }
 
 // Factory describes the daemon-side knowledge of available agent
@@ -85,6 +86,7 @@ type ProductionFactory struct {
 	// VersionProbeTimeout caps how long DetectVersion runs per
 	// agent so GET /v1/agents stays fast even when a CLI hangs.
 	VersionProbeTimeout time.Duration
+	HermesProfiles      func() []AgentProfile
 	// Resolver is the executable-path resolver. Defaults to
 	// exec.LookPath. Tests override to assert which path the
 	// factory hands to agent.Config.
@@ -181,6 +183,13 @@ func (f *ProductionFactory) Agents() []AgentInfo {
 			info.Version = strings.TrimSpace(v)
 		}
 		cancel()
+		if t == "hermes" {
+			probeProfiles := f.HermesProfiles
+			if probeProfiles == nil {
+				probeProfiles = discoverHermesProfiles
+			}
+			info.Profiles = probeProfiles()
+		}
 		out = append(out, info)
 	}
 	return out

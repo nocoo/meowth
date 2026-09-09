@@ -124,6 +124,8 @@ paths:
         (claude, copilot, codex, hermes, pi). `installed` reflects
         `exec.LookPath` success; `version` is the CLI version when
         the probe succeeds, otherwise empty.
+        `profiles` lists read-only Hermes profile names (default first,
+        then sorted named profiles); it is empty for other backends.
       security:
         - bearerAuth: []
       responses:
@@ -460,6 +462,18 @@ components:
           type: string
         version:
           type: string
+
+        profiles:
+          type: array
+          description: Existing Hermes profile identities; empty for other backends.
+          items:
+            type: object
+            required: [name]
+            additionalProperties: false
+            properties:
+              name:
+                type: string
+                pattern: '^[a-z0-9][a-z0-9_-]{0,63}$'
 
     AgentListResponse:
       type: object

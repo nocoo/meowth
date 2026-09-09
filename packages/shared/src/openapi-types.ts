@@ -81,6 +81,8 @@ export interface paths {
      *     (claude, copilot, codex, hermes, pi). `installed` reflects
      *     `exec.LookPath` success; `version` is the CLI version when
      *     the probe succeeds, otherwise empty.
+     *     `profiles` lists read-only Hermes profile names (default first,
+     *     then sorted named profiles); it is empty for other backends.
      */
     get: operations['listAgents'];
     put?: never;
@@ -244,14 +246,21 @@ export interface components {
       installed: boolean;
       executable: string;
       version: string;
+      /** @description Existing Hermes profile identities; empty for other backends. */
+      profiles?: {
+        name: string;
+      }[];
     };
     AgentListResponse: {
       agents: components['schemas']['Agent'][];
     };
     ExecRequest: {
+      /** @description At least one non-whitespace character after trim. No field-level upper bound; the request is still subject to the 1 MiB HTTP body limit. Model context limits are backend-owned. */
       prompt: string;
+      /** @description Absolute path to an existing directory when set. */
       cwd?: string;
       model?: string;
+      /** @description Optional system text. Honored by claude/codex/pi; ignored by hermes and copilot. Shares the 1 MiB body budget with prompt. */
       system_prompt?: string;
       thread_name?: string;
       max_turns?: number;

@@ -252,15 +252,20 @@ func (h *SessionsHandler) CancelHandler(w http.ResponseWriter, r *http.Request) 
 // List handles GET /v1/agents.
 func (h *AgentsHandler) List(w http.ResponseWriter, r *http.Request) {
 	type wire struct {
-		Type       string `json:"type"`
-		Installed  bool   `json:"installed"`
-		Executable string `json:"executable"`
-		Version    string `json:"version"`
+		Type       string                      `json:"type"`
+		Installed  bool                        `json:"installed"`
+		Executable string                      `json:"executable"`
+		Version    string                      `json:"version"`
+		Profiles   []agentfactory.AgentProfile `json:"profiles"`
 	}
 	rows := h.Factory.Agents()
 	out := make([]wire, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, wire{Type: r.Type, Installed: r.Installed, Executable: r.Executable, Version: r.Version})
+		profiles := r.Profiles
+		if profiles == nil {
+			profiles = []agentfactory.AgentProfile{}
+		}
+		out = append(out, wire{Type: r.Type, Installed: r.Installed, Executable: r.Executable, Version: r.Version, Profiles: profiles})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"agents": out})
 }

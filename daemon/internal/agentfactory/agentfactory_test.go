@@ -56,6 +56,9 @@ func TestFakeFactoryAgentsReportsInstalledForAllTypes(t *testing.T) {
 	if f.Mode() != "fake" {
 		t.Fatalf("mode = %q", f.Mode())
 	}
+	if got, want := len(f.SupportedTypes()), len(agent.SupportedTypes); got != want {
+		t.Fatalf("supported types = %d, want %d", got, want)
+	}
 	for _, info := range f.Agents() {
 		if !info.Installed {
 			t.Fatalf("fake info for %q not installed", info.Type)
