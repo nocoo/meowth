@@ -16,6 +16,10 @@ package.
   uses `patches/@nocoo__basalt@2.1.2.patch` so a stop cannot submit
   the next draft.
 
+### Fixed
+
+- G2: `js-yaml` override 4.3.1 → 4.3.2 (`GHSA-2883-xcg3-v3hh`).
+
 [0.7.1]: https://github.com/nocoo/meowth/releases/tag/v0.7.1
 
 ## [0.7.0] — 2026-09-08
