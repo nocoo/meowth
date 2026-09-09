@@ -6,19 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.1] — 2026-09-09
 
-Patch release: pin `@nocoo/basalt` to 2.1.2 for solid-color badge
-contrast, and keep the Chat composer stop-click patch on the new
-package.
+Patch release: pin `@nocoo/basalt` to 2.1.2, clear two G2 advisories
+published after v0.7.0, and keep the Chat composer stop-click patch.
 
 ### Changed
 
 - `@nocoo/basalt` 2.1.0 → 2.1.2 (exact pin). Composer stop still
   uses `patches/@nocoo__basalt@2.1.2.patch` so a stop cannot submit
   the next draft.
+- `vitest` / `@vitest/coverage-v8` 3.2.6 → 4.1.11.
 
 ### Fixed
 
 - G2: `js-yaml` override 4.3.1 → 4.3.2 (`GHSA-2883-xcg3-v3hh`).
+- G2: Vitest mocker path traversal (`GHSA-82fw-gwwq-j7x9`).
+
+### Tests
+
+- Extra L1 coverage for mint submit, token create/revoke, viewmodel
+  refresh, SecretReveal timers, and ANSI truecolor / dangling ESC.
 
 [0.7.1]: https://github.com/nocoo/meowth/releases/tag/v0.7.1
 
