@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
-import { AppLink, BasaltProviders, MEOWTH_ACCENT } from './basalt-providers';
+import { AppLink, BasaltProviders, BasaltRouteProviders, MEOWTH_ACCENT } from './basalt-providers';
 
 describe('BasaltProviders', () => {
   it('renders children', () => {
@@ -11,6 +11,19 @@ describe('BasaltProviders', () => {
       </BasaltProviders>,
     );
     expect(screen.getByText('ready')).toBeInTheDocument();
+  });
+});
+
+describe('BasaltRouteProviders', () => {
+  it('renders children through LinkProvider', () => {
+    render(
+      <MemoryRouter>
+        <BasaltRouteProviders>
+          <p>routed</p>
+        </BasaltRouteProviders>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('routed')).toBeInTheDocument();
   });
 });
 

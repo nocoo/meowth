@@ -81,6 +81,17 @@ describe('TokensContent (props, Stage C4)', () => {
     release?.();
   });
 
+  it('dismissing the confirm dialog without confirming does not revoke', async () => {
+    const onRevoke = vi.fn(noopRevoke);
+    render(<TokensContent tokens={[makeToken({ id: 'target-id' })]} onRevoke={onRevoke} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(onRevoke).not.toHaveBeenCalled();
+  });
+
   it('shows an EmptyState (not the table) when tokens list is empty', () => {
     render(<TokensContent tokens={[]} onRevoke={noopRevoke} />);
     expect(screen.getByText('No tokens yet')).toBeInTheDocument();

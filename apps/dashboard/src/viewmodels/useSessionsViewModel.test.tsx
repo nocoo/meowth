@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -51,5 +51,16 @@ describe('useSessionsViewModel', () => {
     if (result.current.status.kind === 'error') {
       expect(result.current.status.message).toMatch(/unreachable/i);
     }
+  });
+
+  it('refresh re-fetches sessions', async () => {
+    const spy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ sessions: [] }), { status: 200 }));
+    const { result } = renderHook(() => useSessionsViewModel(), { wrapper });
+    await waitFor(() => expect(result.current.status.kind).toBe('ready'));
+    const before = spy.mock.calls.length;
+    act(() => result.current.refresh());
+    await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(before));
   });
 });

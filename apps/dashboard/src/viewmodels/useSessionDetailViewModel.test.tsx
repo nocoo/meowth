@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -136,5 +136,80 @@ describe('useSessionDetailViewModel', () => {
     const msgUrl =
       typeof messagesCall?.[0] === 'string' ? messagesCall[0] : (messagesCall?.[0] as Request).url;
     expect(msgUrl).not.toContain('after_seq');
+  });
+
+  it('surfaces a daemon error when the session fetch fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+    const { result } = renderHook(() => useSessionDetailViewModel(SID), { wrapper });
+    await waitFor(() => expect(result.current.status.kind).toBe('error'));
+    if (result.current.status.kind === 'error') {
+      expect(result.current.status.message).toMatch(/unreachable/i);
+    }
+  });
+
+  it('stops after 200 snapshot pages', async () => {
+    const session = {
+      id: SID,
+      backend_type: 'claude',
+      backend_session_id: 'bs',
+      status: 'running',
+      started_at: '2026-06-22T00:00:00Z',
+      ended_at: null,
+      thread_name: '',
+      model: 'opus',
+    };
+    let seq = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.endsWith(`/v1/sessions/${SID}`)) {
+        return new Response(JSON.stringify(session), { status: 200 });
+      }
+      seq += 1;
+      return new Response(
+        JSON.stringify({
+          session_id: SID,
+          events: [envelope(seq, 'message', { content: 'x' })],
+          next_after_seq: seq,
+          has_more: true,
+        }),
+        { status: 200 },
+      );
+    });
+    const { result } = renderHook(() => useSessionDetailViewModel(SID), { wrapper });
+    await waitFor(() => expect(result.current.status.kind).toBe('error'), { timeout: 5000 });
+    if (result.current.status.kind === 'error') {
+      expect(result.current.status.message).toMatch(/200 snapshot pages/);
+    }
+  });
+
+  it('refresh reloads the snapshot', async () => {
+    const session = {
+      id: SID,
+      backend_type: 'claude',
+      backend_session_id: 'bs',
+      status: 'completed',
+      started_at: '2026-06-22T00:00:00Z',
+      ended_at: '2026-06-22T00:00:10Z',
+      thread_name: '',
+      model: 'opus',
+    };
+    const page = {
+      session_id: SID,
+      events: [envelope(1, 'message', { content: 'hello' })],
+      next_after_seq: 1,
+      has_more: false,
+    };
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.endsWith(`/v1/sessions/${SID}`)) {
+        return new Response(JSON.stringify(session), { status: 200 });
+      }
+      return new Response(JSON.stringify(page), { status: 200 });
+    });
+    const { result } = renderHook(() => useSessionDetailViewModel(SID), { wrapper });
+    await waitFor(() => expect(result.current.status.kind).toBe('ready'));
+    const before = spy.mock.calls.length;
+    act(() => result.current.refresh());
+    await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(before));
   });
 });

@@ -122,6 +122,27 @@ describe('ansiToReactNodes', () => {
     expect(container.textContent).toBe('ABC');
   });
 
+  it('skips truecolor SGR arguments without rendering them', () => {
+    const nodes = ansiToReactNodes(`${ESC}[38;2;10;20;30mA${ESC}[48;2;1;2;3mB${ESC}[0m`);
+    expect(asString(nodes)).toBe('AB');
+  });
+
+  it('drops a dangling ESC at the end of input', () => {
+    expect(asString(ansiToReactNodes(`ok${ESC}`))).toBe('ok');
+  });
+
+  it('clears background with SGR 49', () => {
+    const nodes = ansiToReactNodes(`${ESC}[42mA${ESC}[49mB${ESC}[0m`);
+    expect(asString(nodes)).toBe('AB');
+  });
+
+  it('maps 256-color background codes', () => {
+    const nodes = ansiToReactNodes(`${ESC}[48;5;21mX${ESC}[0m`);
+    const { container } = render(<div>{nodes}</div>);
+    expect(container.querySelector('span')?.className).toMatch(/bg-basalt-/);
+    expect(container.textContent).toBe('X');
+  });
+
   it('treats ESC[m (empty SGR) as a reset', () => {
     const nodes = ansiToReactNodes(`${ESC}[31mA${ESC}[mB`);
     const { container } = render(<div>{nodes}</div>);

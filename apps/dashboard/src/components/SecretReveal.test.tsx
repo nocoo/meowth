@@ -114,4 +114,50 @@ describe('SecretReveal', () => {
     render(<SecretReveal secret={SECRET} initiallyMasked={false} />);
     expect(screen.getByTestId('secret-reveal-value').textContent).toBe(SECRET);
   });
+
+  it('a second copy while the restore timer is running still restores the mask', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    installClipboard(() => Promise.resolve());
+    render(<SecretReveal secret={SECRET} revealRestoreMs={2000} />);
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Copy' }));
+    });
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Copy' }));
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.getByTestId('secret-reveal-value').textContent).toBe('•'.repeat(SECRET.length));
+  });
+
+  it('hiding the tab while a restore timer is pending clears the timer', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    installClipboard(() => Promise.resolve());
+    render(<SecretReveal secret={SECRET} revealRestoreMs={2000} />);
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Copy' }));
+    });
+    act(() => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => 'hidden',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(screen.getByTestId('secret-reveal-value').textContent).toBe('•'.repeat(SECRET.length));
+  });
+
+  it('unmount clears pending copy timers', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    installClipboard(() => Promise.resolve());
+    const { unmount } = render(<SecretReveal secret={SECRET} revealRestoreMs={2000} />);
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Copy' }));
+    });
+    unmount();
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+  });
 });

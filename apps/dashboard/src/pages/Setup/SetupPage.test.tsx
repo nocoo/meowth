@@ -57,6 +57,22 @@ describe('SetupPage', () => {
     expect(screen.getByRole('button', { name: /Back to/i })).toBeInTheDocument();
   });
 
+  it('submits a setup-code and can return to the token form', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ type: '/problems/x', title: 'bad code', status: 400 }), {
+        status: 400,
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt();
+    await user.click(screen.getByRole('button', { name: /setup-code instead/i }));
+    await user.type(screen.getByPlaceholderText('mws_...'), 'mws_not-a-real-code');
+    await user.click(screen.getByRole('button', { name: /Mint token/i }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Back to/i }));
+    expect(screen.getByRole('button', { name: /Continue/i })).toBeInTheDocument();
+  });
+
   it('surfaces an inline error and stays on the setup page for an invalid token shape', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const user = userEvent.setup();

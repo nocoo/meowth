@@ -89,6 +89,25 @@ describe('TokensCreateDialog (Stage C4)', () => {
     await waitFor(() => expect(trigger).toHaveFocus());
   });
 
+  it('submitting the name form calls submitCreate', async () => {
+    const submitCreate = vi.fn(async () => undefined);
+    const setCreateName = vi.fn();
+    render(
+      <TokensCreateDialog
+        vm={vmFor({
+          modal: { open: true, phase: 'idle', name: '' },
+          submitCreate,
+          setCreateName,
+        })}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Name'), 'ci');
+    expect(setCreateName).toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+    expect(submitCreate).toHaveBeenCalledTimes(1);
+  });
+
   it('phase=idle renders the name input + Create button; Cancel calls closeCreateModal', async () => {
     const closeCreateModal = vi.fn();
     render(

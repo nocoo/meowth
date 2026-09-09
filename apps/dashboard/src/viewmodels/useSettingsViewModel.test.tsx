@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -45,5 +45,16 @@ describe('useSettingsViewModel', () => {
     const { result } = renderHook(() => useSettingsViewModel(), { wrapper });
     expect(typeof result.current.version).toBe('string');
     expect(result.current.version.length).toBeGreaterThan(0);
+  });
+
+  it('refresh re-probes healthz', async () => {
+    const spy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const { result } = renderHook(() => useSettingsViewModel(), { wrapper });
+    await waitFor(() => expect(result.current.status.kind).toBe('ready'));
+    const before = spy.mock.calls.length;
+    act(() => result.current.refresh());
+    await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(before));
   });
 });
