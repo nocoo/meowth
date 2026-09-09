@@ -1,6 +1,7 @@
 package agentfactory
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -44,12 +45,16 @@ func discoverHermesProfiles() []AgentProfile {
 
 func profilesAt(root string) []AgentProfile {
 	profiles := []AgentProfile{}
-	info, err := os.Lstat(root)
-	if err != nil || !info.IsDir() {
+	profileRoot, err := os.OpenRoot(root)
+	if err != nil {
 		return profiles
 	}
+	defer func() { _ = profileRoot.Close() }()
+
 	profiles = append(profiles, AgentProfile{Name: "default"})
-	entries, err := os.ReadDir(filepath.Join(root, "profiles"))
+	// A Root confines the static profiles directory lookup to root, even
+	// when HERMES_HOME is supplied by the local environment.
+	entries, err := fs.ReadDir(profileRoot.FS(), "profiles")
 	if err != nil {
 		return profiles
 	}
