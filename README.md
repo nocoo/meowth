@@ -130,6 +130,7 @@ MEOWTH_REAL_CHAT=1 pnpm dashboard:e2e:real
 ## 文档
 
 - [文档索引](docs/README.md)
+- [Hermes profile discovery](docs/features/12-hermes-profile-discovery.md)
 - [项目定位与设计背景](docs/01-project-overview.md)
 - [HTTP 协议与接口](docs/architecture/02-daemon-http-protocol.md)
 - [初始化与首次 token](docs/architecture/04-bootstrap-and-first-run-mint.md)

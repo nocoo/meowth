@@ -4,6 +4,8 @@ Meowth 项目的编号文档目录。所有架构决策、功能设计、长任�
 
 ## 规范
 
+Latest: [Hermes profile discovery](features/12-hermes-profile-discovery.md).
+
 - 文件命名:`NN-kebab-name.md`（两位编号 + 小写英文 + 横杠分隔）
 - 编号用于排序,不代表优先级
 - 每篇文档必含:设计细节 + 代码引用（文件路径） + 原子化提交计划 + 6DQ 质量计划

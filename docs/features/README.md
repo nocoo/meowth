@@ -20,6 +20,8 @@
 
 ## 何时新建 features 文档
 
+Latest: [12 · Hermes profile discovery](12-hermes-profile-discovery.md).
+
 - 新增端到端可见的能力（新 API 端点、dashboard 新页、新 backend）
 - 跨多个模块的协调改动（端口迁移、协议演进、依赖大版本升级）
 - 引入新的运维约束或本机环境依赖
