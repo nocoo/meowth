@@ -7,8 +7,8 @@ basalt / surety / zhe / pew trees.
 | Field         | Value |
 |---------------|-------|
 | package       | `@nocoo/basalt` |
-| version       | `2.1.0` |
-| adopted_at    | 2026-09-07 |
+| version       | `2.1.2` |
+| adopted_at    | 2026-09-09 |
 | contract      | `docs/features/07-dashboard-basalt-package.md`, `docs/features/08-dashboard-theme-and-vite.md` |
 | integration   | `~/workspace/personal/basalt/INTEGRATION.md` |
 

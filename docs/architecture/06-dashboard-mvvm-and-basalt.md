@@ -142,7 +142,7 @@ apps/dashboard/
 
 **dependencies**：
 
-- `@nocoo/basalt` — 钉死 **2.1.0**。Chrome、常见控件、主题 / accent provider 都从这里来。
+- `@nocoo/basalt` — 钉死 **2.1.2**。Chrome、常见控件、主题 / accent provider 都从这里来。
 - `react`、`react-dom`
 - `react-router`
 - `clsx`

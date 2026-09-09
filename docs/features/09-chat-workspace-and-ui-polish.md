@@ -113,7 +113,7 @@ actual reason; do not count synthetic responses as live-agent verification.
   distinguishable from daemon terminal statuses.
 - A browser regression exposed a Basalt 2.1.0 composer bug: stopping could
   change the same DOM button to `type=submit` before click activation ended,
-  sending the next draft. `patches/@nocoo__basalt@2.1.0.patch` prevents the
+  sending the next draft. `patches/@nocoo__basalt@2.1.2.patch` prevents the
   stop click's default action. The fix is installed through pnpm's locked
   patch mechanism, without copying the composer into the application.
 - All 499 dashboard and 1 shared unit tests and the per-file coverage gate passed;
