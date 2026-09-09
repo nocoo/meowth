@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"testing"
 )
 
@@ -53,5 +54,29 @@ func TestDiscoverHermesProfilesHonorsHermesHome(t *testing.T) {
 	want := []AgentProfile{{Name: "default"}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestProfilesAtRejectsProfilesOutsideRoot(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(outside, "profiles", "outside-profile"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(outside, "profiles"), filepath.Join(root, "profiles")); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := profilesAt(root), []AgentProfile{{Name: "default"}}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestDiscoverHermesProfilesReturnsEmptyWithoutHome(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("UserHomeDir uses USERPROFILE on Windows")
+	}
+	t.Setenv("HOME", "")
+	if got := discoverHermesProfiles(); len(got) != 0 {
+		t.Fatalf("got %v, want no profiles", got)
 	}
 }
