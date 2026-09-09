@@ -4,6 +4,20 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] — 2026-09-09
+
+Patch release: pin `@nocoo/basalt` to 2.1.2 for solid-color badge
+contrast, and keep the Chat composer stop-click patch on the new
+package.
+
+### Changed
+
+- `@nocoo/basalt` 2.1.0 → 2.1.2 (exact pin). Composer stop still
+  uses `patches/@nocoo__basalt@2.1.2.patch` so a stop cannot submit
+  the next draft.
+
+[0.7.1]: https://github.com/nocoo/meowth/releases/tag/v0.7.1
+
 ## [0.7.0] — 2026-09-08
 
 Dashboard Chat is now a reading workspace: Basalt chat chrome, safe
