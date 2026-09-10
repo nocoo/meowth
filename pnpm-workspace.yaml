@@ -5,7 +5,7 @@ allowBuilds:
   '@biomejs/biome': true
   esbuild: false
 minimumReleaseAgeExclude:
-  - '@nocoo/basalt@2.1.2'
+  - '@nocoo/basalt@2.1.7'
 onlyBuiltDependencies:
   - '@biomejs/biome'
 overrides:
@@ -19,4 +19,4 @@ overrides:
   brace-expansion@2: "2.1.4"
   brace-expansion@5: "5.0.9"
 patchedDependencies:
-  '@nocoo/basalt@2.1.2': patches/@nocoo__basalt@2.1.2.patch
+  '@nocoo/basalt@2.1.7': patches/@nocoo__basalt@2.1.7.patch

@@ -1,8 +1,8 @@
 diff --git a/dist/components/chat-composer.js b/dist/components/chat-composer.js
-index 4e993e906303240a42b837221d697adc51733ace..613e68ea01dce8372615e83999061012871a493a 100644
+index 679b4761ed9b804eeaeb833b7c563e4e7ed51b70..a08655a1f909b5d497e04b167ef9a5adc8f00bb1 100644
 --- a/dist/components/chat-composer.js
 +++ b/dist/components/chat-composer.js
-@@ -48,7 +48,7 @@ function l({ disabled: l = !1, streaming: u = !1, label: d = "Message", placehol
+@@ -47,7 +47,7 @@ function l({ disabled: l = !1, streaming: u = !1, label: d = "Message", placehol
  				type: "button",
  				size: "icon",
  				variant: "secondary",
