@@ -31,7 +31,7 @@ jobs:
     # with their respective phases and are NOT executed here.
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Print runner identity (pre-setup)
         # docs/architecture/08 §7.1 requires the first CI run to
         # confirm runner architecture; print on every run so future
@@ -44,7 +44,7 @@ jobs:
         # (`pnpm@11.6.0`); specifying `version:` here as well makes
         # pnpm/action-setup@v4 abort with "Multiple versions of
         # pnpm specified".
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -96,9 +96,9 @@ jobs:
       matrix:
         goarch: [arm64, amd64]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -125,7 +125,7 @@ jobs:
       matrix:
         goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@v5
         with:
           go-version-file: daemon/go.mod
@@ -141,7 +141,7 @@ jobs:
   l1-daemon:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@v5
         with:
           go-version-file: daemon/go.mod
@@ -152,7 +152,7 @@ jobs:
         # (`pnpm@11.6.0`); specifying `version:` here as well makes
         # pnpm/action-setup@v4 abort with "Multiple versions of
         # pnpm specified".
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -164,13 +164,13 @@ jobs:
     # Phase 3.25 — coverage gate strict (90% default, baseline floors).
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@v4
         # pnpm version is read from package.json `packageManager`
         # (`pnpm@11.6.0`); specifying `version:` here as well makes
         # pnpm/action-setup@v4 abort with "Multiple versions of
         # pnpm specified".
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -185,7 +185,7 @@ jobs:
   l2:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@v5
         with:
           go-version-file: daemon/go.mod
@@ -196,7 +196,7 @@ jobs:
         # (`pnpm@11.6.0`); specifying `version:` here as well makes
         # pnpm/action-setup@v4 abort with "Multiple versions of
         # pnpm specified".
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -211,14 +211,14 @@ jobs:
     # have caught the same path, but isolates the L2 assertion.
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@v5
         with:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -234,13 +234,13 @@ jobs:
     # per 08 §7.3.
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@v4
         # pnpm version is read from package.json `packageManager`
         # (`pnpm@11.6.0`); specifying `version:` here as well makes
         # pnpm/action-setup@v4 abort with "Multiple versions of
         # pnpm specified".
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -278,7 +278,7 @@ jobs:
     # aggregate is intentionally NOT reused here.
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@v5
         with:
           go-version-file: daemon/go.mod
@@ -289,7 +289,7 @@ jobs:
         # (`pnpm@11.6.0`); specifying `version:` here as well makes
         # pnpm/action-setup@v4 abort with "Multiple versions of
         # pnpm specified".
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: 'pnpm'
@@ -310,7 +310,7 @@ jobs:
     # changing both the script and adding `fetch-depth: 0` here.
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@v5
         with:
           go-version-file: daemon/go.mod
@@ -321,7 +321,7 @@ jobs:
         # (`pnpm@11.6.0`); specifying `version:` here as well makes
         # pnpm/action-setup@v4 abort with "Multiple versions of
         # pnpm specified".
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
           cache: 'pnpm'
