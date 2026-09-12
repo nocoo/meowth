@@ -1,18 +1,4 @@
 # Phase 2.12 — CI / 6DQ gates on GitHub-hosted macOS.
-#
-# Maps to docs/architecture/08-6dq-hooks-wiring.md §7.3. Several jobs
-# called out by §7.3 are NOT created here because their prerequisites
-# live in later phases — adding empty/no-op jobs would be a false
-# green. They will be appended by the commits below:
-#   - openapi-drift   → Phase 02 (docs/architecture/02 §11)
-#   - dist-scan       → Phase 06 (Vite build) + Phase 07
-#                       (scripts/check-dashboard-dist.sh)
-#   - l3 split into l3-dev / l3-embed with embed depending on
-#                       dist-scan: same Phase 06 / 07 follow-up
-#   - dep-cruiser / source-scan inside `lint`: Phase 06 / 07
-#
-# Real CLI smoke (§7.4) is intentionally NOT in default CI; runners
-# do not have claude/codex/hermes/pi binaries installed.
 
 name: CI
 
@@ -24,72 +10,34 @@ concurrency:
 
 jobs:
   lint:
-    # G1 partial — runs the wiring that already exists today
-    # (daemon: gofmt + go vet + golangci-lint; dashboard: biome
-    # strict + tsc strict). The §7.3 lint job also wants
-    # dependency-cruiser and the 07 source/CSP scan; those land
-    # with their respective phases and are NOT executed here.
     runs-on: macos-14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Print runner identity (pre-setup)
-        # docs/architecture/08 §7.1 requires the first CI run to
-        # confirm runner architecture; print on every run so future
-        # drift is obvious.
         run: |
           uname -m
           sw_vers
-      - uses: pnpm/action-setup@v4
-        # pnpm version is read from package.json `packageManager`
-        # (`pnpm@11.6.0`); specifying `version:` here as well makes
-        # pnpm/action-setup@v4 abort with "Multiple versions of
-        # pnpm specified".
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@ab52d72877d386c9a8fd224e9ac868e88be90539
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          package-manager: "pnpm"
+          install-policy: "blocked"
       - uses: actions/setup-go@v5
         with:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Print toolchain identity (post-setup)
-        # Versions here reflect what the workflow actually pinned
-        # (Node 22 from setup-node, pnpm 11 from action-setup, Go
-        # from daemon/go.mod), not whatever the runner image ships.
         run: |
           node -v
           pnpm -v
           go version
-      - name: pnpm install
-        # `--ignore-scripts` skips per-dep lifecycle scripts. We need it
-        # because pnpm 11.6 hard-fails `--frozen-lockfile` with
-        # ERR_PNPM_IGNORED_BUILDS on @biomejs/biome's postinstall — even
-        # when biome is on the workspace `onlyBuiltDependencies`
-        # allowlist (the allow check only kicks in after a user-level
-        # `pnpm approve-builds`, which is not feasible in CI). The deps
-        # we use that ship a postinstall (biome, husky) work fine
-        # without it: biome's binary is prebuilt, and CI never commits
-        # so the husky hook install is moot. Phase 2.9's
-        # `pnpm e2e:install` runs Playwright's browser fetch as an
-        # explicit step, not via postinstall.
-        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Install ripgrep
-        # scripts/check-dashboard-source.sh greps the dashboard src
-        # via rg. The GitHub macos-14 image does not ship it.
         run: brew install ripgrep
       - run: pnpm daemon:g1
       - run: pnpm dashboard:g1
 
   build-darwin:
-    # docs/architecture/08 §7.1 darwin-amd64 cross-build assertion.
-    # arm64 is included so both build targets are gated; no tests
-    # run under the cross target — that is the documented trade-off.
-    # 3.21+: build goes through root `pnpm daemon:build` so the
-    # dashboard dist is freshly built + copied + go-embedded along
-    # the same code path used locally. The matrix injects GOOS /
-    # GOARCH which the `cd daemon && go build ./...` step inside
-    # `daemon:build` inherits.
     runs-on: macos-14
     strategy:
       fail-fast: false
@@ -97,17 +45,16 @@ jobs:
         goarch: [arm64, amd64]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@ab52d72877d386c9a8fd224e9ac868e88be90539
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          package-manager: "pnpm"
+          install-policy: "blocked"
       - uses: actions/setup-go@v5
         with:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
-      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: pnpm daemon:build darwin/${{ matrix.goarch }}
         env:
           GOOS: darwin
@@ -115,10 +62,6 @@ jobs:
         run: pnpm daemon:build
 
   compile-windows:
-    # docs/features/06 §3.3 — compile-only Windows gate on the
-    # darwin runner. Does not add a windows-latest runner or run
-    # Windows binaries. -exec true links the test binary then
-    # replaces the run with /usr/bin/true.
     runs-on: macos-14
     strategy:
       fail-fast: false
@@ -147,37 +90,24 @@ jobs:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
-      - uses: pnpm/action-setup@v4
-        # pnpm version is read from package.json `packageManager`
-        # (`pnpm@11.6.0`); specifying `version:` here as well makes
-        # pnpm/action-setup@v4 abort with "Multiple versions of
-        # pnpm specified".
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@ab52d72877d386c9a8fd224e9ac868e88be90539
         with:
-          node-version: '22'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile --ignore-scripts
+          package-manager: "pnpm"
+          install-policy: "blocked"
       - run: pnpm daemon:test:cover
       - run: pnpm daemon:cover:check
 
   l1-dashboard:
-    # Phase 3.25 — coverage gate strict (90% default, baseline floors).
     runs-on: macos-14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: pnpm/action-setup@v4
-        # pnpm version is read from package.json `packageManager`
-        # (`pnpm@11.6.0`); specifying `version:` here as well makes
-        # pnpm/action-setup@v4 abort with "Multiple versions of
-        # pnpm specified".
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@ab52d72877d386c9a8fd224e9ac868e88be90539
         with:
-          node-version: '22'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile --ignore-scripts
+          package-manager: "pnpm"
+          install-policy: "blocked"
       - name: Install ripgrep
-        # check-dashboard-source.test.ts shells out to
-        # scripts/check-dashboard-source.sh, which requires rg.
         run: brew install ripgrep
       - run: pnpm dashboard:test:cover
       - run: pnpm dashboard:cover:check
@@ -191,24 +121,14 @@ jobs:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
-      - uses: pnpm/action-setup@v4
-        # pnpm version is read from package.json `packageManager`
-        # (`pnpm@11.6.0`); specifying `version:` here as well makes
-        # pnpm/action-setup@v4 abort with "Multiple versions of
-        # pnpm specified".
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@ab52d72877d386c9a8fd224e9ac868e88be90539
         with:
-          node-version: '22'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile --ignore-scripts
+          package-manager: "pnpm"
+          install-policy: "blocked"
       - run: pnpm test:l2
 
   l2-embed:
-    # docs/architecture/06 §3.4.2 + 07 §11 — boots meowthd with the
-    # freshly built and embedded dashboard dist, hits a real port,
-    # asserts /, /assets/*, /v1/agents 401, /bootstrap/mint stays
-    # problem+json (no SPA leak). Runs after build matrix would
-    # have caught the same path, but isolates the L2 assertion.
     runs-on: macos-14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -217,43 +137,28 @@ jobs:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@ab52d72877d386c9a8fd224e9ac868e88be90539
         with:
-          node-version: '22'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile --ignore-scripts
+          package-manager: "pnpm"
+          install-policy: "blocked"
       - run: pnpm daemon:build
       - run: pnpm test:l2:embed
 
   l3:
-    # Phase 2.9 placeholder — Playwright config + two test.skip
-    # specs (dev/embed). Real fixtures land with Phase 3.6 (daemon
-    # HTTP) + 3.13+ (Vite). Once those exist, split this job into
-    # l3-dev and l3-embed; the embed job should depend on dist-scan
-    # per 08 §7.3.
     runs-on: macos-14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: pnpm/action-setup@v4
-        # pnpm version is read from package.json `packageManager`
-        # (`pnpm@11.6.0`); specifying `version:` here as well makes
-        # pnpm/action-setup@v4 abort with "Multiple versions of
-        # pnpm specified".
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@ab52d72877d386c9a8fd224e9ac868e88be90539
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          package-manager: "pnpm"
+          install-policy: "blocked"
       - uses: actions/setup-go@v5
-        # e2e-embed-fixture invokes `pnpm daemon:build` to produce
-        # the dashboard-dist + meowthd binary under test; without
-        # Go on PATH the fixture's go-build step exits 1 and
-        # Playwright never starts.
         with:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
-      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
@@ -261,21 +166,9 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('apps/dashboard/package.json') }}
       - run: pnpm --filter @meowth/dashboard e2e:install
       - name: L3 Playwright (UI + embed + embed-mint)
-        # dashboard-dev fixture (Vite + meowthd path A) is excluded
-        # here: docs/features/01 §6.2 marks it as skipped because
-        # GitHub macOS runners regularly fail the `meowthd init`
-        # step inside e2e-dev-fixture.ts. embed + embed-mint cover
-        # the production path (the release surface) and are the
-        # canonical Phase 3.20-3.24 regression set.
-        # dashboard-ui uses mocked API data and verifies layout,
-        # keyboard navigation, responsive content, and Vite HMR.
         run: pnpm --filter @meowth/dashboard e2e --project=dashboard-ui --project=dashboard-embed --project=dashboard-embed-mint
 
   g2:
-    # docs/architecture/08 §7.3: supply-chain only. Secret scan is
-    # a separate job (`secret-scan`) so a CI failure points at one
-    # subsystem. pre-push aggregates them via `pnpm scan:g2`; that
-    # aggregate is intentionally NOT reused here.
     runs-on: macos-14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -284,30 +177,17 @@ jobs:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
-      - uses: pnpm/action-setup@v4
-        # pnpm version is read from package.json `packageManager`
-        # (`pnpm@11.6.0`); specifying `version:` here as well makes
-        # pnpm/action-setup@v4 abort with "Multiple versions of
-        # pnpm specified".
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@ab52d72877d386c9a8fd224e9ac868e88be90539
         with:
-          node-version: '22'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile --ignore-scripts
+          package-manager: "pnpm"
+          install-policy: "blocked"
       - name: Install osv-scanner
-        # We exercise the repo's own wrapper (scripts/run-osv-scan.sh
-        # + pnpm scan:osv) instead of the official osv-scanner-action
-        # so the CI path matches what developers run locally.
         run: brew install osv-scanner
       - run: pnpm scan:osv
       - run: pnpm scan:govulncheck
 
   secret-scan:
-    # gitleaks full current-worktree scan (08 §7.3). pre-commit only
-    # covers the staged diff; this job scans the entire checked-out
-    # tree. The root script uses `--no-git --source .`, so this is
-    # not a git-history scan; switching to history scanning requires
-    # changing both the script and adding `fetch-depth: 0` here.
     runs-on: macos-14
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -316,14 +196,9 @@ jobs:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
-      - uses: pnpm/action-setup@v4
-        # pnpm version is read from package.json `packageManager`
-        # (`pnpm@11.6.0`); specifying `version:` here as well makes
-        # pnpm/action-setup@v4 abort with "Multiple versions of
-        # pnpm specified".
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@ab52d72877d386c9a8fd224e9ac868e88be90539
         with:
-          node-version: '22'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile --ignore-scripts
+          package-manager: "pnpm"
+          install-policy: "blocked"
       - run: pnpm scan:gitleaks:detect
