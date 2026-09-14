@@ -376,13 +376,13 @@ func TestRecoverConvertsPanicToProblemJSON(t *testing.T) {
 }
 
 func TestBodyLimitMiddlewareTrips413OnOverlargeBody(t *testing.T) {
-	// 02 §12 wants v1 bodies capped at 1 MiB → 413 problem+json.
+	// 02 §12 wants v1 bodies capped at 64 MiB → 413 problem+json.
 	srv, db, touched := newTestServer(t)
 	secret, _ := insertToken(t, db)
 
-	// 1 MiB + 1 byte of valid JSON-looking padding.
+	// 64 MiB + 1 byte of valid JSON-looking padding.
 	big := []byte(`{"name":"`)
-	big = append(big, bytes.Repeat([]byte("a"), (1<<20)+1)...)
+	big = append(big, bytes.Repeat([]byte("a"), int((64<<20)+1))...)
 	big = append(big, []byte(`"}`)...)
 
 	rr := httptest.NewRecorder()
@@ -646,11 +646,11 @@ func TestNosniffOnAllPaths(t *testing.T) {
 func TestNosniffOnBodyLimit413(t *testing.T) {
 	// Reviewer-cited: prove the chain order — nosniff is BEFORE
 	// body_limit, so the 413 also carries the header. This
-	// reuses the over-1MiB request the body-limit test uses.
+	// reuses the over-64MiB request the body-limit test uses.
 	srv, db, touched := newTestServer(t)
 	secret, _ := insertToken(t, db)
 	big := []byte(`{"name":"`)
-	big = append(big, bytes.Repeat([]byte("a"), (1<<20)+1)...)
+	big = append(big, bytes.Repeat([]byte("a"), int((64<<20)+1))...)
 	big = append(big, []byte(`"}`)...)
 
 	rr := httptest.NewRecorder()

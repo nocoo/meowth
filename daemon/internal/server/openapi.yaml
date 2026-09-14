@@ -495,7 +495,7 @@ components:
           minLength: 1
           description: >
             At least one non-whitespace character after trim. No field-level
-            upper bound; the request is still subject to the 1 MiB HTTP body
+            upper bound; the request is still subject to the 64 MiB HTTP body
             limit. Model context limits are backend-owned.
         cwd:
           type: string
@@ -506,7 +506,7 @@ components:
           type: string
           description: >
             Optional system text. Honored by claude/codex/pi; ignored by
-            hermes and copilot. Shares the 1 MiB body budget with prompt.
+            hermes and copilot. Shares the 64 MiB body budget with prompt.
         thread_name:
           type: string
         max_turns:
@@ -653,7 +653,7 @@ components:
           schema:
             $ref: "#/components/schemas/Problem"
     PayloadTooLarge:
-      description: Request body exceeded the per-request 1 MiB cap.
+      description: Request body exceeded the per-request 64 MiB cap.
       content:
         application/problem+json:
           schema:

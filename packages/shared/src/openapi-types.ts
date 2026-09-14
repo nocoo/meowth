@@ -255,12 +255,12 @@ export interface components {
       agents: components['schemas']['Agent'][];
     };
     ExecRequest: {
-      /** @description At least one non-whitespace character after trim. No field-level upper bound; the request is still subject to the 1 MiB HTTP body limit. Model context limits are backend-owned. */
+      /** @description At least one non-whitespace character after trim. No field-level upper bound; the request is still subject to the 64 MiB HTTP body limit. Model context limits are backend-owned. */
       prompt: string;
       /** @description Absolute path to an existing directory when set. */
       cwd?: string;
       model?: string;
-      /** @description Optional system text. Honored by claude/codex/pi; ignored by hermes and copilot. Shares the 1 MiB body budget with prompt. */
+      /** @description Optional system text. Honored by claude/codex/pi; ignored by hermes and copilot. Shares the 64 MiB body budget with prompt. */
       system_prompt?: string;
       thread_name?: string;
       max_turns?: number;
@@ -342,7 +342,7 @@ export interface components {
         'application/problem+json': components['schemas']['Problem'];
       };
     };
-    /** @description Request body exceeded the per-request 1 MiB cap. */
+    /** @description Request body exceeded the per-request 64 MiB cap. */
     PayloadTooLarge: {
       headers: {
         [name: string]: unknown;

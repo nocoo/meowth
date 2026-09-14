@@ -41,7 +41,7 @@ type Config struct {
 	AuthConfig auth.Config // DB defaulted from cfg.DB; Hasher/TouchHook tests override
 
 	// BodyLimit is the max request body in bytes per docs/architecture/02
-	// §12. Defaults to 1 MiB when zero.
+	// §12. Defaults to 64 MiB when zero.
 	BodyLimit int64
 
 	// MintWindow is the resolved Phase 3.8 bootstrap mint state.
@@ -59,7 +59,7 @@ type Config struct {
 	AgentFactory agentfactory.Factory
 }
 
-const defaultBodyLimit int64 = 1 << 20
+const defaultBodyLimit int64 = 64 << 20
 
 // Server bundles the chi router, the resolved Config, and the
 // http.Server-ready handler.
