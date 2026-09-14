@@ -715,6 +715,7 @@ func TestPiExecuteCleansTempFileOnStartFailure(t *testing.T) {
 	for _, m := range matches {
 		info, statErr := os.Stat(m)
 		if statErr == nil && time.Since(info.ModTime()) < 10*time.Second {
+			// #nosec G304 -- test-only fixed-prefix glob under os.TempDir().
 			content, _ := os.ReadFile(m)
 			if string(content) == "confidential instructions start failure" {
 				t.Fatalf("orphaned system prompt file found after Start failure: %s", m)
@@ -926,6 +927,7 @@ func TestPiExecuteAutoRetrySuccessIsolatesAttemptText(t *testing.T) {
 	fakePath := filepath.Join(tempDir, "pi")
 	jsonlPath := filepath.Join(tempDir, "stream.jsonl")
 
+	// #nosec G304 -- fixed fixture filename under t.TempDir().
 	f, err := os.Create(jsonlPath)
 	if err != nil {
 		t.Fatalf("create stream.jsonl: %v", err)
@@ -1263,6 +1265,7 @@ func TestPiExecuteChunksOutputToAvoidEnvelopeLineLimit(t *testing.T) {
 	expectedText := strings.Repeat(unit, 45000) // ~1.5 MiB
 
 	// Generate JSONL stream in Go using json.Marshal to guarantee zero bash escaping bugs
+	// #nosec G304 -- fixed fixture filename under t.TempDir().
 	f, err := os.Create(jsonlPath)
 	if err != nil {
 		t.Fatalf("create stream.jsonl: %v", err)
