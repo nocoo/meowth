@@ -203,14 +203,20 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 
 	// Pi's --append-system-prompt flag natively accepts a file path.
 	// If a system prompt is provided, write it to a temporary file (0600)
-	// so it never appears in argv or encounters ARG_MAX limitations.
+	// with an absolute path so it never appears in argv or encounters ARG_MAX limitations.
 	var systemPromptPath string
 	if opts.SystemPrompt != "" {
 		tmpFile, err := os.CreateTemp("", "meowth-pi-sysprompt-*.txt")
 		if err != nil {
 			return nil, fmt.Errorf("pi system prompt tempfile: %w", err)
 		}
-		systemPromptPath = tmpFile.Name()
+		absPath, err := filepath.Abs(tmpFile.Name())
+		if err != nil {
+			_ = tmpFile.Close()
+			_ = os.Remove(tmpFile.Name())
+			return nil, fmt.Errorf("pi system prompt abs path: %w", err)
+		}
+		systemPromptPath = absPath
 		if _, err := tmpFile.WriteString(opts.SystemPrompt); err != nil {
 			_ = tmpFile.Close()
 			_ = os.Remove(systemPromptPath)
@@ -407,9 +413,14 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 				}
 			}
 			if err != nil {
-				if err != io.EOF && runCtx.Err() == nil && finalStatus == "completed" {
-					finalStatus = "failed"
-					finalError = fmt.Sprintf("pi stdout read error: %v", err)
+				if err != io.EOF && runCtx.Err() == nil {
+					if cmd.Process != nil {
+						_ = cmd.Process.Kill()
+					}
+					if finalStatus == "completed" {
+						finalStatus = "failed"
+						finalError = fmt.Sprintf("pi stdout read error: %v", err)
+					}
 				}
 				break
 			}

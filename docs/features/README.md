@@ -18,7 +18,7 @@
 | 10 | [`10-chat-reading-and-interaction.md`](./10-chat-reading-and-interaction.md) | Chat activity disclosures, focused reading layout, and refined controls | Implemented; UI and real-agent verification passed |
 | 11 | [`11-session-chat-transcript.md`](./11-session-chat-transcript.md) | Shared Chat response controls for session detail transcripts | Implemented; unit, browser, and recorded-session verification passed |
 | 12 | [`12-hermes-profile-discovery.md`](./12-hermes-profile-discovery.md) | Hermes ACP profile discovery and configuration | Implemented |
-| 13 | [`13-expand-http-body-limit-and-pi-stdin.md`](./13-expand-http-body-limit-and-pi-stdin.md) | Expand HTTP body limit to 64MiB and stream Pi prompt via stdin | In Progress |
+| 13 | [`13-expand-http-body-limit-and-pi-stdin.md`](./13-expand-http-body-limit-and-pi-stdin.md) | Expand HTTP body limit to 64MiB and stream Pi prompt via stdin | Implemented |
 
 ## 何时新建 features 文档
 

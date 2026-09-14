@@ -533,6 +533,378 @@ func TestPiExecuteEmptyPromptDeliversEOFAndCleansTempFile(t *testing.T) {
 	}
 }
 
+// TestPiExecuteCleansTempFileAndExitsWhenChildIgnoresStdinAndCancelled proves
+// that when a child process never reads stdin and caller cancels context,
+// the run terminates cleanly without deadlock and the temp system prompt is removed.
+func TestPiExecuteCleansTempFileAndExitsWhenChildIgnoresStdinAndCancelled(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	// The fake Pi child:
+	// 1. Intentionally never touches stdin.
+	// 2. Extracts sys_path and outputs it.
+	// 3. Sleeps indefinitely until killed by context cancellation.
+	script := "#!/bin/sh\n" +
+		"sys_path=''\n" +
+		"while [ $# -gt 0 ]; do\n" +
+		"  if [ \"$1\" = \"--append-system-prompt\" ]; then\n" +
+		"    sys_path=\"$2\"\n" +
+		"    shift 2\n" +
+		"  else\n" +
+		"    shift\n" +
+		"  fi\n" +
+		"done\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"sys:'\"$sys_path\"'\"}}\\n'\n" +
+		"sleep 60\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	// 1 MiB prompt that child ignores; os/exec writer goroutine will be blocked
+	// on writing until child dies.
+	largePrompt := strings.Repeat("unconsumed prompt text\n", 40000)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	session, err := backend.Execute(ctx, largePrompt, ExecOptions{
+		SystemPrompt: "confidential system instructions",
+		Timeout:      10 * time.Second,
+	})
+	if err != nil {
+		cancel()
+		t.Fatalf("execute: %v", err)
+	}
+
+	gotSysPath := make(chan string, 1)
+	go func() {
+		var collected strings.Builder
+		for msg := range session.Messages {
+			if msg.Type == MessageText {
+				collected.WriteString(msg.Content)
+				if strings.Contains(collected.String(), "sys:") {
+					str := collected.String()
+					idx := strings.Index(str, "sys:")
+					path := strings.TrimSpace(str[idx+4:])
+					if path != "" {
+						select {
+						case gotSysPath <- path:
+						default:
+						}
+					}
+				}
+			}
+		}
+	}()
+
+	var sysPath string
+	select {
+	case sysPath = <-gotSysPath:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for sys: path message")
+	}
+
+	// Cancel context while child is blocked in sleep and writer is blocked on pipe.
+	cancel()
+
+	select {
+	case res, ok := <-session.Result:
+		if !ok {
+			t.Fatal("result channel closed without value")
+		}
+		if res.Status != "aborted" {
+			t.Fatalf("expected status=aborted, got %q", res.Status)
+		}
+		if _, err := os.Stat(sysPath); !os.IsNotExist(err) {
+			t.Fatalf("temporary system prompt file %q was not removed after cancellation", sysPath)
+		}
+	case <-time.After(20 * time.Second):
+		t.Fatal("backend deadlocked or failed to terminate upon context cancellation within WaitDelay")
+	}
+}
+
+// TestPiExecuteHandlesMassiveStdoutLineWithoutScannerLimit proves that
+// reader.ReadBytes('\n') handles a stdout JSON line larger than the old
+// bufio.Scanner 32MiB limit without truncating or failing, followed by a sentinel line.
+func TestPiExecuteHandlesMassiveStdoutLineWithoutScannerLimit(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	// The fake Pi child:
+	// Emits agent_start, then a 34 MiB text_delta line, then a turn_end sentinel.
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"'\n" +
+		"awk 'BEGIN { for (i=0; i<1060000; i++) printf \"01234567890123456789012345678901\" }'\n" +
+		"printf '\"}}\\n'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 15 * time.Second})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	for range session.Messages {
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "completed" {
+		t.Fatalf("expected status=completed, got %q (error=%q)", res.Status, res.Error)
+	}
+	if len(res.Output) < 33000000 {
+		t.Fatalf("expected output length >= 33MB, got %d bytes", len(res.Output))
+	}
+}
+
+// TestPiExecuteCleansTempFileOnStartFailure proves that when cmd.Start fails
+// (e.g. invalid working directory), the temporary system prompt file is immediately cleaned up.
+func TestPiExecuteCleansTempFileOnStartFailure(t *testing.T) {
+	t.Parallel()
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	writeTestExecutable(t, fakePath, []byte("#!/bin/sh\nexit 0\n"))
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx := context.Background()
+	nonExistentDir := filepath.Join(t.TempDir(), "does-not-exist-cwd")
+	_, err = backend.Execute(ctx, "probe", ExecOptions{
+		Cwd:          nonExistentDir,
+		SystemPrompt: "confidential instructions start failure",
+	})
+	if err == nil {
+		t.Fatal("expected execute to fail for non-existent working directory")
+	}
+
+	// Verify no orphaned meowth-pi-sysprompt files left behind matching our run.
+	pattern := filepath.Join(os.TempDir(), "meowth-pi-sysprompt-*.txt")
+	matches, _ := filepath.Glob(pattern)
+	for _, m := range matches {
+		info, statErr := os.Stat(m)
+		if statErr == nil && time.Since(info.ModTime()) < 10*time.Second {
+			content, _ := os.ReadFile(m)
+			if string(content) == "confidential instructions start failure" {
+				t.Fatalf("orphaned system prompt file found after Start failure: %s", m)
+			}
+		}
+	}
+}
+
+// TestPiSystemPromptFilePermissionsAndAbsolutePath proves that the temporary
+// system prompt file is created with 0600 mode and passed as an absolute path.
+func TestPiSystemPromptFilePermissionsAndAbsolutePath(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	script := "#!/bin/sh\n" +
+		"sys_path=''\n" +
+		"while [ $# -gt 0 ]; do\n" +
+		"  if [ \"$1\" = \"--append-system-prompt\" ]; then\n" +
+		"    sys_path=\"$2\"\n" +
+		"    shift 2\n" +
+		"  else\n" +
+		"    shift\n" +
+		"  fi\n" +
+		"done\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"path:'\"$sys_path\"'\"}}\\n'\n" +
+		"sleep 1\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{
+		SystemPrompt: "test system prompt",
+		Timeout:      5 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	var capturedPath string
+	for msg := range session.Messages {
+		if msg.Type == MessageText && strings.HasPrefix(msg.Content, "path:") {
+			capturedPath = strings.TrimPrefix(msg.Content, "path:")
+			// Assert file permissions while child is still alive
+			fi, err := os.Stat(capturedPath)
+			if err != nil {
+				t.Fatalf("stat system prompt file: %v", err)
+			}
+			if perm := fi.Mode().Perm(); perm != 0600 {
+				t.Fatalf("expected permissions 0600, got %04o", perm)
+			}
+			if !filepath.IsAbs(capturedPath) {
+				t.Fatalf("expected absolute path, got %q", capturedPath)
+			}
+		}
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "completed" {
+		t.Fatalf("expected status=completed, got %q (error=%q)", res.Status, res.Error)
+	}
+	if capturedPath == "" {
+		t.Fatal("never captured system prompt path from child output")
+	}
+	// Verify cleaned up after execution
+	if _, err := os.Stat(capturedPath); !os.IsNotExist(err) {
+		t.Fatalf("temporary system prompt file %q was not removed after execution", capturedPath)
+	}
+}
+
+// TestPiExecuteTimeoutCleansTempFile proves that when execution times out,
+// the temporary system prompt file is cleaned up.
+func TestPiExecuteTimeoutCleansTempFile(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	script := "#!/bin/sh\n" +
+		"sys_path=''\n" +
+		"while [ $# -gt 0 ]; do\n" +
+		"  if [ \"$1\" = \"--append-system-prompt\" ]; then\n" +
+		"    sys_path=\"$2\"\n" +
+		"    shift 2\n" +
+		"  else\n" +
+		"    shift\n" +
+		"  fi\n" +
+		"done\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"path:'\"$sys_path\"'\"}}\\n'\n" +
+		"sleep 10\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx := context.Background()
+	session, err := backend.Execute(ctx, "probe", ExecOptions{
+		SystemPrompt: "timeout test system prompt",
+		Timeout:      2 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	gotPath := make(chan string, 1)
+	go func() {
+		for msg := range session.Messages {
+			if msg.Type == MessageText && strings.HasPrefix(msg.Content, "path:") {
+				select {
+				case gotPath <- strings.TrimPrefix(msg.Content, "path:"):
+				default:
+				}
+			}
+		}
+	}()
+
+	var capturedPath string
+	select {
+	case capturedPath = <-gotPath:
+	case <-time.After(3 * time.Second):
+		t.Fatal("never captured system prompt path from child output within deadline")
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "timeout" {
+		t.Fatalf("expected status=timeout, got %q", res.Status)
+	}
+	if _, err := os.Stat(capturedPath); !os.IsNotExist(err) {
+		t.Fatalf("temporary system prompt file %q was not removed after timeout", capturedPath)
+	}
+}
+
+// TestPiExecuteHandlesTrailingPartialLineAtEOF proves that if the stdout
+// stream ends with bytes not followed by a newline, it is still processed
+// or drained without crashing or hanging.
+func TestPiExecuteHandlesTrailingPartialLineAtEOF(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	// The fake Pi child:
+	// Emits a valid agent_start, then turn_end without trailing newline, then terminates.
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '%s' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 5 * time.Second})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	for range session.Messages {
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "completed" {
+		t.Fatalf("expected status=completed, got %q (error=%q)", res.Status, res.Error)
+	}
+}
+
 func sha256Sum(data []byte) [32]byte {
 	return sha256.Sum256(data)
 }
