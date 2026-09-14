@@ -17,10 +17,12 @@
 | 09 | [`09-chat-workspace-and-ui-polish.md`](./09-chat-workspace-and-ui-polish.md) | Chat 模板整合、富文本、单域名与全站 UI 规范 | 已落地 |
 | 10 | [`10-chat-reading-and-interaction.md`](./10-chat-reading-and-interaction.md) | Chat activity disclosures, focused reading layout, and refined controls | Implemented; UI and real-agent verification passed |
 | 11 | [`11-session-chat-transcript.md`](./11-session-chat-transcript.md) | Shared Chat response controls for session detail transcripts | Implemented; unit, browser, and recorded-session verification passed |
+| 12 | [`12-hermes-profile-discovery.md`](./12-hermes-profile-discovery.md) | Hermes ACP profile discovery and configuration | Implemented |
+| 13 | [`13-expand-http-body-limit-and-pi-stdin.md`](./13-expand-http-body-limit-and-pi-stdin.md) | Expand HTTP body limit to 64MiB and stream Pi prompt via stdin | In Progress |
 
 ## 何时新建 features 文档
 
-Latest: [12 · Hermes profile discovery](12-hermes-profile-discovery.md).
+Latest: [13 · Expand HTTP body limit and Pi stdin transport](13-expand-http-body-limit-and-pi-stdin.md).
 
 - 新增端到端可见的能力（新 API 端点、dashboard 新页、新 backend）
 - 跨多个模块的协调改动（端口迁移、协议演进、依赖大版本升级）

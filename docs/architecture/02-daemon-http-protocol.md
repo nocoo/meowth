@@ -109,7 +109,7 @@
 **Prompt size contract (local proxy philosophy)**:
 
 - There is **no field-level upper bound** on `prompt` or `system_prompt`.
-- The only request-size ceiling is the shared HTTP **body_limit of 1 MiB** (§12 / §10.2 `payload_too_large`).
+- The only request-size ceiling is the shared HTTP **body_limit of 64 MiB** (§12 / §10.2 `payload_too_large`).
 - Model context windows, compaction, and provider token limits are **backend-owned**; Meowth does not compute them.
 - Backend-specific transport limits (e.g. argv `ARG_MAX` for pi/copilot) must not be re-imposed as a common field cap; surface them as backend errors when hit.
 
@@ -575,7 +575,7 @@ Content-Type: application/problem+json; charset=utf-8
 | `session_not_found` | 404 | `{id}` 不存在 |
 | `token_not_found` | 404 | `{id}` 不存在 |
 | `session_conflict` | 409 | `resume_session_id` 已终结/不存在 |
-| `payload_too_large` | 413 | request body > `1 MiB` |
+| `payload_too_large` | 413 | request body > `64 MiB` |
 | `message_truncated` | — | 仅出现在 NDJSON `error` envelope；非 HTTP status |
 | `backend_unavailable` | 503 | `exec.LookPath` 失败、agent 二进制缺失 |
 | `internal` | 500 | 兜底；详情不暴露给客户端，写 daemon 日志 |
@@ -613,7 +613,7 @@ Content-Type: application/problem+json; charset=utf-8
 2. access_log     # method/path/status/duration_ms/request_id；不记录 body
 3. recover        # panic → 500 problem+json type=internal；写 daemon 日志带 stack
 4. nosniff        # X-Content-Type-Options: nosniff（所有响应；详 07 §4.1 C）
-5. body_limit     # 1 MiB（v1）；超 → 413 problem+json type=payload_too_large
+5. body_limit     # 64 MiB（v1）；超 → 413 problem+json type=payload_too_large
 6. cors (dev only)   # 仅在 --dev 启动时挂载；先于 bearer_auth；处理 OPTIONS preflight；生产构建禁用；详 §2.4
 7. bearer_auth    # 仅 /v1/* 与 /v1/agents/{type}/exec；豁免 /healthz、/、静态、/bootstrap/*、/problems/*、OPTIONS preflight
 8. router            # chi router；分发到具体 handler；HTML/static handler 自己在响应里挂 security_headers（详 07 §4.1 A/B）
