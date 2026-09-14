@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -251,5 +252,14 @@ func TestRedactArgvPromptsPiLast(t *testing.T) {
 	got := redactArgvPrompts(args, argvPromptLast)
 	if got[len(got)-1] == "SECRET" {
 		t.Fatalf("pi last arg not redacted: %#v", got)
+	}
+}
+
+func TestRedactArgvPromptsNone(t *testing.T) {
+	t.Parallel()
+	args := []string{"-p", "--mode", "json", "--session", "/tmp/session.jsonl"}
+	got := redactArgvPrompts(args, argvPromptNone)
+	if strings.Join(got, " ") != strings.Join(args, " ") {
+		t.Fatalf("argvPromptNone should leave args intact: got %#v want %#v", got, args)
 	}
 }

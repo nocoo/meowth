@@ -2,7 +2,10 @@ package agent
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -14,7 +17,7 @@ func TestBuildPiArgsNoToolAllowlist(t *testing.T) {
 	// Extension tools registered via Pi's registerTool() must not be
 	// filtered out by a hardcoded --tools allowlist. Omitting --tools
 	// lets Pi use its full tool registry. See #2379.
-	args := buildPiArgs("test prompt", "/tmp/session.jsonl", ExecOptions{}, slog.Default())
+	args := buildPiArgs("/tmp/session.jsonl", "", ExecOptions{}, slog.Default())
 	for i, arg := range args {
 		if arg == "--tools" {
 			t.Errorf("buildPiArgs emits --tools %q; should not restrict tool registry (see #2379)", args[i+1])
@@ -23,27 +26,28 @@ func TestBuildPiArgsNoToolAllowlist(t *testing.T) {
 }
 
 func TestBuildPiArgsBasicFlags(t *testing.T) {
-	args := buildPiArgs("hello world", "/tmp/s.jsonl", ExecOptions{
-		Model:        "anthropic/claude-sonnet-4-20250514",
-		SystemPrompt: "be helpful",
+	args := buildPiArgs("/tmp/s.jsonl", "/tmp/sysprompt.txt", ExecOptions{
+		Model: "anthropic/claude-sonnet-4-20250514",
 	}, slog.Default())
 
 	joined := strings.Join(args, " ")
-	for _, want := range []string{"-p", "--mode json", "--session /tmp/s.jsonl", "--provider anthropic", "--model claude-sonnet-4-20250514", "--append-system-prompt"} {
+	for _, want := range []string{"-p", "--mode json", "--session /tmp/s.jsonl", "--provider anthropic", "--model claude-sonnet-4-20250514", "--append-system-prompt /tmp/sysprompt.txt"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("expected %q in args, got: %v", want, args)
 		}
 	}
 
-	// Prompt must be the last positional argument.
-	if args[len(args)-1] != "hello world" {
-		t.Errorf("prompt should be last arg, got %q", args[len(args)-1])
+	// Prompt must NOT be in argv.
+	for _, arg := range args {
+		if arg == "hello world" {
+			t.Errorf("prompt should not be passed in argv, got %v", args)
+		}
 	}
 }
 
 func TestBuildPiArgsCustomArgsAppended(t *testing.T) {
 	// Users can still restrict tools via custom_args if desired.
-	args := buildPiArgs("prompt", "/tmp/s.jsonl", ExecOptions{
+	args := buildPiArgs("/tmp/s.jsonl", "", ExecOptions{
 		CustomArgs: []string{"--tools", "read,bash"},
 	}, slog.Default())
 
@@ -381,4 +385,154 @@ func TestPiMessageErrorTextBranchesUnit(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPiExecuteLargePromptViaStdinAndSystemPromptTempFile(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	// The fake Pi child:
+	// 1. Reads stdin until EOF and computes its SHA256.
+	// 2. Checks argv for --append-system-prompt <file>, reads the file and computes its SHA256.
+	// 3. Emits valid agent events and prints both SHA256 hashes in text_delta.
+	script := "#!/bin/sh\n" +
+		"stdin_hash=$(cat | shasum -a 256 | awk '{print $1}')\n" +
+		"sys_path=''\n" +
+		"while [ $# -gt 0 ]; do\n" +
+		"  if [ \"$1\" = \"--append-system-prompt\" ]; then\n" +
+		"    sys_path=\"$2\"\n" +
+		"    shift 2\n" +
+		"  else\n" +
+		"    shift\n" +
+		"  fi\n" +
+		"done\n" +
+		"sys_hash=''\n" +
+		"if [ -n \"$sys_path\" ] && [ -f \"$sys_path\" ]; then\n" +
+		"  sys_hash=$(shasum -a 256 \"$sys_path\" | awk '{print $1}')\n" +
+		"fi\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"stdin:'\"$stdin_hash\"';sys:'\"$sys_hash\"'\"}}\\n'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	// 2 MiB prompt (> 1 MiB previous body limit and > POSIX ARG_MAX)
+	largePrompt := strings.Repeat("hello 中文测试 multi-byte unicode 1234567890\n", 40000)
+	largeSystemPrompt := strings.Repeat("system instructions line \n", 10000)
+
+	expectedPromptHash := fmt.Sprintf("%x", sha256Sum([]byte(largePrompt)))
+	expectedSysHash := fmt.Sprintf("%x", sha256Sum([]byte(largeSystemPrompt)))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, largePrompt, ExecOptions{
+		SystemPrompt: largeSystemPrompt,
+		Timeout:      10 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	for range session.Messages {
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("Result channel closed without delivering a value")
+	}
+	if res.Status != "completed" {
+		t.Fatalf("expected Status=completed, got %q (error=%q)", res.Status, res.Error)
+	}
+
+	expectedOutput := fmt.Sprintf("stdin:%s;sys:%s", expectedPromptHash, expectedSysHash)
+	if res.Output != expectedOutput {
+		t.Fatalf("output mismatch: got %q want %q", res.Output, expectedOutput)
+	}
+}
+
+func TestPiExecuteEmptyPromptDeliversEOFAndCleansTempFile(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	// The fake Pi child:
+	// 1. Reads stdin until EOF; empty input gives 0 bytes.
+	// 2. Checks sys_path existence and readability.
+	script := "#!/bin/sh\n" +
+		"stdin_bytes=$(wc -c | tr -d ' ')\n" +
+		"sys_path=''\n" +
+		"while [ $# -gt 0 ]; do\n" +
+		"  if [ \"$1\" = \"--append-system-prompt\" ]; then\n" +
+		"    sys_path=\"$2\"\n" +
+		"    shift 2\n" +
+		"  else\n" +
+		"    shift\n" +
+		"  fi\n" +
+		"done\n" +
+		"if [ -n \"$sys_path\" ] && [ ! -f \"$sys_path\" ]; then\n" +
+		"  exit 2\n" +
+		"fi\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"bytes:'\"$stdin_bytes\"';path:'\"$sys_path\"'\"}}\\n'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "", ExecOptions{
+		SystemPrompt: "test system prompt",
+		Timeout:      5 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	for range session.Messages {
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("Result channel closed without delivering a value")
+	}
+	if res.Status != "completed" {
+		t.Fatalf("expected Status=completed, got %q (error=%q)", res.Status, res.Error)
+	}
+
+	// Output contains bytes:0;path:/...
+	if !strings.HasPrefix(res.Output, "bytes:0;path:") {
+		t.Fatalf("unexpected output: %q", res.Output)
+	}
+
+	parts := strings.Split(res.Output, ";path:")
+	if len(parts) == 2 {
+		sysPath := parts[1]
+		// Verify temporary file was cleaned up upon termination
+		if _, err := os.Stat(sysPath); !os.IsNotExist(err) {
+			t.Fatalf("temp system prompt file %q was not removed after execution", sysPath)
+		}
+	}
+}
+
+func sha256Sum(data []byte) [32]byte {
+	return sha256.Sum256(data)
 }
