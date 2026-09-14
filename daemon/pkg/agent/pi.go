@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -200,45 +201,70 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 		return nil, fmt.Errorf("pi session file: %w", err)
 	}
 
+	// Pi's --append-system-prompt flag natively accepts a file path.
+	// If a system prompt is provided, write it to a temporary file (0600)
+	// so it never appears in argv or encounters ARG_MAX limitations.
+	var systemPromptPath string
+	if opts.SystemPrompt != "" {
+		tmpFile, err := os.CreateTemp("", "meowth-pi-sysprompt-*.txt")
+		if err != nil {
+			return nil, fmt.Errorf("pi system prompt tempfile: %w", err)
+		}
+		systemPromptPath = tmpFile.Name()
+		if _, err := tmpFile.WriteString(opts.SystemPrompt); err != nil {
+			_ = tmpFile.Close()
+			_ = os.Remove(systemPromptPath)
+			return nil, fmt.Errorf("pi system prompt write: %w", err)
+		}
+		if err := tmpFile.Close(); err != nil {
+			_ = os.Remove(systemPromptPath)
+			return nil, fmt.Errorf("pi system prompt close: %w", err)
+		}
+	}
+
+	cleanupSystemPrompt := func() {
+		if systemPromptPath != "" {
+			if err := os.Remove(systemPromptPath); err != nil && !os.IsNotExist(err) {
+				b.cfg.Logger.Warn("failed to clean up pi system prompt file", "path", systemPromptPath, "err", err)
+			}
+			systemPromptPath = ""
+		}
+	}
+
 	runCtx, cancel := runContext(ctx, timeout)
 
-	args := buildPiArgs(prompt, sessionPath, opts, b.cfg.Logger)
+	args := buildPiArgs(sessionPath, systemPromptPath, opts, b.cfg.Logger)
 	argv0, cmdArgs := choosePiInvocation(execName, lookedUp, args, b.cfg.Logger)
 
 	cmd := exec.CommandContext(runCtx, argv0, cmdArgs...)
 	hideAgentWindow(cmd)
-	logAgentCommandRedacted(b.cfg.Logger, argv0, cmdArgs, argvPromptLast)
+	logAgentCommandRedacted(b.cfg.Logger, argv0, cmdArgs, argvPromptNone)
 	cmd.WaitDelay = 10 * time.Second
 	if opts.Cwd != "" {
 		cmd.Dir = opts.Cwd
 	}
 	cmd.Env = buildEnv(b.cfg.Env)
 
+	// Supplying prompt via cmd.Stdin with strings.NewReader.
+	// Go's os/exec automatically sets up an os.Pipe, streams data in a
+	// dedicated goroutine, and closes the pipe (delivering EOF) upon completion.
+	// This avoids passing the user prompt in argv, avoids OS ARG_MAX limits,
+	// and preserves the FIFO EOF behavior required to prevent #2188 hangs.
+	cmd.Stdin = strings.NewReader(prompt)
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		cleanupSystemPrompt()
 		cancel()
 		return nil, fmt.Errorf("pi stdout pipe: %w", err)
-	}
-	// Attach an explicit stdin pipe so we can close it ourselves. Pi reads
-	// its prompt from argv (positional, see buildPiArgs) and never expects
-	// interactive input, but when the parent leaves cmd.Stdin nil and the
-	// daemon is run under systemd, Pi has been observed to block in its
-	// event loop awaiting stdin events instead of progressing to "done"
-	// (#2188). Closing the pipe immediately after Start delivers an
-	// explicit EOF on a FIFO, which unblocks Pi's readable side.
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("pi stdin pipe: %w", err)
 	}
 	cmd.Stderr = newLogWriter(b.cfg.Logger, "[pi:stderr] ")
 
 	if err := cmd.Start(); err != nil {
-		_ = stdin.Close()
+		cleanupSystemPrompt()
 		cancel()
 		return nil, wrapStartError("pi", err)
 	}
-	_ = stdin.Close()
 
 	b.cfg.Logger.Info("pi started", "pid", cmd.Process.Pid, "cwd", opts.Cwd, "model", opts.Model)
 
@@ -246,13 +272,14 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 	msgCh := pipe.C()
 	resCh := make(chan Result, 1)
 
-	// Close stdout when the context is cancelled so scanner.Scan() unblocks.
+	// Close stdout when the context is cancelled so reader unblocks.
 	go func() {
 		<-runCtx.Done()
 		_ = stdout.Close()
 	}()
 
 	go func() {
+		defer cleanupSystemPrompt()
 		defer cancel()
 		defer pipe.Close()
 		defer close(resCh)
@@ -263,125 +290,128 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 		var finalError string
 		usage := make(map[string]TokenUsage)
 
-		scanner := bufio.NewScanner(stdout)
-		// Pi message_update events can be large (they embed the full message
-		// partial on each delta), so give the scanner generous headroom.
-		scanner.Buffer(make([]byte, 0, 1024*1024), 32*1024*1024)
+		reader := bufio.NewReader(stdout)
 		var textBuffer strings.Builder
 
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if line == "" {
-				continue
+		for {
+			lineBytes, err := reader.ReadBytes('\n')
+			if len(lineBytes) > 0 {
+				line := strings.TrimSpace(string(lineBytes))
+				if line != "" {
+					var evt piStreamEvent
+					if jsonErr := json.Unmarshal([]byte(line), &evt); jsonErr == nil {
+						switch evt.Type {
+						case "agent_start":
+							pipe.Send(Message{Type: MessageStatus, Status: "running"})
+
+						case "message_update":
+							if evt.AssistantMessageEvent != nil {
+								switch evt.AssistantMessageEvent.Type {
+								case "text_delta":
+									if d := drainPiTextBuffer(&textBuffer, evt.AssistantMessageEvent.Delta); d != "" {
+										output.WriteString(d)
+										pipe.Send(Message{Type: MessageText, Content: d})
+									}
+								case "thinking_delta":
+									if d := evt.AssistantMessageEvent.Delta; d != "" {
+										pipe.Send(Message{Type: MessageThinking, Content: d})
+									}
+								}
+							}
+
+						case "tool_execution_start":
+							var params map[string]any
+							if len(evt.Args) > 0 {
+								_ = json.Unmarshal(evt.Args, &params)
+							}
+							pipe.Send(Message{
+								Type:   MessageToolUse,
+								Tool:   evt.ToolName,
+								CallID: evt.ToolCallID,
+								Input:  params,
+							})
+
+						case "tool_execution_end":
+							pipe.Send(Message{
+								Type:   MessageToolResult,
+								CallID: evt.ToolCallID,
+								Output: decodePiResult(evt.Result),
+							})
+
+						case "turn_end":
+							msg := decodePiMessage(evt.Message)
+							if msg != nil {
+								if msg.Usage != nil {
+									model := msg.Model
+									if model == "" {
+										model = opts.Model
+									}
+									if model == "" {
+										model = "unknown"
+									}
+									u := usage[model]
+									u.InputTokens += msg.Usage.Input
+									u.OutputTokens += msg.Usage.Output
+									u.CacheReadTokens += msg.Usage.CacheRead
+									u.CacheWriteTokens += msg.Usage.CacheWrite
+									usage[model] = u
+								}
+								if errText := piMessageErrorText(msg); errText != "" {
+									pipe.Send(Message{Type: MessageError, Content: errText})
+									if finalStatus == "completed" {
+										finalStatus = "failed"
+										finalError = errText
+									}
+								}
+							}
+
+						case "message_end":
+							// Pi surfaces assistant turn failures (provider 4xx/5xx,
+							// auth, model-not-available) through `message_end` with
+							// `stopReason: "error"` and a populated `errorMessage`,
+							// then still emits `agent_end` with exit code 0. Without
+							// this case the backend would report Status=completed
+							// with empty output — see docs/architecture/01 §4 trim
+							// follow-up and the multi-agent review that surfaced
+							// this gap on a 400 `model_not_available_for_integrator`
+							// response from Pi's raven provider.
+							if msg := decodePiMessage(evt.Message); msg != nil {
+								if errText := piMessageErrorText(msg); errText != "" {
+									pipe.Send(Message{Type: MessageError, Content: errText})
+									if finalStatus == "completed" {
+										finalStatus = "failed"
+										finalError = errText
+									}
+								}
+							}
+
+						case "error":
+							errText := decodePiString(evt.Message)
+							pipe.Send(Message{Type: MessageError, Content: errText})
+							if finalStatus == "completed" {
+								finalStatus = "failed"
+								finalError = errText
+							}
+
+						case "auto_retry_end":
+							if !evt.Success && finalStatus == "completed" {
+								finalStatus = "failed"
+								if evt.FinalError != "" {
+									finalError = evt.FinalError
+								} else {
+									finalError = "pi exhausted automatic retries"
+								}
+							}
+						}
+					}
+				}
 			}
-			var evt piStreamEvent
-			if err := json.Unmarshal([]byte(line), &evt); err != nil {
-				continue
-			}
-
-			switch evt.Type {
-			case "agent_start":
-				pipe.Send(Message{Type: MessageStatus, Status: "running"})
-
-			case "message_update":
-				if evt.AssistantMessageEvent == nil {
-					continue
-				}
-				switch evt.AssistantMessageEvent.Type {
-				case "text_delta":
-					if d := drainPiTextBuffer(&textBuffer, evt.AssistantMessageEvent.Delta); d != "" {
-						output.WriteString(d)
-						pipe.Send(Message{Type: MessageText, Content: d})
-					}
-				case "thinking_delta":
-					if d := evt.AssistantMessageEvent.Delta; d != "" {
-						pipe.Send(Message{Type: MessageThinking, Content: d})
-					}
-				}
-
-			case "tool_execution_start":
-				var params map[string]any
-				if len(evt.Args) > 0 {
-					_ = json.Unmarshal(evt.Args, &params)
-				}
-				pipe.Send(Message{
-					Type:   MessageToolUse,
-					Tool:   evt.ToolName,
-					CallID: evt.ToolCallID,
-					Input:  params,
-				})
-
-			case "tool_execution_end":
-				pipe.Send(Message{
-					Type:   MessageToolResult,
-					CallID: evt.ToolCallID,
-					Output: decodePiResult(evt.Result),
-				})
-
-			case "turn_end":
-				msg := decodePiMessage(evt.Message)
-				if msg != nil {
-					if msg.Usage != nil {
-						model := msg.Model
-						if model == "" {
-							model = opts.Model
-						}
-						if model == "" {
-							model = "unknown"
-						}
-						u := usage[model]
-						u.InputTokens += msg.Usage.Input
-						u.OutputTokens += msg.Usage.Output
-						u.CacheReadTokens += msg.Usage.CacheRead
-						u.CacheWriteTokens += msg.Usage.CacheWrite
-						usage[model] = u
-					}
-					if errText := piMessageErrorText(msg); errText != "" {
-						pipe.Send(Message{Type: MessageError, Content: errText})
-						if finalStatus == "completed" {
-							finalStatus = "failed"
-							finalError = errText
-						}
-					}
-				}
-
-			case "message_end":
-				// Pi surfaces assistant turn failures (provider 4xx/5xx,
-				// auth, model-not-available) through `message_end` with
-				// `stopReason: "error"` and a populated `errorMessage`,
-				// then still emits `agent_end` with exit code 0. Without
-				// this case the backend would report Status=completed
-				// with empty output — see docs/architecture/01 §4 trim
-				// follow-up and the multi-agent review that surfaced
-				// this gap on a 400 `model_not_available_for_integrator`
-				// response from Pi's raven provider.
-				if msg := decodePiMessage(evt.Message); msg != nil {
-					if errText := piMessageErrorText(msg); errText != "" {
-						pipe.Send(Message{Type: MessageError, Content: errText})
-						if finalStatus == "completed" {
-							finalStatus = "failed"
-							finalError = errText
-						}
-					}
-				}
-
-			case "error":
-				errText := decodePiString(evt.Message)
-				pipe.Send(Message{Type: MessageError, Content: errText})
-				if finalStatus == "completed" {
+			if err != nil {
+				if err != io.EOF && runCtx.Err() == nil && finalStatus == "completed" {
 					finalStatus = "failed"
-					finalError = errText
+					finalError = fmt.Sprintf("pi stdout read error: %v", err)
 				}
-
-			case "auto_retry_end":
-				if !evt.Success && finalStatus == "completed" {
-					finalStatus = "failed"
-					if evt.FinalError != "" {
-						finalError = evt.FinalError
-					} else {
-						finalError = "pi exhausted automatic retries"
-					}
-				}
+				break
 			}
 		}
 		if d := flushPiTextBuffer(&textBuffer); d != "" {
@@ -404,6 +434,8 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 		}
 
 		b.cfg.Logger.Info("pi finished", "pid", cmd.Process.Pid, "status", finalStatus, "duration", duration.Round(time.Millisecond).String())
+
+		cleanupSystemPrompt()
 
 		resCh <- Result{
 			Status:     finalStatus,
@@ -544,16 +576,15 @@ var piBlockedArgs = map[string]blockedArgMode{
 //
 // Flags:
 //
-//	-p                          non-interactive mode (prompt is positional)
+//	-p                          non-interactive mode (prompt read from stdin)
 //	--mode json                 emit one JSON event per line on stdout
 //	--session <path>            session log file (created upfront, reused on resume)
 //	--provider <name>           provider, when Model is "provider/id"
 //	--model <id>                model identifier
-//	--append-system-prompt <s>  extra system instructions
+//	--append-system-prompt <p>  extra system instructions (file path)
 //
-// Custom args appended before the positional prompt. The prompt is a
-// positional argument and must be last.
-func buildPiArgs(prompt, sessionPath string, opts ExecOptions, logger *slog.Logger) []string {
+// Custom args appended. The prompt is supplied via stdin, not argv.
+func buildPiArgs(sessionPath, systemPromptPath string, opts ExecOptions, logger *slog.Logger) []string {
 	args := []string{
 		"-p",
 		"--mode", "json",
@@ -575,11 +606,10 @@ func buildPiArgs(prompt, sessionPath string, opts ExecOptions, logger *slog.Logg
 	// tools. Passing --tools acts as a restrictive allowlist that
 	// silently filters out extension-registered tools (#2379).
 	// Users who want to restrict tools can do so via custom_args.
-	if opts.SystemPrompt != "" {
-		args = append(args, "--append-system-prompt", opts.SystemPrompt)
+	if systemPromptPath != "" {
+		args = append(args, "--append-system-prompt", systemPromptPath)
 	}
 	args = append(args, filterCustomArgs(opts.CustomArgs, piBlockedArgs, logger)...)
-	args = append(args, prompt)
 	return args
 }
 

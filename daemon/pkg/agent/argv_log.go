@@ -12,8 +12,10 @@ import (
 type argvPromptMode int
 
 const (
-	// argvPromptLast is used by pi: the prompt is the final positional arg.
-	argvPromptLast argvPromptMode = iota
+	// argvPromptNone is used when no prompt is passed in argv (e.g. pi via stdin).
+	argvPromptNone argvPromptMode = iota
+	// argvPromptLast is used when the prompt is the final positional arg.
+	argvPromptLast
 	// argvPromptFlagP is used by copilot: `-p <prompt>` early in argv.
 	argvPromptFlagP
 )
@@ -35,6 +37,8 @@ func redactArgvPrompts(args []string, mode argvPromptMode) []string {
 	}
 	safe := append([]string(nil), args...)
 	switch mode {
+	case argvPromptNone:
+		// No prompt in argv, return as-is.
 	case argvPromptFlagP:
 		for i := 0; i+1 < len(safe); i++ {
 			if safe[i] == "-p" || safe[i] == "--prompt" {
