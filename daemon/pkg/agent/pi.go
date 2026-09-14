@@ -26,6 +26,38 @@ var (
 	piControlTokenRE = regexp.MustCompile(`<\|[A-Za-z0-9_-]+>[A-Za-z0-9_-]*|<[A-Za-z0-9_-]+\|>`)
 )
 
+// emitChunkedMessageText splits text into UTF-8 rune-safe chunks that comfortably
+// fit within the consumer's (Teams Native MeowthStreamDecoder.maximumLineBytes = 524,288 bytes)
+// and daemon envelope's (1 MiB) per-line limit even after worst-case JSON string escaping
+// (where control characters like \u0001 become 6 bytes: \ u 0 0 0 1, or quotes become \").
+// Target chunk byte size is at most 64 KiB, guaranteeing encoded line length < 512 KiB.
+func emitChunkedMessageText(pipe *messagePipe, text string) {
+	if text == "" {
+		return
+	}
+	const maxChunkBytes = 64 * 1024
+	for len(text) > 0 {
+		if len(text) <= maxChunkBytes {
+			pipe.Send(Message{Type: MessageText, Content: text})
+			return
+		}
+		// Cut at rune boundary <= maxChunkBytes
+		cut := maxChunkBytes
+		for cut > 0 && (text[cut]&0xC0) == 0x80 {
+			cut--
+		}
+		if cut == 0 {
+			// Fallback: advance at least to next valid rune boundary
+			cut = 1
+			for cut < len(text) && (text[cut]&0xC0) == 0x80 {
+				cut++
+			}
+		}
+		pipe.Send(Message{Type: MessageText, Content: text[:cut]})
+		text = text[cut:]
+	}
+}
+
 func stripPiToolCallMarkup(s string) string {
 	s = stripPiStructuredToolMarkup(s)
 	return piControlTokenRE.ReplaceAllString(s, "")
@@ -291,13 +323,40 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 		defer close(resCh)
 
 		startTime := time.Now()
-		var output strings.Builder
 		finalStatus := "completed"
-		var finalError string
+		var fatalError string
+		var readErr error
 		usage := make(map[string]TokenUsage)
 
 		reader := bufio.NewReader(stdout)
 		var textBuffer strings.Builder
+		var attemptText strings.Builder
+		var committedOutput strings.Builder
+		var stashedError string
+		activeAssistantInFlight := false
+		hasSuccessfulTurn := false
+		attemptEmitted := false
+		attemptUsageRecorded := false
+		var retryCount int
+
+		recordAssistantUsage := func(msg *piMessage) {
+			if msg != nil && msg.Usage != nil && !attemptUsageRecorded {
+				model := msg.Model
+				if model == "" {
+					model = opts.Model
+				}
+				if model == "" {
+					model = "unknown"
+				}
+				u := usage[model]
+				u.InputTokens += msg.Usage.Input
+				u.OutputTokens += msg.Usage.Output
+				u.CacheReadTokens += msg.Usage.CacheRead
+				u.CacheWriteTokens += msg.Usage.CacheWrite
+				usage[model] = u
+				attemptUsageRecorded = true
+			}
+		}
 
 		for {
 			lineBytes, err := reader.ReadBytes('\n')
@@ -310,13 +369,24 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 						case "agent_start":
 							pipe.Send(Message{Type: MessageStatus, Status: "running"})
 
+						case "message_start":
+							if msg := decodePiMessage(evt.Message); msg != nil && msg.Role == "assistant" {
+								activeAssistantInFlight = true
+								attemptEmitted = false
+								attemptUsageRecorded = false
+								textBuffer.Reset()
+								attemptText.Reset()
+							}
+
 						case "message_update":
 							if evt.AssistantMessageEvent != nil {
 								switch evt.AssistantMessageEvent.Type {
 								case "text_delta":
 									if d := drainPiTextBuffer(&textBuffer, evt.AssistantMessageEvent.Delta); d != "" {
-										output.WriteString(d)
-										pipe.Send(Message{Type: MessageText, Content: d})
+										attemptText.WriteString(d)
+										// Send non-sensitive status update to preserve semantic inactivity progress
+										// without prematurely emitting unverified text tokens.
+										pipe.Send(Message{Type: MessageStatus, Status: "in_progress"})
 									}
 								case "thinking_delta":
 									if d := evt.AssistantMessageEvent.Delta; d != "" {
@@ -346,112 +416,151 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 
 						case "turn_end":
 							msg := decodePiMessage(evt.Message)
-							if msg != nil {
-								if msg.Usage != nil {
-									model := msg.Model
-									if model == "" {
-										model = opts.Model
-									}
-									if model == "" {
-										model = "unknown"
-									}
-									u := usage[model]
-									u.InputTokens += msg.Usage.Input
-									u.OutputTokens += msg.Usage.Output
-									u.CacheReadTokens += msg.Usage.CacheRead
-									u.CacheWriteTokens += msg.Usage.CacheWrite
-									usage[model] = u
-								}
+							if msg != nil && msg.Role == "assistant" {
+								recordAssistantUsage(msg)
 								if errText := piMessageErrorText(msg); errText != "" {
-									pipe.Send(Message{Type: MessageError, Content: errText})
-									if finalStatus == "completed" {
-										finalStatus = "failed"
-										finalError = errText
-									}
+									stashedError = errText
+									activeAssistantInFlight = false
+									// Discard attempt text on error
+									textBuffer.Reset()
+									attemptText.Reset()
 								}
 							}
 
 						case "message_end":
-							// Pi surfaces assistant turn failures (provider 4xx/5xx,
-							// auth, model-not-available) through `message_end` with
-							// `stopReason: "error"` and a populated `errorMessage`,
-							// then still emits `agent_end` with exit code 0. Without
-							// this case the backend would report Status=completed
-							// with empty output — see docs/architecture/01 §4 trim
-							// follow-up and the multi-agent review that surfaced
-							// this gap on a 400 `model_not_available_for_integrator`
-							// response from Pi's raven provider.
 							if msg := decodePiMessage(evt.Message); msg != nil {
+								if msg.Role == "assistant" {
+									recordAssistantUsage(msg)
+								}
 								if errText := piMessageErrorText(msg); errText != "" {
-									pipe.Send(Message{Type: MessageError, Content: errText})
-									if finalStatus == "completed" {
-										finalStatus = "failed"
-										finalError = errText
+									stashedError = errText
+									activeAssistantInFlight = false
+									// Discard attempt text on error
+									textBuffer.Reset()
+									attemptText.Reset()
+								} else if msg.Role == "assistant" && isPiSuccessfulAssistantStopReason(msg.StopReason) {
+									// Assistant message completed with verified success
+									if d := flushPiTextBuffer(&textBuffer); d != "" {
+										attemptText.WriteString(d)
 									}
+									textBuffer.Reset()
+									if !attemptEmitted {
+										commit := attemptText.String()
+										committedOutput.WriteString(commit)
+										if commit != "" {
+											emitChunkedMessageText(pipe, commit)
+										}
+										attemptEmitted = true
+									}
+									attemptText.Reset()
+									activeAssistantInFlight = false
+									stashedError = ""
+									hasSuccessfulTurn = true
+								} else if msg.Role == "assistant" {
+									// StopReason is not in success whitelist (e.g. aborted, length, or unexpected)
+									stashedError = fmt.Sprintf("pi assistant stopped without success (stopReason: %s)", msg.StopReason)
+									activeAssistantInFlight = false
+									textBuffer.Reset()
+									attemptText.Reset()
+								}
+							}
+
+						case "auto_retry_start":
+							retryCount++
+							pipe.Send(Message{Type: MessageStatus, Status: "retrying"})
+							b.cfg.Logger.Info("pi auto retry start",
+								"pid", cmd.Process.Pid,
+								"backend_session_id", sessionPath,
+								"attempt", evt.Attempt,
+								"max_attempts", evt.MaxAttempts,
+								"delay_ms", evt.DelayMs,
+							)
+							// Reset attempt text buffer for the next attempt
+							activeAssistantInFlight = false
+							attemptEmitted = false
+							attemptUsageRecorded = false
+							textBuffer.Reset()
+							attemptText.Reset()
+
+						case "auto_retry_end":
+							b.cfg.Logger.Info("pi auto retry end",
+								"pid", cmd.Process.Pid,
+								"backend_session_id", sessionPath,
+								"success", evt.Success,
+							)
+							if !evt.Success {
+								if evt.FinalError != "" {
+									stashedError = evt.FinalError
+								} else if stashedError == "" {
+									stashedError = "pi exhausted automatic retries"
 								}
 							}
 
 						case "error":
 							errText := decodePiString(evt.Message)
-							pipe.Send(Message{Type: MessageError, Content: errText})
-							if finalStatus == "completed" {
-								finalStatus = "failed"
-								finalError = errText
-							}
-
-						case "auto_retry_end":
-							if !evt.Success && finalStatus == "completed" {
-								finalStatus = "failed"
-								if evt.FinalError != "" {
-									finalError = evt.FinalError
-								} else {
-									finalError = "pi exhausted automatic retries"
-								}
-							}
+							fatalError = errText
+							activeAssistantInFlight = false
+							textBuffer.Reset()
+							attemptText.Reset()
 						}
 					}
 				}
 			}
 			if err != nil {
 				if err != io.EOF && runCtx.Err() == nil {
+					readErr = err
 					if cmd.Process != nil {
 						_ = cmd.Process.Kill()
-					}
-					if finalStatus == "completed" {
-						finalStatus = "failed"
-						finalError = fmt.Sprintf("pi stdout read error: %v", err)
 					}
 				}
 				break
 			}
 		}
-		if d := flushPiTextBuffer(&textBuffer); d != "" {
-			output.WriteString(d)
-			pipe.Send(Message{Type: MessageText, Content: d})
-		}
+
+		// Ensure attempt text buffers are cleaned up
+		textBuffer.Reset()
+		attemptText.Reset()
 
 		waitErr := cmd.Wait()
 		duration := time.Since(startTime)
 
 		if runCtx.Err() == context.DeadlineExceeded {
 			finalStatus = "timeout"
-			finalError = fmt.Sprintf("pi timed out after %s", timeout)
+			fatalError = fmt.Sprintf("pi timed out after %s", timeout)
 		} else if runCtx.Err() == context.Canceled {
 			finalStatus = "aborted"
-			finalError = "execution cancelled"
-		} else if waitErr != nil && finalStatus == "completed" {
+			fatalError = "execution cancelled"
+		} else if readErr != nil {
 			finalStatus = "failed"
-			finalError = fmt.Sprintf("pi exited with error: %v", waitErr)
+			fatalError = fmt.Sprintf("pi stdout read error: %v", readErr)
+			pipe.Send(Message{Type: MessageError, Content: fatalError})
+		} else if fatalError != "" {
+			finalStatus = "failed"
+			pipe.Send(Message{Type: MessageError, Content: fatalError})
+		} else if waitErr != nil {
+			finalStatus = "failed"
+			fatalError = fmt.Sprintf("pi exited with error: %v", waitErr)
+			pipe.Send(Message{Type: MessageError, Content: fatalError})
+		} else if stashedError != "" || !hasSuccessfulTurn || activeAssistantInFlight {
+			finalStatus = "failed"
+			if stashedError != "" {
+				fatalError = stashedError
+			} else if activeAssistantInFlight {
+				fatalError = "pi stream ended while assistant turn was still in flight"
+			} else {
+				fatalError = "pi stream ended without successful turn completion"
+			}
+			pipe.Send(Message{Type: MessageError, Content: fatalError})
 		}
 
-		b.cfg.Logger.Info("pi finished", "pid", cmd.Process.Pid, "status", finalStatus, "duration", duration.Round(time.Millisecond).String())
+		b.cfg.Logger.Info("pi finished", "pid", cmd.Process.Pid, "backend_session_id", sessionPath, "status", finalStatus, "retries", retryCount, "duration", duration.Round(time.Millisecond).String())
 
 		cleanupSystemPrompt()
 
 		resCh <- Result{
 			Status:     finalStatus,
-			Output:     output.String(),
-			Error:      finalError,
+			Output:     committedOutput.String(),
+			Error:      fatalError,
 			DurationMs: duration.Milliseconds(),
 			SessionID:  sessionPath,
 			Usage:      usage,
@@ -482,6 +591,12 @@ type piStreamEvent struct {
 
 	// error: Message is a string. turn_end: Message is an object.
 	Message json.RawMessage `json:"message,omitempty"`
+
+	// auto_retry_start
+	Attempt      int    `json:"attempt,omitempty"`
+	MaxAttempts  int    `json:"maxAttempts,omitempty"`
+	DelayMs      int    `json:"delayMs,omitempty"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
 
 	// auto_retry_end
 	Success    bool   `json:"success,omitempty"`
@@ -530,12 +645,21 @@ func decodePiMessage(raw json.RawMessage) *piMessage {
 	return &m
 }
 
+// isPiSuccessfulAssistantStopReason returns true only when the stopReason
+// explicitly indicates a normal successful turn completion.
+func isPiSuccessfulAssistantStopReason(stopReason string) bool {
+	switch strings.ToLower(strings.TrimSpace(stopReason)) {
+	case "stop", "tooluse", "tool_use", "end", "end_turn":
+		return true
+	default:
+		return false
+	}
+}
+
 // piMessageErrorText returns the human-readable error text carried on a
 // Pi assistant message when the upstream provider failed mid-turn. It
-// triggers on either a populated `errorMessage` or `stopReason == "error"`
-// (Pi has been observed to set the latter even when errorMessage is empty
-// because the embedded provider response could not be decoded). Empty
-// return means "no error here, continue with the completed path."
+// triggers on a populated `errorMessage`, `stopReason == "error"`, or
+// any non-successful terminal reason (such as aborted or length).
 func piMessageErrorText(m *piMessage) string {
 	if m == nil {
 		return ""
@@ -543,10 +667,22 @@ func piMessageErrorText(m *piMessage) string {
 	if msg := strings.TrimSpace(m.ErrorMessage); msg != "" {
 		return msg
 	}
-	if strings.EqualFold(strings.TrimSpace(m.StopReason), "error") {
+	sr := strings.ToLower(strings.TrimSpace(m.StopReason))
+	switch sr {
+	case "error":
 		return "pi reported stopReason=error with no errorMessage payload"
+	case "aborted":
+		return "pi reported stopReason=aborted"
+	case "length":
+		return "pi reported stopReason=length (output token limit exceeded)"
+	case "":
+		return ""
+	default:
+		if isPiSuccessfulAssistantStopReason(sr) {
+			return ""
+		}
+		return fmt.Sprintf("pi reported unexpected stopReason: %s", m.StopReason)
 	}
-	return ""
 }
 
 func decodePiString(raw json.RawMessage) string {

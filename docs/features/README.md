@@ -19,7 +19,7 @@
 | 11 | [`11-session-chat-transcript.md`](./11-session-chat-transcript.md) | Shared Chat response controls for session detail transcripts | Implemented; unit, browser, and recorded-session verification passed |
 | 12 | [`12-hermes-profile-discovery.md`](./12-hermes-profile-discovery.md) | Hermes ACP profile discovery and configuration | Implemented |
 | 13 | [`13-expand-http-body-limit-and-pi-stdin.md`](./13-expand-http-body-limit-and-pi-stdin.md) | Expand HTTP body limit to 64MiB and stream Pi prompt via stdin | Implemented |
-| 14 | [`14-pi-adapter-resilience-and-assistant-isolation.md`](./14-pi-adapter-resilience-and-assistant-isolation.md) | Pi adapter resilience against transient upstream errors and attempt isolation | In Progress |
+| 14 | [`14-pi-adapter-resilience-and-assistant-isolation.md`](./14-pi-adapter-resilience-and-assistant-isolation.md) | Pi adapter resilience against transient upstream errors and attempt isolation | Implemented |
 
 ## 何时新建 features 文档
 

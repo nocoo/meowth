@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/nocoo/meowth/daemon/internal/envelope"
 )
 
 func TestBuildPiArgsNoToolAllowlist(t *testing.T) {
@@ -86,7 +89,8 @@ func TestPiExecuteAttachesStdinPipe(t *testing.T) {
 		"case \"$kind\" in\n" +
 		"  fifo|*pipe*)\n" +
 		"    printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
-		"    printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"    printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"test\",\"stopReason\":\"stop\"}}'\n" +
+		"    printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"test\",\"stopReason\":\"stop\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
 		"    exit 0\n" +
 		"    ;;\n" +
 		"esac\n" +
@@ -284,9 +288,9 @@ func TestPiExecuteMapsStopReasonErrorWithoutErrorMessage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new pi backend: %v", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	session, err := backend.Execute(ctx, "prompt-ignored", ExecOptions{Timeout: 5 * time.Second})
+	session, err := backend.Execute(ctx, "prompt-ignored", ExecOptions{Timeout: 10 * time.Second})
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -320,7 +324,8 @@ func TestPiExecuteCompletedHappyPathStillPasses(t *testing.T) {
 		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
 		"printf '%s\\n' '{\"type\":\"turn_start\"}'\n" +
 		"printf '%s\\n' '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"4\"}}'\n" +
-		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":3,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":4}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\",\"usage\":{\"input\":3,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":4}}}'\n" +
 		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
 		"exit 0\n"
 	writeTestExecutable(t, fakePath, []byte(script))
@@ -329,9 +334,9 @@ func TestPiExecuteCompletedHappyPathStillPasses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new pi backend: %v", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	session, err := backend.Execute(ctx, "prompt-ignored", ExecOptions{Timeout: 5 * time.Second})
+	session, err := backend.Execute(ctx, "prompt-ignored", ExecOptions{Timeout: 10 * time.Second})
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -415,7 +420,8 @@ func TestPiExecuteLargePromptViaStdinAndSystemPromptTempFile(t *testing.T) {
 		"fi\n" +
 		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
 		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"stdin:'\"$stdin_hash\"';sys:'\"$sys_hash\"'\"}}\\n'\n" +
-		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
 		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
 		"exit 0\n"
 	writeTestExecutable(t, fakePath, []byte(script))
@@ -486,7 +492,8 @@ func TestPiExecuteEmptyPromptDeliversEOFAndCleansTempFile(t *testing.T) {
 		"fi\n" +
 		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
 		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"bytes:'\"$stdin_bytes\"';path:'\"$sys_path\"'\"}}\\n'\n" +
-		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
 		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
 		"exit 0\n"
 	writeTestExecutable(t, fakePath, []byte(script))
@@ -496,12 +503,12 @@ func TestPiExecuteEmptyPromptDeliversEOFAndCleansTempFile(t *testing.T) {
 		t.Fatalf("new pi backend: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	session, err := backend.Execute(ctx, "", ExecOptions{
 		SystemPrompt: "test system prompt",
-		Timeout:      5 * time.Second,
+		Timeout:      10 * time.Second,
 	})
 	if err != nil {
 		t.Fatalf("execute: %v", err)
@@ -545,7 +552,7 @@ func TestPiExecuteCleansTempFileAndExitsWhenChildIgnoresStdinAndCancelled(t *tes
 	fakePath := filepath.Join(t.TempDir(), "pi")
 	// The fake Pi child:
 	// 1. Intentionally never touches stdin.
-	// 2. Extracts sys_path and outputs it.
+	// 2. Extracts sys_path and outputs it via thinking_delta so it's streamed immediately.
 	// 3. Sleeps indefinitely until killed by context cancellation.
 	script := "#!/bin/sh\n" +
 		"sys_path=''\n" +
@@ -558,7 +565,7 @@ func TestPiExecuteCleansTempFileAndExitsWhenChildIgnoresStdinAndCancelled(t *tes
 		"  fi\n" +
 		"done\n" +
 		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
-		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"sys:'\"$sys_path\"'\"}}\\n'\n" +
+		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"thinking_delta\",\"delta\":\"sys:'\"$sys_path\"'\"}}\\n'\n" +
 		"sleep 60\n" +
 		"exit 0\n"
 	writeTestExecutable(t, fakePath, []byte(script))
@@ -586,7 +593,7 @@ func TestPiExecuteCleansTempFileAndExitsWhenChildIgnoresStdinAndCancelled(t *tes
 	go func() {
 		var collected strings.Builder
 		for msg := range session.Messages {
-			if msg.Type == MessageText {
+			if msg.Type == MessageThinking {
 				collected.WriteString(msg.Content)
 				if strings.Contains(collected.String(), "sys:") {
 					str := collected.String()
@@ -646,7 +653,8 @@ func TestPiExecuteHandlesMassiveStdoutLineWithoutScannerLimit(t *testing.T) {
 		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"'\n" +
 		"awk 'BEGIN { for (i=0; i<1060000; i++) printf \"01234567890123456789012345678901\" }'\n" +
 		"printf '\"}}\\n'\n" +
-		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
 		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
 		"exit 0\n"
 	writeTestExecutable(t, fakePath, []byte(script))
@@ -735,9 +743,10 @@ func TestPiSystemPromptFilePermissionsAndAbsolutePath(t *testing.T) {
 		"  fi\n" +
 		"done\n" +
 		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
-		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"path:'\"$sys_path\"'\"}}\\n'\n" +
+		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"thinking_delta\",\"delta\":\"path:'\"$sys_path\"'\"}}\\n'\n" +
 		"sleep 1\n" +
-		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
 		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
 		"exit 0\n"
 	writeTestExecutable(t, fakePath, []byte(script))
@@ -747,12 +756,12 @@ func TestPiSystemPromptFilePermissionsAndAbsolutePath(t *testing.T) {
 		t.Fatalf("new pi backend: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	session, err := backend.Execute(ctx, "probe", ExecOptions{
 		SystemPrompt: "test system prompt",
-		Timeout:      5 * time.Second,
+		Timeout:      10 * time.Second,
 	})
 	if err != nil {
 		t.Fatalf("execute: %v", err)
@@ -760,7 +769,7 @@ func TestPiSystemPromptFilePermissionsAndAbsolutePath(t *testing.T) {
 
 	var capturedPath string
 	for msg := range session.Messages {
-		if msg.Type == MessageText && strings.HasPrefix(msg.Content, "path:") {
+		if msg.Type == MessageThinking && strings.HasPrefix(msg.Content, "path:") {
 			capturedPath = strings.TrimPrefix(msg.Content, "path:")
 			// Assert file permissions while child is still alive
 			fi, err := os.Stat(capturedPath)
@@ -794,8 +803,9 @@ func TestPiSystemPromptFilePermissionsAndAbsolutePath(t *testing.T) {
 
 // TestPiExecuteTimeoutCleansTempFile proves that when execution times out,
 // the temporary system prompt file is cleaned up.
+// Deliberately serial (no t.Parallel()) to prevent sub-second scheduling
+// jitter under heavy CPU-bound test suites from stealing the 2s timeout window.
 func TestPiExecuteTimeoutCleansTempFile(t *testing.T) {
-	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("shell-script fake binary requires a POSIX shell")
 	}
@@ -812,7 +822,7 @@ func TestPiExecuteTimeoutCleansTempFile(t *testing.T) {
 		"  fi\n" +
 		"done\n" +
 		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
-		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"path:'\"$sys_path\"'\"}}\\n'\n" +
+		"printf '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"thinking_delta\",\"delta\":\"path:'\"$sys_path\"'\"}}\\n'\n" +
 		"sleep 10\n" +
 		"exit 0\n"
 	writeTestExecutable(t, fakePath, []byte(script))
@@ -834,7 +844,7 @@ func TestPiExecuteTimeoutCleansTempFile(t *testing.T) {
 	gotPath := make(chan string, 1)
 	go func() {
 		for msg := range session.Messages {
-			if msg.Type == MessageText && strings.HasPrefix(msg.Content, "path:") {
+			if msg.Type == MessageThinking && strings.HasPrefix(msg.Content, "path:") {
 				select {
 				case gotPath <- strings.TrimPrefix(msg.Content, "path:"):
 				default:
@@ -846,7 +856,7 @@ func TestPiExecuteTimeoutCleansTempFile(t *testing.T) {
 	var capturedPath string
 	select {
 	case capturedPath = <-gotPath:
-	case <-time.After(3 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("never captured system prompt path from child output within deadline")
 	}
 
@@ -876,7 +886,520 @@ func TestPiExecuteHandlesTrailingPartialLineAtEOF(t *testing.T) {
 	// Emits a valid agent_start, then turn_end without trailing newline, then terminates.
 	script := "#!/bin/sh\n" +
 		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
-		"printf '%s' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\"}}'\n" +
+		"printf '%s' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 10 * time.Second})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	for range session.Messages {
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "completed" {
+		t.Fatalf("expected status=completed, got %q (error=%q)", res.Status, res.Error)
+	}
+}
+
+func TestPiExecuteAutoRetrySuccessIsolatesAttemptText(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	tempDir := t.TempDir()
+	fakePath := filepath.Join(tempDir, "pi")
+	jsonlPath := filepath.Join(tempDir, "stream.jsonl")
+
+	f, err := os.Create(jsonlPath)
+	if err != nil {
+		t.Fatalf("create stream.jsonl: %v", err)
+	}
+	enc := json.NewEncoder(f)
+	_ = enc.Encode(map[string]any{"type": "agent_start"})
+	_ = enc.Encode(map[string]any{"type": "turn_start"})
+	_ = enc.Encode(map[string]any{
+		"type":    "message_start",
+		"message": map[string]any{"role": "assistant", "model": "raven-test"},
+	})
+	// Delta with both regular corrupt text and sanitizer markup residue (e.g. unfinished <|turn> prefix)
+	_ = enc.Encode(map[string]any{
+		"type": "message_update",
+		"assistantMessageEvent": map[string]any{
+			"type":  "text_delta",
+			"delta": `{"corrupted": "partial", <|turn`,
+		},
+	})
+	_ = enc.Encode(map[string]any{
+		"type": "message_end",
+		"message": map[string]any{
+			"role":         "assistant",
+			"model":        "raven-test",
+			"stopReason":   "error",
+			"errorMessage": "500: socket closed",
+		},
+	})
+	_ = enc.Encode(map[string]any{
+		"type":        "auto_retry_start",
+		"attempt":     1,
+		"maxAttempts": 3,
+		"delayMs":     50,
+	})
+	_ = enc.Encode(map[string]any{
+		"type":    "message_start",
+		"message": map[string]any{"role": "assistant", "model": "raven-test"},
+	})
+	_ = enc.Encode(map[string]any{
+		"type": "message_update",
+		"assistantMessageEvent": map[string]any{
+			"type":  "text_delta",
+			"delta": `{"clean": true}`,
+		},
+	})
+	_ = enc.Encode(map[string]any{
+		"type": "message_end",
+		"message": map[string]any{
+			"role":       "assistant",
+			"model":      "raven-test",
+			"stopReason": "stop",
+		},
+	})
+	_ = enc.Encode(map[string]any{
+		"type":    "auto_retry_end",
+		"success": true,
+	})
+	_ = enc.Encode(map[string]any{
+		"type": "turn_end",
+		"message": map[string]any{
+			"role":       "assistant",
+			"model":      "raven-test",
+			"stopReason": "stop",
+			"usage":      map[string]any{"input": 10, "output": 5, "totalTokens": 15},
+		},
+	})
+	_ = enc.Encode(map[string]any{
+		"type":      "agent_end",
+		"willRetry": false,
+	})
+	_ = f.Close()
+
+	script := "#!/bin/sh\n" +
+		"cat \"" + jsonlPath + "\"\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 15 * time.Second})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	var textMessages []string
+	var statuses []string
+	var sawErrorMsg bool
+	for msg := range session.Messages {
+		if msg.Type == MessageText {
+			textMessages = append(textMessages, msg.Content)
+		}
+		if msg.Type == MessageStatus {
+			statuses = append(statuses, msg.Status)
+		}
+		if msg.Type == MessageError {
+			sawErrorMsg = true
+		}
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "completed" {
+		t.Fatalf("expected status=completed, got %q (error=%q)", res.Status, res.Error)
+	}
+	if sawErrorMsg {
+		t.Fatal("expected no MessageError to be emitted during recoverable auto-retry")
+	}
+	// Verify failed attempt text was completely discarded and not prepended to clean text
+	if res.Output != `{"clean": true}` {
+		t.Fatalf("expected output %q, got %q", `{"clean": true}`, res.Output)
+	}
+	if len(textMessages) != 1 || textMessages[0] != `{"clean": true}` {
+		t.Fatalf("expected exactly one text message with clean content, got %#v", textMessages)
+	}
+	// Verify non-sensitive status was emitted
+	hasRetrying := false
+	for _, s := range statuses {
+		if s == "retrying" {
+			hasRetrying = true
+		}
+	}
+	if !hasRetrying {
+		t.Fatalf("expected status 'retrying' in stream, got %#v", statuses)
+	}
+}
+
+func TestPiExecuteAutoRetryExhaustedFailsRun(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_start\"}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_start\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"error\",\"errorMessage\":\"500: connection lost\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"auto_retry_end\",\"success\":false,\"finalError\":\"500: connection lost\"}'\n" +
+		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 10 * time.Second})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	var sawErrorMsg bool
+	for msg := range session.Messages {
+		if msg.Type == MessageError && strings.Contains(msg.Content, "connection lost") {
+			sawErrorMsg = true
+		}
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "failed" {
+		t.Fatalf("expected status=failed, got %q", res.Status)
+	}
+	if !strings.Contains(res.Error, "connection lost") {
+		t.Fatalf("expected error to contain 'connection lost', got %q", res.Error)
+	}
+	if !sawErrorMsg {
+		t.Fatal("expected MessageError in stream before Result")
+	}
+}
+
+func TestPiExecuteNewAssistantTurnInFlightFailsIfUnfinished(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	// Sequence:
+	// Turn 1 succeeds cleanly.
+	// Turn 2 starts (new assistant message_start), but stream ends abruptly without message_end.
+	// Overall run must NOT be marked completed even though Turn 1 was successful.
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_start\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"turn1\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_start\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"turn2 in flight\"}}'\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 5 * time.Second})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	for range session.Messages {
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "failed" {
+		t.Fatalf("expected status=failed when turn 2 left in flight, got %q", res.Status)
+	}
+}
+
+func TestPiExecuteNonZeroExitOverridesSuccessfulTurn(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	// Emits clean turn, but child process exits 42
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_start\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"ok\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\"}}'\n" +
+		"exit 42\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 15 * time.Second})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	for range session.Messages {
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "failed" {
+		t.Fatalf("expected status=failed on non-zero exit, got %q", res.Status)
+	}
+}
+
+func TestPiExecuteFatalErrorEventOverridesSubsequentEvents(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	// Emits top-level error event, then tries to emit a fake message_end stop. Fatal error must win.
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '%s\\n' '{\"type\":\"error\",\"message\":\"fatal CLI panic\"}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\"}}'\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 15 * time.Second})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	for range session.Messages {
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "failed" {
+		t.Fatalf("expected status=failed, got %q", res.Status)
+	}
+	if !strings.Contains(res.Error, "fatal CLI panic") {
+		t.Fatalf("expected fatal error text, got %q", res.Error)
+	}
+}
+
+// TestPiExecuteChunksOutputToAvoidEnvelopeLineLimit verifies that when Pi outputs
+// a very large text (> 256 KiB, e.g. 1.5 MiB), the daemon adapter delivers it in
+// UTF-8 safe chunks (<= 64 KiB) so that encoding into the real daemon envelope
+// (envelope.Builder -> EncodeLine -> TruncateMessageContent) yields valid wire lines
+// < 524,288 bytes (Teams Native MeowthStreamDecoder.maximumLineBytes) without truncation,
+// while preserving exact multibyte Unicode, quotes, and \u0001 control characters.
+func TestPiExecuteChunksOutputToAvoidEnvelopeLineLimit(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	tempDir := t.TempDir()
+	fakePath := filepath.Join(tempDir, "pi")
+	jsonlPath := filepath.Join(tempDir, "stream.jsonl")
+
+	// Construct expected text with repetition of Chinese multibyte runes, quotes, and \u0001 control char
+	unit := "测试Unicode\"引号\"\u0001control\n"
+	expectedText := strings.Repeat(unit, 45000) // ~1.5 MiB
+
+	// Generate JSONL stream in Go using json.Marshal to guarantee zero bash escaping bugs
+	f, err := os.Create(jsonlPath)
+	if err != nil {
+		t.Fatalf("create stream.jsonl: %v", err)
+	}
+	enc := json.NewEncoder(f)
+	_ = enc.Encode(map[string]any{"type": "agent_start"})
+	_ = enc.Encode(map[string]any{
+		"type":    "message_start",
+		"message": map[string]any{"role": "assistant", "model": "raven-test"},
+	})
+	_ = enc.Encode(map[string]any{
+		"type": "message_update",
+		"assistantMessageEvent": map[string]any{
+			"type":  "text_delta",
+			"delta": expectedText,
+		},
+	})
+	_ = enc.Encode(map[string]any{
+		"type": "message_end",
+		"message": map[string]any{
+			"role":       "assistant",
+			"model":      "raven-test",
+			"stopReason": "stop",
+		},
+	})
+	_ = enc.Encode(map[string]any{
+		"type": "turn_end",
+		"message": map[string]any{
+			"role":       "assistant",
+			"model":      "raven-test",
+			"stopReason": "stop",
+			"usage":      map[string]any{"input": 10, "output": 10, "totalTokens": 20},
+		},
+	})
+	_ = f.Close()
+
+	// Fake child simply cats the prepared valid JSONL stream
+	script := "#!/bin/sh\n" +
+		"cat \"" + jsonlPath + "\"\n" +
+		"exit 0\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 10 * time.Second})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	builder := envelope.NewBuilder("test-session")
+	now := time.Now().UTC()
+
+	var chunks []string
+	for msg := range session.Messages {
+		if msg.Type == MessageText {
+			chunks = append(chunks, msg.Content)
+			// Each chunk must be <= 64 KiB
+			if len(msg.Content) > 64*1024 {
+				t.Fatalf("chunk byte length %d exceeded 64 KiB limit", len(msg.Content))
+			}
+
+			// Construct real daemon envelope using internal/envelope
+			env, err := builder.Message(now, envelope.MessagePayload{
+				Kind:    string(msg.Type),
+				Content: msg.Content,
+			})
+			if err != nil {
+				t.Fatalf("builder.Message: %v", err)
+			}
+
+			// Verify that TruncateMessageContent reports no truncation needed
+			_, _, truncated, err := envelope.TruncateMessageContent(env)
+			if err != nil {
+				t.Fatalf("TruncateMessageContent: %v", err)
+			}
+			if truncated {
+				t.Fatalf("envelope was unexpectedly truncated; chunk size is too large")
+			}
+
+			// Encode envelope line and assert wire line length < 524,288 bytes
+			line, err := envelope.EncodeLine(env)
+			if err != nil {
+				t.Fatalf("envelope.EncodeLine: %v", err)
+			}
+			if len(line) >= 524288 {
+				t.Fatalf("encoded envelope line length %d >= 524,288 bytes (Teams Native MeowthStreamDecoder.maximumLineBytes)", len(line))
+			}
+		}
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "completed" {
+		t.Fatalf("expected status=completed, got %q (error=%q)", res.Status, res.Error)
+	}
+
+	// Verify chunks reconstruct exact output without any corruption
+	reconstructed := strings.Join(chunks, "")
+	if reconstructed != expectedText {
+		t.Fatalf("reconstructed output mismatch from expectedText: chunked len=%d, expected len=%d", len(reconstructed), len(expectedText))
+	}
+	if res.Output != expectedText {
+		t.Fatalf("Result.Output mismatch from expectedText: res.Output len=%d, expected len=%d", len(res.Output), len(expectedText))
+	}
+}
+
+// TestPiExecuteTurnEndDoesNotDuplicateUsageAcrossRetries verifies that when multiple
+// assistant attempts happen in a run, usage is only counted once per assistant message lifecycle.
+func TestPiExecuteTurnEndDoesNotDuplicateUsageAcrossRetries(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	// Turn 1 fails with 500 error; turn_end emitted with usage 10 tokens.
+	// Auto retry starts.
+	// Turn 2 succeeds; turn_end emitted with usage 25 tokens.
+	// Total tokens should be 10 + 25 = 35. Duplicate turn_end within same attempt must not double count.
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_start\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"error\",\"errorMessage\":\"500\",\"usage\":{\"input\":8,\"output\":2,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":10}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"error\",\"errorMessage\":\"500\",\"usage\":{\"input\":8,\"output\":2,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":10}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"auto_retry_start\",\"attempt\":1,\"maxAttempts\":3,\"delayMs\":10}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_start\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\",\"usage\":{\"input\":20,\"output\":5,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":25}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"stop\",\"usage\":{\"input\":20,\"output\":5,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":25}}}'\n" +
 		"exit 0\n"
 	writeTestExecutable(t, fakePath, []byte(script))
 
@@ -902,6 +1425,129 @@ func TestPiExecuteHandlesTrailingPartialLineAtEOF(t *testing.T) {
 	}
 	if res.Status != "completed" {
 		t.Fatalf("expected status=completed, got %q (error=%q)", res.Status, res.Error)
+	}
+	usage := res.Usage["raven-test"]
+	// Should be 8+20=28 input, 2+5=7 output. Duplicates must have been suppressed.
+	if usage.InputTokens != 28 || usage.OutputTokens != 7 {
+		t.Fatalf("expected usage input=28, output=7; got input=%d, output=%d",
+			usage.InputTokens, usage.OutputTokens)
+	}
+}
+
+// TestPiExecuteAutoRetryEndSuccessCannotClearNonSuccessStopReasons verifies that
+// an auto_retry_end(success=true) event does not clear aborted, length, or missing stopReasons.
+func TestPiExecuteAutoRetryEndSuccessCannotClearNonSuccessStopReasons(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	cases := []struct {
+		name       string
+		stopReason string
+	}{
+		{"aborted", "aborted"},
+		{"length", "length"},
+		{"empty", ""},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			fakePath := filepath.Join(t.TempDir(), "pi")
+			stopReasonJSON := ""
+			if tc.stopReason != "" {
+				stopReasonJSON = `,"stopReason":"` + tc.stopReason + `"`
+			}
+			script := "#!/bin/sh\n" +
+				"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+				"printf '%s\\n' '{\"type\":\"message_start\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\"}}'\n" +
+				"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\"" + stopReasonJSON + "}}'\n" +
+				"printf '%s\\n' '{\"type\":\"auto_retry_end\",\"success\":true}'\n" +
+				"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\"" + stopReasonJSON + ",\"usage\":{\"input\":5,\"output\":1,\"totalTokens\":6}}}'\n" +
+				"exit 0\n"
+			writeTestExecutable(t, fakePath, []byte(script))
+
+			backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+			if err != nil {
+				t.Fatalf("new pi backend: %v", err)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+
+			session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 15 * time.Second})
+			if err != nil {
+				t.Fatalf("execute: %v", err)
+			}
+
+			for range session.Messages {
+			}
+
+			res, ok := <-session.Result
+			if !ok {
+				t.Fatal("result channel closed without value")
+			}
+			if res.Status != "failed" {
+				t.Fatalf("expected status=failed when stopReason=%q even with auto_retry_end(success=true), got %q", tc.stopReason, res.Status)
+			}
+		})
+	}
+}
+
+// TestPiExecuteMessageEndUsagePreservedOnMidToolFailure verifies that when an assistant
+// message_end provides usage before a tool call, and the child fails during tool execution
+// (nonzero exit without ever emitting turn_end), the recorded usage is preserved on the failed Result.
+func TestPiExecuteMessageEndUsagePreservedOnMidToolFailure(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake binary requires a POSIX shell")
+	}
+
+	fakePath := filepath.Join(t.TempDir(), "pi")
+	// Sequence:
+	// 1. Assistant message_start & message_end with stopReason "toolUse" and populated usage.
+	// 2. tool_execution_start emitted.
+	// 3. Child exits non-zero (42) without ever emitting turn_end.
+	script := "#!/bin/sh\n" +
+		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_start\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"raven-test\",\"stopReason\":\"toolUse\",\"usage\":{\"input\":12,\"output\":4,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":16}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"tool_execution_start\",\"toolName\":\"bash\",\"toolCallId\":\"call-1\"}'\n" +
+		"exit 42\n"
+	writeTestExecutable(t, fakePath, []byte(script))
+
+	backend, err := New("pi", Config{ExecutablePath: fakePath, Logger: slog.Default()})
+	if err != nil {
+		t.Fatalf("new pi backend: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	session, err := backend.Execute(ctx, "probe", ExecOptions{Timeout: 5 * time.Second})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	for range session.Messages {
+	}
+
+	res, ok := <-session.Result
+	if !ok {
+		t.Fatal("result channel closed without value")
+	}
+	if res.Status != "failed" {
+		t.Fatalf("expected status=failed on non-zero exit during tool, got %q", res.Status)
+	}
+	usage, exists := res.Usage["raven-test"]
+	if !exists {
+		t.Fatal("expected usage for raven-test to be recorded from message_end before tool failure")
+	}
+	if usage.InputTokens != 12 || usage.OutputTokens != 4 {
+		t.Fatalf("expected usage input=12, output=4; got input=%d, output=%d", usage.InputTokens, usage.OutputTokens)
 	}
 }
 

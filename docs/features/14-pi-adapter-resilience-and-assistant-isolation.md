@@ -1,12 +1,12 @@
 # Feature 14: Pi Adapter Resilience and Assistant Attempt Isolation
 
-> Status: Approved & In Progress
+> Status: Implemented
 > Driver: Pi (Herdr w3J:p3), reviewed by Codex
 > Context: Co-evolution with teams-native 127-eval campaign (V39 cohort upstream 500 interruption analysis). Hardening Pi adapter against transient mid-stream errors and auto-retries.
 
 ## 1. Background & Problem
 
-During the teams-native 127-eval run (V39 cohort), upstream transient errors (such as HTTP 500 connection aborts and transient TLS handshake errors during gateway rotation) triggered `stopReason: "error"` in assistant messages.
+During the teams-native 127-eval run (V39 cohort), observed upstream transient errors (specifically connection/HTTP 500 and TLS certificate verification error time windows) triggered `stopReason: "error"` in assistant messages.
 Although Pi SDK (`@earendil-works/pi-coding-agent` v0.85.1) has built-in auto-retry with exponential backoff (`settings.retry.enabled=true`, up to 3 retries), the daemon's Pi adapter (`daemon/pkg/agent/pi.go`) was terminating the run prematurely:
 1. When an assistant message ended with `stopReason: "error"`, `pi.go` immediately dispatched a `MessageError` envelope to `session.Messages` and locked `finalStatus = "failed"`.
 2. Teams-native client received the `MessageError` and instantly aborted/failed the task, tearing down the child process while Pi was in the middle of executing its automatic retry.
@@ -19,27 +19,27 @@ Although Pi SDK (`@earendil-works/pi-coding-agent` v0.85.1) has built-in auto-re
 ### 2.1 Attempt-Scoped Text Buffering & Delivery
 - **Per-attempt buffering**: Text deltas (`text_delta`) emitted during an assistant turn are buffered in memory and NOT immediately streamed as `MessageText`.
 - **Inactivity keepalive**: To preserve semantic inactivity / progress detection without triggering early first-token semantic timestamps or streaming unverified partial outputs, emit non-sensitive progress indications (e.g. `MessageStatus{Type: MessageStatus, Status: "in_progress"}`) on incoming deltas or retry transitions.
-- **Commit on Success**: When an assistant turn completes with genuine success (`message_end` without `stopReason == "error"` and no error payload), the buffered text is flushed to `session.Messages` as `MessageText` and appended to `output`.
-- **Discard on Error/Retry**: If `message_end` or `turn_end` reports `stopReason: "error"` or an error payload, the buffered text of that failed attempt is cleanly discarded.
+- **Commit on Verified Success**: When an assistant turn completes with verified success (`role == "assistant"` and explicit whitelist stopReason: `stop`, `toolUse` / `tool_use`), the buffered text is flushed to `session.Messages` as `MessageText` and appended to `output`. Text is emitted at most once. Clean `turn_end` or absence of error text alone is never treated as success.
+- **Discard on Error/Retry/Non-Success**: If `message_end` or `turn_end` reports `stopReason: "error"`, non-whitelisted stopReason (e.g. `aborted`, `length`), or an error payload, the buffered text of that attempt and sanitizer buffer are cleanly discarded.
 - **Immediate Streaming for Non-Text Events**: `tool_execution_start`, `tool_execution_end`, `thinking_delta`, and `status` continue to be streamed immediately.
 
 ### 2.2 Transient Error Stashing & Auto-Retry Handling
 - **Stash, Do Not Fail Early**: When `message_end` or `turn_end` reports an error, stash the error message as `stashedError`. Do NOT emit `MessageError` yet, and do NOT permanently set `finalStatus = "failed"`.
 - **Auto-retry tracking**:
-  - `auto_retry_start`: Track active retry attempt and emit status/log (`MessageStatus{Status: "retrying"}`).
-  - `auto_retry_end`: If `success: false`, record retry exhaustion error.
+  - `auto_retry_start`: Track active retry attempt and emit non-sensitive status/log (`MessageStatus{Status: "retrying"}`). Do not log sensitive credential or auth payloads.
+  - `auto_retry_end`: If `success: false`, record retry exhaustion error. `success: true` does not override actual aborts, cancellations, or missing success receipts.
 - **Explicit Success Proof**:
-  - When a message completes successfully (assistant message with non-error stopReason, or clean `turn_end`), `stashedError` is cleared, and `hasSuccessfulTurn = true`.
+  - Only a verified assistant message with `role == "assistant"` and explicit `stopReason` (`stop`, `toolUse`, `tool_use`) clears `stashedError` and sets `hasSuccessfulTurn = true`.
 - **Final Settlement (Post EOF & cmd.Wait)**:
-  - If context was cancelled or timed out, report `aborted` or `timeout`.
-  - If `cmd.Wait()` returned non-zero exit code: report `failed`.
+  - If context was cancelled or timed out: report `aborted` or `timeout`. Fatal status sticks and cannot be overridden by subsequent events.
   - If unrecoverable stdout read error occurred: report `failed`.
-  - If `auto_retry_end` failed or `stashedError != ""` persists without genuine success proof: emit `MessageError` and report `failed`.
+  - If `cmd.Wait()` returned non-zero exit code: report `failed`.
+  - If `auto_retry_end` failed or `stashedError != ""` persists without genuine success proof, or `hasSuccessfulTurn` is false: emit `MessageError` and report `failed`.
   - If genuinely successful and exit code 0: report `completed`.
 
 ### 2.3 Cumulative Token Usage & Retry Metadata
 - Token usages across turns and retries are accumulated per model without manufacturing fake keys.
-- Real retry count and timestamps are logged.
+- Real retry count and non-sensitive metadata (attempt, delay) are logged.
 
 ## 3. 6DQ Quality Plan
 
