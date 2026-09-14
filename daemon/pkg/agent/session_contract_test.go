@@ -92,8 +92,10 @@ func TestSessionDrainMessagesThenReadResultDoesNotDeadlock(t *testing.T) {
 	fakePath := filepath.Join(t.TempDir(), "pi")
 	script := "#!/bin/sh\n" +
 		"printf '%s\\n' '{\"type\":\"agent_start\"}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_start\",\"message\":{\"role\":\"assistant\",\"model\":\"m\"}}'\n" +
 		"printf '%s\\n' '{\"type\":\"message_update\",\"assistantMessageEvent\":{\"type\":\"text_delta\",\"delta\":\"hi\"}}'\n" +
-		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"m\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"model\":\"m\",\"stopReason\":\"stop\"}}'\n" +
+		"printf '%s\\n' '{\"type\":\"turn_end\",\"message\":{\"role\":\"assistant\",\"model\":\"m\",\"stopReason\":\"stop\",\"usage\":{\"input\":1,\"output\":1,\"cacheRead\":0,\"cacheWrite\":0,\"totalTokens\":2}}}'\n" +
 		"printf '%s\\n' '{\"type\":\"agent_end\",\"willRetry\":false}'\n" +
 		"exit 0\n"
 	writeTestExecutable(t, fakePath, []byte(script))
