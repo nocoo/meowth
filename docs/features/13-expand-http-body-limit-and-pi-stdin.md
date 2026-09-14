@@ -1,7 +1,7 @@
 # Feature 13: Expand HTTP Body Limit and Safe Stdin Transport for Pi
 
 > Status: Implemented
-> Driver: 李政 (nocoo) & Claude
+> Driver: Pi (Herdr w3J:p3), reviewed by Codex
 > Context: Co-evolution with teams-native large context/ledger task; removing application-layer bottlenecks (HTTP body limit and OS ARG_MAX for Pi).
 
 ## 1. Background & Problem
