@@ -20,7 +20,7 @@
 | 12 | [`12-hermes-profile-discovery.md`](./12-hermes-profile-discovery.md) | Hermes ACP profile discovery and configuration | Implemented |
 | 13 | [`13-expand-http-body-limit-and-pi-stdin.md`](./13-expand-http-body-limit-and-pi-stdin.md) | Expand HTTP body limit to 64MiB and stream Pi prompt via stdin | Implemented |
 | 14 | [`14-pi-adapter-resilience-and-assistant-isolation.md`](./14-pi-adapter-resilience-and-assistant-isolation.md) | Pi adapter resilience against transient upstream errors and attempt isolation | Implemented |
-| 15 | [`15-transient-assistant-progress.md`](./15-transient-assistant-progress.md) | Opt-in public text previews and safe execution activity | Planned |
+| 15 | [`15-transient-assistant-progress.md`](./15-transient-assistant-progress.md) | Opt-in public text previews and safe execution activity | Implemented; synthetic transport verification passed |
 
 ## 何时新建 features 文档
 

@@ -282,6 +282,7 @@ export interface components {
       session_id: string;
       /** @enum {string} */
       type: 'session_started' | 'message' | 'usage' | 'error' | 'session_ended' | 'heartbeat';
+      /** @description Type-specific payload. Opted-in message events may use kind=text-preview with content and a session-local message_id, or kind=status with preview_start/preview_end/preview_reset and the same message_id. Previews are transient and never canonical text. A successful preview_end does not establish session success. */
       payload: {
         [key: string]: unknown;
       };
@@ -493,7 +494,10 @@ export interface operations {
   execAgent: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Set to 1 for transient Pi text-preview messages with message_id and preview_start/preview_end/preview_reset statuses. Canonical text and session_ended semantics are unchanged. Thinking and harness tool events become body-free thinking/tool_running/ tool_finished statuses; raw logs are omitted. Tool policy and the tool-result planning boundary still apply to these statuses. Older daemons ignore this header; support is acknowledged by the same response header. See feature 15 for the full contract. */
+        'X-Meowth-Stream-Progress'?: '1';
+      };
       path: {
         type: 'claude' | 'copilot' | 'codex' | 'hermes' | 'pi';
       };
@@ -508,6 +512,8 @@ export interface operations {
       /** @description NDJSON stream of envelope events */
       200: {
         headers: {
+          /** @description Present with value 1 when the progress opt-in was accepted. */
+          'X-Meowth-Stream-Progress'?: '1';
           [name: string]: unknown;
         };
         content: {

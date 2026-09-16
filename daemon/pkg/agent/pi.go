@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -25,38 +26,6 @@ type piBackend struct {
 var (
 	piControlTokenRE = regexp.MustCompile(`<\|[A-Za-z0-9_-]+>[A-Za-z0-9_-]*|<[A-Za-z0-9_-]+\|>`)
 )
-
-// emitChunkedMessageText splits text into UTF-8 rune-safe chunks that comfortably
-// fit within the consumer's (Teams Native MeowthStreamDecoder.maximumLineBytes = 524,288 bytes)
-// and daemon envelope's (1 MiB) per-line limit even after worst-case JSON string escaping
-// (where control characters like \u0001 become 6 bytes: \ u 0 0 0 1, or quotes become \").
-// Target chunk byte size is at most 64 KiB, guaranteeing encoded line length < 512 KiB.
-func emitChunkedMessageText(pipe *messagePipe, text string) {
-	if text == "" {
-		return
-	}
-	const maxChunkBytes = 64 * 1024
-	for len(text) > 0 {
-		if len(text) <= maxChunkBytes {
-			pipe.Send(Message{Type: MessageText, Content: text})
-			return
-		}
-		// Cut at rune boundary <= maxChunkBytes
-		cut := maxChunkBytes
-		for cut > 0 && (text[cut]&0xC0) == 0x80 {
-			cut--
-		}
-		if cut == 0 {
-			// Fallback: advance at least to next valid rune boundary
-			cut = 1
-			for cut < len(text) && (text[cut]&0xC0) == 0x80 {
-				cut++
-			}
-		}
-		pipe.Send(Message{Type: MessageText, Content: text[:cut]})
-		text = text[cut:]
-	}
-}
 
 func stripPiToolCallMarkup(s string) string {
 	s = stripPiStructuredToolMarkup(s)
@@ -338,6 +307,20 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 		attemptEmitted := false
 		attemptUsageRecorded := false
 		var retryCount int
+		var previewNumber int
+		var previewID string
+		previewEnded := false
+		resetPreview := func() {
+			if previewID != "" {
+				pipe.Send(Message{Type: MessageStatus, Status: "preview_reset", MessageID: previewID})
+				previewID = ""
+			}
+		}
+		emitPreview := func(text string) {
+			if previewID != "" && !previewEnded && activeAssistantInFlight && fatalError == "" && runCtx.Err() == nil {
+				emitChunkedText(pipe, Message{Type: MessageTextPreview, Content: text, MessageID: previewID})
+			}
+		}
 
 		recordAssistantUsage := func(msg *piMessage) {
 			if msg != nil && msg.Usage != nil && !attemptUsageRecorded {
@@ -376,6 +359,12 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 								attemptUsageRecorded = false
 								textBuffer.Reset()
 								attemptText.Reset()
+								if opts.StreamProgress && fatalError == "" && runCtx.Err() == nil {
+									previewNumber++
+									previewID = strconv.Itoa(previewNumber)
+									previewEnded = false
+									pipe.Send(Message{Type: MessageStatus, Status: "preview_start", MessageID: previewID})
+								}
 							}
 
 						case "message_update":
@@ -384,8 +373,8 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 								case "text_delta":
 									if d := drainPiTextBuffer(&textBuffer, evt.AssistantMessageEvent.Delta); d != "" {
 										attemptText.WriteString(d)
-										// Send non-sensitive status update to preserve semantic inactivity progress
-										// without prematurely emitting unverified text tokens.
+										emitPreview(d)
+										// Preserve legacy progress without advancing canonical first-text timing.
 										pipe.Send(Message{Type: MessageStatus, Status: "in_progress"})
 									}
 								case "thinking_delta":
@@ -419,6 +408,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 							if msg != nil && msg.Role == "assistant" {
 								recordAssistantUsage(msg)
 								if errText := piMessageErrorText(msg); errText != "" {
+									resetPreview()
 									stashedError = errText
 									activeAssistantInFlight = false
 									// Discard attempt text on error
@@ -433,6 +423,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 									recordAssistantUsage(msg)
 								}
 								if errText := piMessageErrorText(msg); errText != "" {
+									resetPreview()
 									stashedError = errText
 									activeAssistantInFlight = false
 									// Discard attempt text on error
@@ -442,21 +433,27 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 									// Assistant message completed with verified success
 									if d := flushPiTextBuffer(&textBuffer); d != "" {
 										attemptText.WriteString(d)
+										emitPreview(d)
 									}
 									textBuffer.Reset()
 									if !attemptEmitted {
 										commit := attemptText.String()
 										committedOutput.WriteString(commit)
 										if commit != "" {
-											emitChunkedMessageText(pipe, commit)
+											emitChunkedText(pipe, Message{Type: MessageText, Content: commit})
 										}
 										attemptEmitted = true
+									}
+									if previewID != "" && !previewEnded {
+										pipe.Send(Message{Type: MessageStatus, Status: "preview_end", MessageID: previewID})
+										previewEnded = true
 									}
 									attemptText.Reset()
 									activeAssistantInFlight = false
 									stashedError = ""
 									hasSuccessfulTurn = true
 								} else if msg.Role == "assistant" {
+									resetPreview()
 									// StopReason is not in success whitelist (e.g. aborted, length, or unexpected)
 									stashedError = fmt.Sprintf("pi assistant stopped without success (stopReason: %s)", msg.StopReason)
 									activeAssistantInFlight = false
@@ -467,6 +464,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 
 						case "auto_retry_start":
 							retryCount++
+							resetPreview()
 							pipe.Send(Message{Type: MessageStatus, Status: "retrying"})
 							b.cfg.Logger.Info("pi auto retry start",
 								"pid", cmd.Process.Pid,
@@ -489,6 +487,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 								"success", evt.Success,
 							)
 							if !evt.Success {
+								resetPreview()
 								if evt.FinalError != "" {
 									stashedError = evt.FinalError
 								} else if stashedError == "" {
@@ -497,6 +496,7 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 							}
 
 						case "error":
+							resetPreview()
 							errText := decodePiString(evt.Message)
 							fatalError = errText
 							activeAssistantInFlight = false
@@ -520,28 +520,37 @@ func (b *piBackend) Execute(ctx context.Context, prompt string, opts ExecOptions
 		// Ensure attempt text buffers are cleaned up
 		textBuffer.Reset()
 		attemptText.Reset()
+		if activeAssistantInFlight {
+			resetPreview()
+		}
 
 		waitErr := cmd.Wait()
 		duration := time.Since(startTime)
 
 		if runCtx.Err() == context.DeadlineExceeded {
+			resetPreview()
 			finalStatus = "timeout"
 			fatalError = fmt.Sprintf("pi timed out after %s", timeout)
 		} else if runCtx.Err() == context.Canceled {
+			resetPreview()
 			finalStatus = "aborted"
 			fatalError = "execution cancelled"
 		} else if readErr != nil {
+			resetPreview()
 			finalStatus = "failed"
 			fatalError = fmt.Sprintf("pi stdout read error: %v", readErr)
 			pipe.Send(Message{Type: MessageError, Content: fatalError})
 		} else if fatalError != "" {
+			resetPreview()
 			finalStatus = "failed"
 			pipe.Send(Message{Type: MessageError, Content: fatalError})
 		} else if waitErr != nil {
+			resetPreview()
 			finalStatus = "failed"
 			fatalError = fmt.Sprintf("pi exited with error: %v", waitErr)
 			pipe.Send(Message{Type: MessageError, Content: fatalError})
 		} else if stashedError != "" || !hasSuccessfulTurn || activeAssistantInFlight {
+			resetPreview()
 			finalStatus = "failed"
 			if stashedError != "" {
 				fatalError = stashedError

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestNewReturnsHermesBackend(t *testing.T) {
@@ -21,6 +23,135 @@ func TestNewReturnsHermesBackend(t *testing.T) {
 	}
 	if _, ok := b.(*hermesBackend); !ok {
 		t.Fatalf("expected *hermesBackend, got %T", b)
+	}
+}
+
+func TestHermesProgressToolStartPrecedesDeferredArguments(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		t.Run(fmt.Sprintf("enabled=%t", enabled), func(t *testing.T) {
+			var messages []Message
+			client := &hermesClient{
+				streamProgress: enabled,
+				onMessage:      func(msg Message) { messages = append(messages, msg) },
+			}
+			client.handleToolCallStart(json.RawMessage(`{"toolCallId":"fixture","kind":"execute","status":"in_progress","content":[]}`))
+			if !enabled {
+				if len(messages) != 0 {
+					t.Fatalf("legacy tool arguments should remain deferred: %+v", messages)
+				}
+				return
+			}
+			if len(messages) != 1 || messages[0].Type != MessageStatus || messages[0].Status != "tool_running" ||
+				messages[0].Content != "" || messages[0].Input != nil || messages[0].Tool != "" {
+				t.Fatalf("safe activity did not precede args: %+v", messages)
+			}
+		})
+	}
+}
+
+func TestHermesProgressPublicTextPrecedesPromptResult(t *testing.T) {
+	dir := t.TempDir()
+	want := strings.Repeat("中文😀\"\\\n", 12000)
+	notification := func(update map[string]any) string {
+		data, err := json.Marshal(map[string]any{
+			"jsonrpc": "2.0", "method": "session/update",
+			"params": map[string]any{"sessionId": "fixture", "update": update},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+	replay := notification(map[string]any{
+		"sessionUpdate": "agent_message_chunk",
+		"content":       map[string]any{"type": "text", "text": "SYNTHETIC_OLD_HISTORY"},
+	})
+	live := strings.Join([]string{
+		notification(map[string]any{
+			"sessionUpdate": "agent_thought_chunk",
+			"content":       map[string]any{"type": "text", "text": "SYNTHETIC_PRIVATE_THINKING"},
+		}),
+		notification(map[string]any{
+			"sessionUpdate": "tool_call", "toolCallId": "tool-1", "kind": "execute",
+			"status": "in_progress", "content": []any{},
+		}),
+		notification(map[string]any{
+			"sessionUpdate": "tool_call_update", "toolCallId": "tool-1", "status": "completed",
+			"rawInput": map[string]any{"command": "SYNTHETIC_PRIVATE_ARGS"}, "rawOutput": "SYNTHETIC_PRIVATE_RESULT",
+		}),
+		notification(map[string]any{
+			"sessionUpdate": "agent_message_chunk",
+			"content":       map[string]any{"type": "text", "text": want},
+		}),
+	}, "\n")
+	script := `#!/bin/sh
+while IFS= read -r line; do
+  id=$(printf '%s' "$line" | sed -n 's/.*"id":\([0-9]*\).*/\1/p')
+  case "$line" in
+    *'"method":"initialize"'*)
+      printf '{"jsonrpc":"2.0","id":%s,"result":{"protocolVersion":1,"agentCapabilities":{}}}\n' "$id"
+      ;;
+    *'"method":"session/new"'*)
+      cat <<'REPLAY'
+` + replay + `
+REPLAY
+      printf '{"jsonrpc":"2.0","id":%s,"result":{"sessionId":"fixture"}}\n' "$id"
+      ;;
+    *'"method":"session/prompt"'*)
+      cat <<'LIVE'
+` + live + `
+LIVE
+      while [ ! -f release ]; do sleep 0.01; done
+      printf '{"jsonrpc":"2.0","id":%s,"result":{"stopReason":"end_turn"}}\n' "$id"
+      exit 0
+      ;;
+  esac
+done
+`
+	path := filepath.Join(dir, "hermes")
+	writeTestExecutable(t, path, []byte(script))
+	backend, err := New("hermes", Config{ExecutablePath: path, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	session, err := backend.Execute(ctx, "synthetic progress fixture", ExecOptions{StreamProgress: true, Cwd: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var text strings.Builder
+	toolStarts := 0
+	released := false
+	for msg := range session.Messages {
+		if msg.Status == "tool_running" {
+			toolStarts++
+		}
+		if msg.Type == MessageToolUse {
+			t.Fatal("opt-in tool-use should already be represented by safe activity")
+		}
+		if msg.Type == MessageText {
+			if len(msg.Content) > 64*1024 || !utf8.ValidString(msg.Content) {
+				t.Fatalf("invalid public chunk: %d bytes", len(msg.Content))
+			}
+			text.WriteString(msg.Content)
+			if !released {
+				select {
+				case <-session.Result:
+					t.Fatal("prompt result arrived before gate release")
+				default:
+				}
+				if err := os.WriteFile(filepath.Join(dir, "release"), nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
+				released = true
+			}
+		}
+	}
+	result := <-session.Result
+	if toolStarts != 1 || !released || text.String() != want || result.Output != want || result.Status != "completed" {
+		t.Fatalf("starts=%d released=%t text-bytes=%d status=%s error=%q",
+			toolStarts, released, text.Len(), result.Status, result.Error)
 	}
 }
 

@@ -1,6 +1,6 @@
 # Feature 15: Transient Assistant Progress
 
-Status: Planned; contract shared before implementation.
+Status: Implemented; verified with synthetic backends. Runtime rollout is coordinated separately.
 
 ## Purpose
 
@@ -115,3 +115,24 @@ semantics; this feature adds no model defaults or provider integration.
 - Delivery: record actual synthetic checks and their limits. Runtime changes
   require coordination with the client owner; this feature does not claim
   provider availability or outage recovery coverage.
+
+## Verification (2026-09-16)
+
+- 82 selected Pi/Hermes and session-lifecycle root tests passed with the
+  repository's `-parallel=1` setting. The Linux-only FIFO inspection was
+  skipped on macOS. New tests use fake CLIs and explicit temporary session
+  paths; the selected adapter regression run used a temporary test HOME.
+- All envelope, server, and exec-handler package tests passed: 17, 40, and
+  47 root tests respectively. The five HTTP scenarios prove client receipt
+  of public text while completion is gated, then validate terminal + EOF,
+  monotonic sequence, and byte-for-byte equality with persisted envelopes.
+- The HTTP test can export synthetic wire artifacts through the test-only
+  `MEOWTH_STREAM_FIXTURE_DIR` environment variable. Its manifest records
+  SHA-256, byte length, and an exact pause offset for consumer-side replay.
+  Scenarios cover retry + Unicode, a tool boundary, success followed by
+  fatal exit, cancellation, and Hermes incremental-text fallback.
+- Go vet, golangci-lint 2.12.2 with a fresh analysis cache, dashboard/shared
+  type checking, the staged secret scan, and the D1 production/test
+  separation check passed.
+- No real model calls or CLI-installation changes were used for validation.
+  The running daemon process and existing daemon binary were preserved.

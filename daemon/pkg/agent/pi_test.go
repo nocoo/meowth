@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/nocoo/meowth/daemon/internal/envelope"
 )
@@ -25,6 +27,270 @@ func TestBuildPiArgsNoToolAllowlist(t *testing.T) {
 		if arg == "--tools" {
 			t.Errorf("buildPiArgs emits --tools %q; should not restrict tool registry (see #2379)", args[i+1])
 		}
+	}
+}
+
+func executePiProgressFixture(t *testing.T, ctx context.Context, events, tail string, opts ExecOptions) *Session {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("fake CLI requires a POSIX shell")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "pi")
+	writeTestExecutable(t, path, []byte("#!/bin/sh\ncat <<'EVENTS'\n"+events+"\nEVENTS\n"+tail))
+	backend, err := New("pi", Config{ExecutablePath: path, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	opts.ResumeSessionID = filepath.Join(dir, "session.jsonl")
+	session, err := backend.Execute(ctx, "synthetic progress fixture", opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return session
+}
+
+func TestPiProgressIsAttemptScopedAndOptIn(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		for _, retryEndFirst := range []bool{false, true} {
+			t.Run(fmt.Sprintf("enabled=%t/retry-end-first=%t", enabled, retryEndFirst), func(t *testing.T) {
+				ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+				defer cancel()
+				start := `{"type":"message_start","message":{"role":"assistant"}}`
+				retryEnd := `{"type":"auto_retry_end","success":true}`
+				success := `{"type":"message_end","message":{"role":"assistant","model":"fixture","stopReason":"toolUse","usage":{"input":3,"output":1}}}`
+				events := []string{
+					`{"type":"message_start","message":{"role":"user"}}`,
+					`{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"orphan"}}`,
+					start,
+					`{"type":"message_update","assistantMessageEvent":{"type":"thinking_delta","delta":"SYNTHETIC_PRIVATE_THINKING"}}`,
+					`{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"discarded<|tool_call"}}`,
+					`{"type":"message_end","message":{"role":"assistant","model":"fixture","stopReason":"error","errorMessage":"synthetic retry","usage":{"input":2,"output":1}}}`,
+					`{"type":"turn_end","message":{"role":"assistant","model":"fixture","stopReason":"error","usage":{"input":2,"output":1}}}`,
+					`{"type":"auto_retry_start","attempt":1,"maxAttempts":3,"delayMs":1}`,
+					start,
+					`{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"first"}}`,
+				}
+				if retryEndFirst {
+					events = append(events, retryEnd, success)
+				} else {
+					events = append(events, success, retryEnd)
+				}
+				events = append(events, success,
+					`{"type":"turn_end","message":{"role":"assistant","model":"fixture","stopReason":"toolUse","usage":{"input":3,"output":1}}}`,
+					`{"type":"tool_execution_start","toolName":"fixture","toolCallId":"call-1","args":{"query":"SYNTHETIC_PRIVATE_ARGS"}}`,
+					`{"type":"tool_execution_end","toolCallId":"call-1","result":"SYNTHETIC_PRIVATE_RESULT"}`,
+					start,
+					`{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"final"}}`,
+					`{"type":"message_end","message":{"role":"assistant","model":"fixture","stopReason":"stop","usage":{"input":5,"output":2}}}`,
+					`{"type":"turn_end","message":{"role":"assistant","model":"fixture","stopReason":"stop","usage":{"input":5,"output":2}}}`,
+				)
+				session := executePiProgressFixture(t, ctx, strings.Join(events, "\n"), "", ExecOptions{StreamProgress: enabled})
+				var canonical strings.Builder
+				var lifecycle []string
+				previews := make(map[string]string)
+				for msg := range session.Messages {
+					switch msg.Type {
+					case MessageText:
+						canonical.WriteString(msg.Content)
+					case MessageTextPreview:
+						previews[msg.MessageID] += msg.Content
+					case MessageStatus:
+						if strings.HasPrefix(msg.Status, "preview_") {
+							lifecycle = append(lifecycle, msg.Status+":"+msg.MessageID)
+						}
+					case MessageError:
+						t.Errorf("recoverable error escaped: %q", msg.Content)
+					}
+				}
+				result := <-session.Result
+				if result.Status != "completed" || result.Output != "firstfinal" || canonical.String() != result.Output {
+					t.Fatalf("canonical/result mismatch: %q, %+v", canonical.String(), result)
+				}
+				if got := result.Usage["fixture"]; got.InputTokens != 10 || got.OutputTokens != 4 {
+					t.Fatalf("duplicate end changed usage: %+v", got)
+				}
+				if !enabled {
+					if len(lifecycle) != 0 || len(previews) != 0 {
+						t.Fatalf("default stream acquired preview events: %v, %v", lifecycle, previews)
+					}
+					return
+				}
+				want := "preview_start:1,preview_reset:1,preview_start:2,preview_end:2,preview_start:3,preview_end:3"
+				if strings.Join(lifecycle, ",") != want {
+					t.Fatalf("lifecycle = %v", lifecycle)
+				}
+				if len(previews) != 3 || previews["1"] != "discarded" || previews["2"] != "first" || previews["3"] != "final" {
+					t.Fatalf("previews mixed roles, thinking, sanitizer tails, or attempts: %v", previews)
+				}
+			})
+		}
+	}
+}
+
+func TestPiProgressArrivesBeforeAssistantSuccess(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	cwd := t.TempDir()
+	events := `{"type":"message_start","message":{"role":"assistant"}}
+{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"public preview"}}`
+	tail := "while [ ! -f release ]; do sleep 0.01; done\n" +
+		"printf '%s\\n' '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"stopReason\":\"stop\"}}'\n"
+	session := executePiProgressFixture(t, ctx, events, tail, ExecOptions{StreamProgress: true, Cwd: cwd})
+	sawPreview := false
+	for msg := range session.Messages {
+		if msg.Type == MessageText && !sawPreview {
+			t.Fatal("canonical text preceded the gated preview")
+		}
+		if msg.Type == MessageTextPreview {
+			if msg.Content != "public preview" {
+				t.Fatalf("preview = %q", msg.Content)
+			}
+			sawPreview = true
+			select {
+			case <-session.Result:
+				t.Fatal("result arrived while assistant success was still gated")
+			default:
+			}
+			if err := os.WriteFile(filepath.Join(cwd, "release"), nil, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	result := <-session.Result
+	if !sawPreview || result.Status != "completed" || result.Output != "public preview" {
+		t.Fatalf("preview=%t result=%+v", sawPreview, result)
+	}
+}
+
+func TestPiProgressFailureResetsBeforeError(t *testing.T) {
+	start := `{"type":"message_start","message":{"role":"assistant"}}
+{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"partial"}}`
+	success := `{"type":"message_end","message":{"role":"assistant","stopReason":"stop"}}`
+	cases := []struct {
+		name   string
+		events string
+		tail   string
+	}{
+		{"error", `{"type":"message_end","message":{"role":"assistant","stopReason":"error"}}`, ""},
+		{"aborted", `{"type":"message_end","message":{"role":"assistant","stopReason":"aborted"}}
+{"type":"auto_retry_end","success":true}`, ""},
+		{"length", `{"type":"message_end","message":{"role":"assistant","stopReason":"length"}}
+{"type":"auto_retry_end","success":true}`, ""},
+		{"missing-stop", `{"type":"message_end","message":{"role":"assistant"}}`, ""},
+		{"eof", "", ""},
+		{"retry-exhausted", `{"type":"auto_retry_end","success":false,"finalError":"synthetic exhaustion"}`, ""},
+		{"exit-after-success", success, "exit 42\n"},
+		{"fatal-after-success", success + "\n" + `{"type":"error","message":"synthetic fatal"}`, ""},
+		{"new-unfinished-message", success + "\n" + start, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			session := executePiProgressFixture(t, ctx, start+"\n"+tc.events, tc.tail, ExecOptions{StreamProgress: true})
+			activeID := ""
+			sawReset := false
+			for msg := range session.Messages {
+				if msg.Status == "preview_start" {
+					activeID = msg.MessageID
+				}
+				if msg.Status == "preview_reset" {
+					if msg.MessageID != activeID {
+						t.Fatalf("reset %q does not match %q", msg.MessageID, activeID)
+					}
+					activeID = ""
+					sawReset = true
+				}
+				if msg.Type == MessageError && activeID != "" {
+					t.Fatal("error reached the client before preview invalidation")
+				}
+			}
+			result := <-session.Result
+			if result.Status != "failed" || activeID != "" || !sawReset {
+				t.Fatalf("active=%q reset=%t result=%+v", activeID, sawReset, result)
+			}
+		})
+	}
+}
+
+func TestPiProgressCancelAndTimeoutReset(t *testing.T) {
+	for _, timeout := range []bool{false, true} {
+		t.Run(fmt.Sprintf("timeout=%t", timeout), func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			opts := ExecOptions{StreamProgress: true, Cwd: t.TempDir()}
+			want := "aborted"
+			if timeout {
+				opts.Timeout = time.Second
+				want = "timeout"
+			}
+			session := executePiProgressFixture(t, ctx,
+				`{"type":"message_start","message":{"role":"assistant"}}
+{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"pending"}}`,
+				"while [ ! -f release ]; do sleep 0.01; done\n", opts)
+			var preview, reset bool
+			for msg := range session.Messages {
+				if msg.Type == MessageTextPreview {
+					preview = true
+					if !timeout {
+						cancel()
+					}
+				}
+				if msg.Status == "preview_reset" {
+					reset = true
+				}
+				if msg.Type == MessageText || msg.Status == "preview_end" {
+					t.Fatal("cancelled assistant attempt was published")
+				}
+			}
+			result := <-session.Result
+			if !preview || !reset || result.Status != want || result.Output != "" {
+				t.Fatalf("preview=%t reset=%t result=%+v", preview, reset, result)
+			}
+		})
+	}
+}
+
+func TestPiProgressUnicodeChunkBounds(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	want := strings.Repeat("\u0001", 131073) + strings.Repeat("中文😀\"\\\n", 12000)
+	event, err := json.Marshal(map[string]any{
+		"type":                  "message_update",
+		"assistantMessageEvent": map[string]any{"type": "text_delta", "delta": want},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := executePiProgressFixture(t, ctx,
+		`{"type":"message_start","message":{"role":"assistant"}}`+"\n"+string(event)+"\n"+
+			`{"type":"message_end","message":{"role":"assistant","stopReason":"stop"}}`, "",
+		ExecOptions{StreamProgress: true})
+	texts := make(map[MessageType]string)
+	builder := envelope.NewBuilder("synthetic-session")
+	for msg := range session.Messages {
+		if msg.Type != MessageText && msg.Type != MessageTextPreview {
+			continue
+		}
+		if len(msg.Content) > 64*1024 || !utf8.ValidString(msg.Content) {
+			t.Fatalf("invalid chunk: kind=%s bytes=%d", msg.Type, len(msg.Content))
+		}
+		env, err := builder.Message(time.Now(), envelope.MessagePayload{
+			Kind: string(msg.Type), Content: msg.Content, MessageID: msg.MessageID,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		line, err := envelope.EncodeLine(env)
+		if err != nil || len(line) >= 512*1024 {
+			t.Fatalf("wire size=%d error=%v", len(line), err)
+		}
+		texts[msg.Type] += msg.Content
+	}
+	result := <-session.Result
+	if texts[MessageText] != want || texts[MessageTextPreview] != want || result.Output != want || result.Status != "completed" {
+		t.Fatal("chunking changed public text or preview bytes")
 	}
 }
 

@@ -4,6 +4,26 @@ import (
 	"sync"
 )
 
+// Sixfold JSON escaping of a 64 KiB UTF-8 chunk still fits a 512 KiB wire line.
+func emitChunkedText(pipe *messagePipe, msg Message) {
+	text := msg.Content
+	const maxChunkBytes = 64 * 1024
+	for len(text) > 0 {
+		cut := min(len(text), maxChunkBytes)
+		if cut < len(text) {
+			for cut > 0 && (text[cut]&0xC0) == 0x80 {
+				cut--
+			}
+			if cut == 0 {
+				cut = maxChunkBytes
+			}
+		}
+		msg.Content = text[:cut]
+		pipe.Send(msg)
+		text = text[cut:]
+	}
+}
+
 // messagePipe is a lossless, non-blocking fan-in for backend event
 // producers. Send never blocks the protocol scanner; a relay drains
 // an unbounded in-memory queue onto the receive channel.

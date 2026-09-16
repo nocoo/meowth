@@ -26,13 +26,14 @@ func newPumpRunner(db *sql.DB, registry *cancelRegistry) pumpRunner {
 func (r pumpRunner) Run(ctx context.Context, p handlers.ExecRunParams) handlers.ExecRunResult {
 	sessionID := p.SessionID
 	res := pumpAgentSession(ctx, pumpConfig{
-		DB:          r.db,
-		SessionID:   sessionID,
-		BackendType: p.BackendType,
-		Session:     p.Session,
-		Writer:      p.Writer,
-		Flusher:     p.Flusher,
-		Logger:      p.Logger,
+		DB:             r.db,
+		SessionID:      sessionID,
+		BackendType:    p.BackendType,
+		Session:        p.Session,
+		Writer:         p.Writer,
+		Flusher:        p.Flusher,
+		Logger:         p.Logger,
+		StreamProgress: p.StreamProgress,
 		IsShutdown: func() bool {
 			if r.registry == nil {
 				return false

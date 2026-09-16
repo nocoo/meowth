@@ -23,6 +23,8 @@ type Backend interface {
 type ExecOptions struct {
 	Cwd   string
 	Model string
+	// StreamProgress enables transient public previews and early tool activity.
+	StreamProgress bool
 	// SystemPrompt is consumed only by providers that can pass or safely inline
 	// developer/system instructions. Hermes ACP intentionally ignores it and
 	// relies on cwd-scoped context files such as AGENTS.md instead.
@@ -93,13 +95,14 @@ type Session struct {
 type MessageType string
 
 const (
-	MessageText       MessageType = "text"
-	MessageThinking   MessageType = "thinking"
-	MessageToolUse    MessageType = "tool-use"
-	MessageToolResult MessageType = "tool-result"
-	MessageStatus     MessageType = "status"
-	MessageError      MessageType = "error"
-	MessageLog        MessageType = "log"
+	MessageText        MessageType = "text"
+	MessageTextPreview MessageType = "text-preview"
+	MessageThinking    MessageType = "thinking"
+	MessageToolUse     MessageType = "tool-use"
+	MessageToolResult  MessageType = "tool-result"
+	MessageStatus      MessageType = "status"
+	MessageError       MessageType = "error"
+	MessageLog         MessageType = "log"
 )
 
 // Message is a unified event emitted by an agent during execution.
@@ -113,6 +116,7 @@ type Message struct {
 	Status    string         // agent status string (Status)
 	Level     string         // log level (Log)
 	SessionID string         // backend session id (Status), for early resume-pointer pinning
+	MessageID string         // session-local assistant attempt id (preview events only)
 }
 
 // TokenUsage tracks token consumption for a single model.

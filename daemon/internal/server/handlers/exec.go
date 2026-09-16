@@ -29,6 +29,8 @@ import (
 // positive time.Duration without overflowing int64 nanoseconds.
 const maxTimeoutMS = math.MaxInt64 / int64(time.Millisecond)
 
+const streamProgressHeader = "X-Meowth-Stream-Progress"
+
 // ExecRunner is the interface the exec handler delegates the pump
 // to. server.New supplies an implementation that calls the
 // internal pumpAgentSession; tests can inject a stub.
@@ -38,12 +40,13 @@ type ExecRunner interface {
 
 // ExecRunParams collects the inputs for one exec stream.
 type ExecRunParams struct {
-	SessionID   string
-	BackendType string
-	Session     *agent.Session
-	Writer      http.ResponseWriter
-	Flusher     http.Flusher
-	Logger      *slog.Logger
+	SessionID      string
+	BackendType    string
+	Session        *agent.Session
+	Writer         http.ResponseWriter
+	Flusher        http.Flusher
+	Logger         *slog.Logger
+	StreamProgress bool
 }
 
 // ExecRunResult mirrors the pump's terminal pumpResult so the
@@ -182,6 +185,7 @@ func (h *AgentExecHandler) Exec(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opts := agent.ExecOptions{
+		StreamProgress:            r.Header.Get(streamProgressHeader) == "1",
 		Cwd:                       req.Cwd,
 		Model:                     req.Model,
 		SystemPrompt:              req.SystemPrompt,
@@ -215,6 +219,9 @@ func (h *AgentExecHandler) Exec(w http.ResponseWriter, r *http.Request) {
 
 	// Stream headers (per 02 §4.3).
 	w.Header().Set("Content-Type", "application/x-ndjson")
+	if opts.StreamProgress {
+		w.Header().Set(streamProgressHeader, "1")
+	}
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
@@ -259,12 +266,13 @@ func (h *AgentExecHandler) Exec(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 
 	res := h.Runner.Run(execCtx, ExecRunParams{
-		SessionID:   sessionID,
-		BackendType: backendType,
-		Session:     sess,
-		Writer:      w,
-		Flusher:     flusher,
-		Logger:      logger,
+		SessionID:      sessionID,
+		BackendType:    backendType,
+		Session:        sess,
+		Writer:         w,
+		Flusher:        flusher,
+		Logger:         logger,
+		StreamProgress: opts.StreamProgress,
 	})
 	_ = res
 }

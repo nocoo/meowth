@@ -81,6 +81,7 @@ type MessagePayload struct {
 	Status           string         `json:"status,omitempty"`
 	Level            string         `json:"level,omitempty"`
 	BackendSessionID string         `json:"backend_session_id,omitempty"`
+	MessageID        string         `json:"message_id,omitempty"`
 }
 
 // UsagePerModel — usage_payload.models[*]; docs/architecture/02 §5.4.

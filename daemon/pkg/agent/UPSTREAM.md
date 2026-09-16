@@ -41,6 +41,15 @@ trim. Each one needs to be revisited when pumping to a newer multica SHA:
 either the upstream has merged an equivalent fix (drop the local patch) or
 it still hasn't (keep the patch and verify the affected path still applies).
 
+- **Opt-in assistant progress** — `agent.go`, `pi.go`, `hermes.go`, and
+  `message_pipe.go`. Pi emits transient, message-scoped previews alongside
+  its success-gated canonical text; retries and failures invalidate previews.
+  Hermes can announce tool activity before argument assembly finishes.
+  Shared 64 KiB UTF-8 chunks bound public text lines. The daemon HTTP pump
+  owns the corresponding privacy projection. Preserve the default-off
+  behavior and lifecycle contract in [feature 15](../../../docs/features/15-transient-assistant-progress.md)
+  when updating the vendored package.
+
 - **pi `message_end` / `turn_end` error mapping** — `pi.go`. Upstream
   treats Pi runs as `Status="completed"` whenever the child exits 0,
   including when the upstream provider returned an API error mid-turn

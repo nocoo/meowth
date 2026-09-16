@@ -5,10 +5,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -137,6 +139,101 @@ func TestPumpHappyPathEmitsSessionEndedAndUpdatesRow(t *testing.T) {
 	// usage_json non-empty.
 	if len(s.UsageJSON) == 0 || !bytes.Contains(s.UsageJSON, []byte("input_tokens")) {
 		t.Fatalf("usage_json: %q", s.UsageJSON)
+	}
+}
+
+func TestProgressProjectionMatchesNormalAndDrainPaths(t *testing.T) {
+	messages := []agent.Message{
+		{Type: agent.MessageStatus, Status: "preview_start", MessageID: "1"},
+		{Type: agent.MessageTextPreview, Content: "public preview", MessageID: "1"},
+		{Type: agent.MessageThinking, Content: strings.Repeat("SYNTHETIC_PRIVATE_THINKING", 60000)},
+		{Type: agent.MessageToolUse, Tool: "SYNTHETIC_PRIVATE_TITLE", CallID: "SYNTHETIC_PRIVATE_ID", Input: map[string]any{"arg": "SYNTHETIC_PRIVATE_ARGS"}},
+		{Type: agent.MessageToolResult, Output: "SYNTHETIC_PRIVATE_RESULT"},
+		{Type: agent.MessageLog, Content: "SYNTHETIC_PRIVATE_LOG"},
+		{Type: agent.MessageStatus, Status: "SYNTHETIC_PRIVATE_STATUS"},
+		{Type: agent.MessageStatus, Status: "in_progress", Content: "SYNTHETIC_PRIVATE_STATUS_BODY"},
+		{Type: agent.MessageStatus, Status: "preview_reset", MessageID: "1"},
+		{Type: agent.MessageText, Content: "canonical"},
+	}
+	for _, drain := range []bool{false, true} {
+		t.Run(fmt.Sprintf("drain=%t", drain), func(t *testing.T) {
+			db, id := newPumpDB(t)
+			rr := httptest.NewRecorder()
+			cfg := pumpConfig{
+				DB: db, SessionID: id, BackendType: "pi",
+				Session: scriptedSession(messages, agent.Result{Status: "completed", Output: "canonical"}),
+				Writer:  rr, Flusher: rr, StreamProgress: true,
+				Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Now: time.Now,
+			}
+			if drain {
+				builder := envelope.NewBuilder(id)
+				_, _ = builder.SessionStarted(time.Now(), envelope.SessionStartedPayload{})
+				lastEmit := time.Now()
+				backendID := ""
+				if err := drainRemainingMessages(t.Context(), cfg, builder, &lastEmit, &backendID, cfg.Logger); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				res := pumpAgentSession(t.Context(), cfg)
+				if res.Status != "completed" || res.PersistErr != nil {
+					t.Fatalf("pump = %+v", res)
+				}
+			}
+			if bytes.Contains(rr.Body.Bytes(), []byte("SYNTHETIC_PRIVATE")) {
+				t.Fatal("private provider fields reached the opted-in stream")
+			}
+			var kinds []string
+			for i, line := range bytes.Split(bytes.TrimSpace(rr.Body.Bytes()), []byte("\n")) {
+				var env envelope.Envelope
+				if err := json.Unmarshal(line, &env); err != nil {
+					t.Fatal(err)
+				}
+				if env.Seq != int64(i+1) {
+					t.Fatalf("filtered events created a seq gap: %d", env.Seq)
+				}
+				if env.Type != envelope.TypeMessage {
+					continue
+				}
+				var payload envelope.MessagePayload
+				if err := json.Unmarshal(env.Payload, &payload); err != nil {
+					t.Fatal(err)
+				}
+				if payload.Kind == "status" {
+					kinds = append(kinds, payload.Status)
+				} else {
+					kinds = append(kinds, payload.Kind)
+				}
+			}
+			if strings.Join(kinds, ",") != "preview_start,text-preview,thinking,tool_running,tool_finished,in_progress,preview_reset,text" {
+				t.Fatalf("safe event order = %v", kinds)
+			}
+		})
+	}
+}
+
+func TestProgressOptOutPreservesLegacyFields(t *testing.T) {
+	db, id := newPumpDB(t)
+	messages := []agent.Message{
+		{Type: agent.MessageStatus, Status: "preview_start", MessageID: "1"},
+		{Type: agent.MessageTextPreview, Content: "must not leak", MessageID: "1"},
+		{Type: agent.MessageStatus, Status: "preview_reset", MessageID: "1"},
+		{Type: agent.MessageThinking, Content: "synthetic legacy thinking"},
+		{Type: agent.MessageToolUse, Tool: "synthetic-tool", CallID: "call-1", Input: map[string]any{"arg": "synthetic"}},
+		{Type: agent.MessageToolResult, Output: "synthetic result"},
+		{Type: agent.MessageText, Content: "canonical"},
+	}
+	rr, result := runPump(t, db, id, scriptedSession(messages, agent.Result{Status: "completed", Output: "canonical"}), time.Hour)
+	if result.Status != "completed" {
+		t.Fatalf("pump = %+v", result)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, "preview") || strings.Contains(body, "message_id") {
+		t.Fatal("transient events reached a legacy consumer")
+	}
+	for _, retained := range []string{"synthetic legacy thinking", "synthetic-tool", "call-1", "synthetic result"} {
+		if !strings.Contains(body, retained) {
+			t.Fatalf("legacy field %q was changed", retained)
+		}
 	}
 }
 

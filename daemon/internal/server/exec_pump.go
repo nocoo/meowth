@@ -29,6 +29,7 @@ type pumpConfig struct {
 	Logger            *slog.Logger
 	HeartbeatInterval time.Duration
 	Now               func() time.Time
+	StreamProgress    bool
 	// MarkPersistFailure is invoked when AppendMessage fails so
 	// tests can observe the abort path without parsing logs.
 	MarkPersistFailure func(error)
@@ -184,6 +185,10 @@ func pumpAgentSession(ctx context.Context, cfg pumpConfig) pumpResult {
 					logger.Warn("pump: backend_session_id update failed", "err", err)
 				}
 			}
+			msg, keep := messageForStream(msg, cfg.StreamProgress)
+			if !keep {
+				continue
+			}
 			payload := messagePayloadFromAgent(msg)
 			env, err := builder.Message(cfg.Now(), payload)
 			if err != nil {
@@ -206,9 +211,6 @@ func pumpAgentSession(ctx context.Context, cfg pumpConfig) pumpResult {
 				} else if perr := persistAndWrite(ctx, cfg, trunc, store.EventError, logger); perr != nil {
 					return abortStream(cfg, perr, logger)
 				}
-			}
-			if msg.Type == agent.MessageStatus {
-				_ = msg.Type
 			}
 
 		case res, ok := <-cfg.Session.Result:
@@ -390,6 +392,10 @@ func drainRemainingMessages(ctx context.Context, cfg pumpConfig, b *envelope.Bui
 					logger.Warn("pump: backend_session_id update (drain) failed", "err", err)
 				}
 			}
+			msg, keep := messageForStream(msg, cfg.StreamProgress)
+			if !keep {
+				continue
+			}
 			env, err := b.Message(cfg.Now(), messagePayloadFromAgent(msg))
 			if err != nil {
 				logger.Error("pump (drain): build message envelope", "err", err)
@@ -431,7 +437,38 @@ func messagePayloadFromAgent(m agent.Message) envelope.MessagePayload {
 		Status:           m.Status,
 		Level:            m.Level,
 		BackendSessionID: m.SessionID,
+		MessageID:        m.MessageID,
 	}
+}
+
+func messageForStream(m agent.Message, progress bool) (agent.Message, bool) {
+	if !progress {
+		if m.Type == agent.MessageTextPreview || (m.Type == agent.MessageStatus &&
+			(m.Status == "preview_start" || m.Status == "preview_end" || m.Status == "preview_reset")) {
+			return agent.Message{}, false
+		}
+		return m, true
+	}
+	switch m.Type {
+	case agent.MessageText, agent.MessageError:
+		return agent.Message{Type: m.Type, Content: m.Content}, true
+	case agent.MessageTextPreview:
+		return agent.Message{Type: m.Type, Content: m.Content, MessageID: m.MessageID}, m.MessageID != ""
+	case agent.MessageThinking:
+		return agent.Message{Type: agent.MessageStatus, Status: "thinking"}, true
+	case agent.MessageToolUse:
+		return agent.Message{Type: agent.MessageStatus, Status: "tool_running"}, true
+	case agent.MessageToolResult:
+		return agent.Message{Type: agent.MessageStatus, Status: "tool_finished"}, true
+	case agent.MessageStatus:
+		switch m.Status {
+		case "running", "in_progress", "retrying", "thinking", "tool_running", "tool_finished":
+			return agent.Message{Type: agent.MessageStatus, Status: m.Status}, true
+		case "preview_start", "preview_end", "preview_reset":
+			return agent.Message{Type: agent.MessageStatus, Status: m.Status, MessageID: m.MessageID}, m.MessageID != ""
+		}
+	}
+	return agent.Message{}, false
 }
 
 func convertUsage(in map[string]agent.TokenUsage) map[string]envelope.UsagePerModel {

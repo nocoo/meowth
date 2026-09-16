@@ -87,6 +87,26 @@ func TestExecRejectsUnknownBackendType(t *testing.T) {
 	}
 }
 
+func TestExecProgressHeaderIsOptionalAndAcknowledged(t *testing.T) {
+	for _, value := range []string{"", "0", "1", "2"} {
+		t.Run("header="+value, func(t *testing.T) {
+			h, runner := newExecFixture(t)
+			rr := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/v1/agents/pi/exec", strings.NewReader(`{"prompt":"synthetic"}`))
+			req.Header.Set("X-Meowth-Stream-Progress", value)
+			chiRouterWithExec(h).ServeHTTP(rr, req)
+			want := value == "1"
+			if rr.Code != http.StatusOK || !runner.called || runner.captured.StreamProgress != want {
+				t.Fatalf("status=%d called=%t progress=%t", rr.Code, runner.called, runner.captured.StreamProgress)
+			}
+			ack := rr.Header().Get("X-Meowth-Stream-Progress")
+			if (want && ack != "1") || (!want && ack != "") {
+				t.Fatalf("header acknowledgement = %q", ack)
+			}
+		})
+	}
+}
+
 func TestExecRejectsEmptyPrompt(t *testing.T) {
 	h, _ := newExecFixture(t)
 	rr := httptest.NewRecorder()

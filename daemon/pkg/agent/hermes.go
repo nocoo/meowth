@@ -143,10 +143,11 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 	promptDone := make(chan hermesPromptResult, 1)
 
 	c := &hermesClient{
-		cfg:          b.cfg,
-		stdin:        stdin,
-		pending:      make(map[int]*pendingRPC),
-		pendingTools: make(map[string]*pendingToolCall),
+		cfg:            b.cfg,
+		streamProgress: opts.StreamProgress,
+		stdin:          stdin,
+		pending:        make(map[int]*pendingRPC),
+		pendingTools:   make(map[string]*pendingToolCall),
 		acceptNotification: func(string) bool {
 			return streamingCurrentTurn.Load()
 		},
@@ -158,6 +159,14 @@ func (b *hermesBackend) Execute(ctx context.Context, prompt string, opts ExecOpt
 				outputMu.Lock()
 				output.WriteString(msg.Content)
 				outputMu.Unlock()
+				if opts.StreamProgress {
+					emitChunkedText(pipe, msg)
+					return
+				}
+			}
+			if opts.StreamProgress && msg.Type == MessageToolUse {
+				// Tool activity was already emitted at tool_call, before args finished.
+				return
 			}
 			pipe.Send(msg)
 		},
@@ -454,15 +463,16 @@ type hermesPromptResult struct {
 }
 
 type hermesClient struct {
-	cfg          Config
-	stdin        interface{ Write([]byte) (int, error) }
-	writeMu      sync.Mutex // serialises stdin.Write calls across goroutines
-	mu           sync.Mutex
-	nextID       int
-	pending      map[int]*pendingRPC
-	sessionID    string
-	onMessage    func(Message)
-	onPromptDone func(hermesPromptResult)
+	cfg            Config
+	streamProgress bool
+	stdin          interface{ Write([]byte) (int, error) }
+	writeMu        sync.Mutex // serialises stdin.Write calls across goroutines
+	mu             sync.Mutex
+	nextID         int
+	pending        map[int]*pendingRPC
+	sessionID      string
+	onMessage      func(Message)
+	onPromptDone   func(hermesPromptResult)
 	// acceptNotification can drop ACP session updates before dispatching to
 	// handlers that mutate client state such as usage or pending tool calls.
 	acceptNotification func(updateType string) bool
@@ -981,6 +991,9 @@ func (c *hermesClient) handleToolCallStart(data json.RawMessage) {
 	}
 	if err := json.Unmarshal(data, &msg); err != nil {
 		return
+	}
+	if c.streamProgress && c.onMessage != nil {
+		c.onMessage(Message{Type: MessageStatus, Status: "tool_running"})
 	}
 
 	toolName := hermesToolNameFromTitle(msg.Title, msg.Kind)
