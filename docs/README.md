@@ -4,7 +4,7 @@ Meowth 项目的编号文档目录。所有架构决策、功能设计、长任�
 
 ## 规范
 
-Latest: [Hermes profile discovery](features/12-hermes-profile-discovery.md).
+Latest: [Transient assistant progress](features/15-transient-assistant-progress.md).
 
 - 文件命名:`NN-kebab-name.md`（两位编号 + 小写英文 + 横杠分隔）
 - 编号用于排序,不代表优先级
@@ -52,3 +52,4 @@ Latest: [Hermes profile discovery](features/12-hermes-profile-discovery.md).
 | Chat 模板 / 富文本 / 本机 agents 验证 / 全站标签规范 | [`features/09`](./features/09-chat-workspace-and-ui-polish.md) |
 | Chat activity disclosures / focused layout / agent picker | [`features/10`](./features/10-chat-reading-and-interaction.md) |
 | Shared Chat rendering / complete session transcripts | [`features/11`](./features/11-session-chat-transcript.md) |
+| Opt-in public assistant previews / safe activity | [`features/15`](./features/15-transient-assistant-progress.md) |

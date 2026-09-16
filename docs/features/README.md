@@ -20,10 +20,11 @@
 | 12 | [`12-hermes-profile-discovery.md`](./12-hermes-profile-discovery.md) | Hermes ACP profile discovery and configuration | Implemented |
 | 13 | [`13-expand-http-body-limit-and-pi-stdin.md`](./13-expand-http-body-limit-and-pi-stdin.md) | Expand HTTP body limit to 64MiB and stream Pi prompt via stdin | Implemented |
 | 14 | [`14-pi-adapter-resilience-and-assistant-isolation.md`](./14-pi-adapter-resilience-and-assistant-isolation.md) | Pi adapter resilience against transient upstream errors and attempt isolation | Implemented |
+| 15 | [`15-transient-assistant-progress.md`](./15-transient-assistant-progress.md) | Opt-in public text previews and safe execution activity | Planned |
 
 ## 何时新建 features 文档
 
-Latest: [14 · Pi adapter resilience and assistant attempt isolation](14-pi-adapter-resilience-and-assistant-isolation.md).
+Latest: [15 · Transient assistant progress](15-transient-assistant-progress.md).
 
 - 新增端到端可见的能力（新 API 端点、dashboard 新页、新 backend）
 - 跨多个模块的协调改动（端口迁移、协议演进、依赖大版本升级）
