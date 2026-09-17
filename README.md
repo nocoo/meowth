@@ -141,3 +141,5 @@ MEOWTH_REAL_CHAT=1 pnpm dashboard:e2e:real
 ## 许可证
 
 原创代码采用 [MIT](LICENSE)。`daemon/pkg/agent/` 来自 [Multica](https://github.com/multica-ai/multica)，保留其 [Modified Apache 2.0 许可证](daemon/pkg/agent/LICENSE)；上游来源和本地修改记录见 [UPSTREAM.md](daemon/pkg/agent/UPSTREAM.md)。使用这部分代码时需同时阅读其附加条款。
+
+[Agent workflow and local services](docs/02-agent-workflow.md) documents the local service topology and development constraints.

@@ -1,140 +1,87 @@
 # Meowth
 
-> 本项目根本目的与定位详见 [`docs/01-project-overview.md`](docs/01-project-overview.md)
+Local Go daemon and web dashboard for running and observing installed AI agents.
+Profile: native-tool (Go daemon/CLI) + ts-web.
+Direction: [project overview](docs/01-project-overview.md). Frameworks must preserve this handbook.
 
-## 仓库结构（Monorepo）
+## Sources of Truth
 
-pnpm + Turborepo + TypeScript + Biome。
+This file is the quality contract; hooks, CI and config are enforcement. Close implementation gaps without lowering the contract. Historical test results are not evidence of a current passing run.
 
+| Fact | Where |
+|---|---|
+| Product / design | [README.md](README.md), [docs index](docs/README.md) |
+| Local service / workflow | [agent workflow](docs/02-agent-workflow.md) |
+| Commands / toolchain | root `package.json`, `daemon/go.mod`, workspace manifests |
+| Quality / isolation | `scripts/check-*-coverage.sh`, `daemon/internal/home`, `daemon/internal/store`, CI |
+| Accidents | [Retrospective.md](Retrospective.md) |
+| Machine workflow | global `AGENTS.md` and Git rules |
+
+## Project Invariants
+
+- Canonical dev entry is `https://meowth.dev.hexly.ai`; reuse daemon 7040 and Vite 37040 after checking listeners. The live Caddyfile defines proxy routing and wildcard TLS.
+- Normal services use existing user config/tokens/sessions; do not rerun `init` or inject `MEOWTH_TEST`, `MEOWTH_TEST_HOME` or fake backends into them.
+- Agent processes run with the current user permissions and can call paid models or perform external actions. Tokens grant full daemon access; never expose them in logs, traces or fixtures.
+- Keep Go outside the pnpm workspace and preserve dashboard Model/ViewModel boundaries. Rebuild/embed the dashboard when producing a daemon binary.
+- Use numbered design docs, independent directory indexes and atomic commits; long-task plans include code references and 6DQ without effort estimates. Preserve existing coverage floors; add no new exceptions.
+
+## Stack / Layout
+
+| Component | Path / choice |
+|---|---|
+| Daemon | `daemon/cmd/meowthd`, Go + SQLite |
+| Dashboard | `apps/dashboard`, Vite/React/Basalt |
+| Shared / build | `packages/shared`, pnpm/Turborepo/Biome |
+
+## Commands
+
+Run from root with pnpm 11.6.0, the Go toolchain in `daemon/go.mod` (1.26.6), Node matching CI 22.23.2, Bash 4+ and installed scanners. Ordinary L2 uses fake backends; real-agent lanes are opt-in and require a disposable test home.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm daemon:g1
+pnpm dashboard:g1
+pnpm daemon:build
+pnpm daemon:test:cover && pnpm daemon:cover:check
+pnpm dashboard:test:cover && pnpm dashboard:cover:check
+pnpm test:l2
+pnpm dashboard:e2e --project=dashboard-ui --project=dashboard-embed --project=dashboard-embed-mint
+pnpm scan:g2
+pnpm scan:d1
 ```
-meowth/
-├── apps/
-│   └── dashboard/           @meowth/dashboard  Vite + basalt 前端（daemon 管理面板）
-├── daemon/                  Go module，独立于 pnpm workspace（顶层）
-│   └── cmd/meowthd          主二进制入口（详见 docs/01-project-overview.md §7.1）
-├── packages/
-│   └── shared/              @meowth/shared  共享类型与工具
-├── docs/                    编号文档（设计、架构、特性）
-│   └── README.md            文档索引
-├── package.json             根脚本入口
-├── pnpm-workspace.yaml      workspace 配置
-├── turbo.json               任务编排
-├── biome.json               lint + format
-└── tsconfig.base.json       TS 严格模式基线
-```
 
-## 文档体系
+## Verification
 
-所有设计与决策走 `docs/` 编号文档，命名 `NN-kebab-name.md`。
+6DQ = L1/L2/L3 + G1/G2 + D1 (test isolation). Status: `enforced`, `planned`, `manual`, or `N/A`; partial enforcement below does not certify the full required bar.
+L1 requires statements, branches, functions and lines each ≥95%, with no skipped/focused tests; preserve any stricter package threshold. Native tools must identify unmeasured metrics as gaps.
+G1 requires check-only strict analysis/formatting with zero errors/warnings. G2 requires dependency and secret scans, with missing required scanners failing.
 
-入口：[`docs/README.md`](docs/README.md)
-
-二级目录约定：
-- `docs/architecture/` 系统架构
-- `docs/features/` 功能迭代
-- `docs/archive/` 已过时文档
-
-每个二级目录内部独立编号，并维护各自的 `README.md` 索引。
-
-## 开发约束（给 Claude / 给我自己）
-
-### 行动前
-- 关键假设先声明；影响正确性、安全或外部副作用的，等确认再执行
-- 多种解读时列出选项，禁止默默选定
-- 有更简单方案直接提出；需求不清晰立即停止并指出困惑
-- 事实为先：先调查证实/证伪，不无脑赞同
-
-### 编码与提交（硬性要求）
-- **任何改动都必须坚持原子化提交**：一次 commit 只做一件可独立解释、可独立回滚的事
-- 改完代码立即 commit，不积压、不混合无关变更
-- commit 信息说明 *why*，不仅是 *what*；遵循项目 `rules/git-commit.md`
-- 长任务在 `docs/` 编号文档里**预先**规划好原子提交序列，再开工
-- 删除变更范围内确认无引用的死代码
-- 不为不会发生的场景加错误处理 / fallback / 校验
-- 默认不写注释；只在 *why* 非显然时写一行
-- 不写 backwards-compat 垃圾、不留 `// removed` 之类的痕迹
-
-### 文档驱动
-- 架构变更或长任务前，先在 `docs/` 写编号文档
-- 文档必含：设计细节 + 代码引用（文件路径） + 原子化提交计划 + 6DQ 质量计划
-- 文档不含：工作量评估
-- 根 `README.md` 和 `docs/README.md` 始终引用最新的编号文档
-
-### 沟通
-- 称呼用户为「哥」
-- 中文：命令行输出与日常沟通；英文：代码、注释、文档正文标识符、Git 操作
-
-## Local startup and service URLs
-
-**Canonical development URL: https://meowth.dev.hexly.ai**
-
-| Service | Fixed address | Purpose |
+| Dimension | Status | Required proof and current evidence/gap |
 |---|---|---|
-| Dashboard, API, and HMR | `https://meowth.dev.hexly.ai` | The single browser entry through local Caddy |
-| Vite | `http://127.0.0.1:37040` | Frontend source with React Fast Refresh; API proxy to port 7040 |
-| Daemon | `http://127.0.0.1:7040` | HTTP API and the last embedded dashboard build |
-| Health | `https://meowth.dev.hexly.ai/healthz` | Confirms Caddy can reach the daemon; expected `{"ok":true}` |
+| L1 Go | planned | Hooks/CI gate package statement coverage at 95% with 15 frozen lower floors (69–94%). Other metrics and full 95% remain gaps; do not lower/add baselines. |
+| L1 TypeScript | planned | Dashboard/shared collect four metrics, but the shell gate checks per-file statements with frozen 82/87 floors and structural exemptions. Require all four 95% without weakening floors. |
+| L2 HTTP / CLI | planned | `test:l2` runs five real local daemon/CLI matrices with fake agent backends; `test:l2:embed` checks embedded serving. Complete 100% route/command mapping is not yet enforced. |
+| L3 dashboard / CLI | planned | CI runs UI, embed and mint Playwright projects; the dev project and real-agent Chat lane are separate. Require complete page/CLI workflow proof; real providers remain explicitly manual. |
+| G1 Go / TS | enforced | CI runs daemon fmt/vet/golangci-lint and dashboard format/lint/types/dependency boundaries/source checks. Local pre-commit still autofixes staged source. |
+| G2 | enforced | Pre-push/CI scan pnpm/Go dependencies and secrets through OSV, govulncheck and gitleaks. |
+| D1 | planned | Homes and DB markers separate test/prod; L2 creates unique child homes. Arbitrary test-home overrides and browser marker-file cleanup lack canonical-path ownership guards; static `scan:d1` alone is insufficient. |
 
-Run commands from this repository's root. Check existing listeners first:
+Pre-commit currently runs lint-staged only (Biome/gofmt autofix for source). Pre-push runs vet/types, both coverage gates, L2 and G2 sequentially; it does not build the dashboard. CI supplies broader G1/build/L3. Existing hooks do not check index/push-ref snapshots.
 
-```bash
-lsof -nP -iTCP:7040 -sTCP:LISTEN
-lsof -nP -iTCP:37040 -sTCP:LISTEN
-```
+Target hooks: pre-commit checks G1 + L1 against the index snapshot (`git checkout-index`) in <30s; pre-push checks L2 and G2 in parallel against every stdin push ref/commit in <3min, plus build where applicable. L3 runs in CI or an explicit manual lane.
+Never bypass commit/push hooks, force-push, or use autofix in checks. Documentation changes do not authorize deploying or implementing new gates.
 
-Reuse the running daemon and Vite. Start only the missing service in its own
-terminal:
+## Resources / Isolation
 
-```bash
-./daemon/meowthd serve   # Daemon: existing local config, 127.0.0.1:7040
-pnpm dashboard:dev      # Vite: 127.0.0.1:37040, strictPort enabled
-```
+Use fake backends only with `MEOWTH_TEST=1` and a unique `MEOWTH_TEST_HOME` outside production `~/.meowth`. Test DB is `meowth-test.db` with `_test_marker`; verify ownership before deleting any home. Browser fixtures: 47040/47041 and 17040/17041, separate from dev ports. Real smoke (`test:l2:real`, `dashboard:e2e:real`) can reach external agents; do not use it as an ordinary docs gate.
 
-- Keep these ports fixed. Resolve an unexpected listener before launching a
-  replacement. `--listen-addr` is a daemon test-only flag.
-- Normal development uses the existing `$HOME/.meowth/config.toml`, tokens,
-  and sessions. `init` is only for a brand-new installation. Keep `MEOWTH_TEST`,
-  `MEOWTH_TEST_HOME`, and `MEOWTH_BACKEND_FACTORY=fake` out of normal services.
-- Frontend edits through Vite update automatically. Use `pnpm daemon:build`
-  when the daemon binary is missing or when preparing an embedded build; it
-  builds the dashboard, embeds it, and writes `daemon/meowthd`. The embedded
-  page on port 7040 changes when the rebuilt daemon is started.
-- The live Caddy configuration is `/opt/homebrew/etc/Caddyfile`: `/v1`,
-  `/v1/*`, `/healthz`, `/bootstrap`, and `/bootstrap/*` route to 7040; other
-  paths, assets, and HMR WebSockets route to 37040. Use the existing wildcard
-  TLS certificate and the single main hostname. `meowth-vite.dev.hexly.ai`
-  was retired; the workflow repository's older Caddy template is not the
-  source of truth for this machine.
-- `MEOWTH_DAEMON_URL` overrides only Vite's proxy target. Its normal value is
-  `http://127.0.0.1:7040`; check the shell and `apps/dashboard/.env.local` when
-  diagnosing an unexpected backend. Caddy's direct API route stays on 7040.
-- First-run token mint uses `http://127.0.0.1:7040/setup`. Existing tokens can
-  be pasted into the canonical HTTPS dashboard.
-- Browser test ports are separate: UI/dev Vite `47040`, fake dev daemon
-  `47041`, embedded fixtures `17040`/`17041`. Real-agent browser tests select
-  temporary loopback ports and isolated test homes. These are test fixtures,
-  not development entry points.
+## Operations / Release
 
-See [feature 08](docs/features/08-dashboard-theme-and-vite.md) for routing and
-[feature 09](docs/features/09-chat-workspace-and-ui-polish.md) for Chat and
-real-agent verification. [Feature 10](docs/features/10-chat-reading-and-interaction.md)
-records the current Chat layout, tool disclosures, and agent compatibility checks.
-Chat and session details share response controls in
-`apps/dashboard/src/components/chat/`; see [feature 11](docs/features/11-session-chat-transcript.md).
-
-## 常用命令
-
-```bash
-pnpm install            # 安装 workspace 依赖
-pnpm dev                # 所有包 dev
-pnpm build              # 所有包 build
-pnpm typecheck          # 全量类型检查
-pnpm lint               # biome 检查
-pnpm format             # biome 格式化
-```
+Follow [local services](docs/02-agent-workflow.md) for startup, Caddy routes, build/embed behavior and troubleshooting. Keep versions and generated assets consistent with their owning manifests. Normal Git push does not authorize starting real agent jobs, minting tokens or changing existing user state.
 
 ## Retrospective
 
-记录犯错与教训，避免重蹈。
+Move accident narratives to [Retrospective.md](Retrospective.md); keep at most about ten concise recurring project rules here. Put architecture and operational detail in linked docs.
 
-（暂无条目。）
+- Distinguish the Vite live page from the last daemon-embedded dashboard build.
+- Preserve token secrecy in browser screenshots/traces and retain fake-backend test guards.

@@ -52,3 +52,5 @@ Latest: [Hermes profile discovery](features/12-hermes-profile-discovery.md).
 | Chat 模板 / 富文本 / 本机 agents 验证 / 全站标签规范 | [`features/09`](./features/09-chat-workspace-and-ui-polish.md) |
 | Chat activity disclosures / focused layout / agent picker | [`features/10`](./features/10-chat-reading-and-interaction.md) |
 | Shared Chat rendering / complete session transcripts | [`features/11`](./features/11-session-chat-transcript.md) |
+
+[Agent workflow and local services](02-agent-workflow.md) documents the local service topology and development constraints.
