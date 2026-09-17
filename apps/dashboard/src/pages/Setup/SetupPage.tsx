@@ -1,3 +1,4 @@
+import { HexlyLink } from '@/components/HexlyLink';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Notice } from '@/components/ui/notice';
 import useSetupViewModel from '@/viewmodels/useSetupViewModel';
@@ -66,7 +67,8 @@ export default function SetupPage() {
   return (
     <div className="bg-basalt-background relative flex min-h-dvh flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-0" style={{ background: RADIAL_GLOW }} />
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-1">
+        <HexlyLink />
         <ThemeToggle />
       </div>
 

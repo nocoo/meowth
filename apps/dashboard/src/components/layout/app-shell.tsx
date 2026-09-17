@@ -1,10 +1,20 @@
+import { HexlyLink } from '@/components/HexlyLink';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Github } from '@/components/icons/github';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { activeNavItem } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import { ContentIsland, Sheet, SheetContent, SheetDescription, SheetTitle } from '@nocoo/basalt';
+import {
+  ContentIsland,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@nocoo/basalt';
 import { AppHeader } from '@nocoo/basalt/components/app-header';
 import {
   AppMain,
@@ -80,22 +90,27 @@ function AppShellInner() {
           title={current?.label}
           actions={
             <>
-              <Button
-                asChild
-                variant="ghost"
-                size="icon-sm"
-                className="text-basalt-muted-foreground"
-              >
-                <a
-                  href={GITHUB_REPO_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="GitHub repository"
-                  title="GitHub repository"
-                >
-                  <Github className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-                </a>
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-basalt-muted-foreground"
+                  >
+                    <a
+                      href={GITHUB_REPO_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="GitHub repository"
+                    >
+                      <Github className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+                    </a>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">GitHub repository</TooltipContent>
+              </Tooltip>
+              <HexlyLink />
               <ThemeToggle />
             </>
           }

@@ -1,4 +1,5 @@
 import { THEME_STORAGE_KEY } from '@/lib/theme-init';
+import { TooltipProvider } from '@nocoo/basalt';
 import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -36,9 +37,11 @@ function resetTheme(): void {
 
 function renderToggle() {
   return render(
-    <ThemeProvider defaultTheme="system" storageKey={THEME_STORAGE_KEY}>
-      <ThemeToggle />
-    </ThemeProvider>,
+    <TooltipProvider>
+      <ThemeProvider defaultTheme="system" storageKey={THEME_STORAGE_KEY}>
+        <ThemeToggle />
+      </ThemeProvider>
+    </TooltipProvider>,
   );
 }
 

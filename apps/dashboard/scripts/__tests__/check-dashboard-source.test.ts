@@ -94,11 +94,25 @@ describe('check-dashboard-source.sh', () => {
     expect(r.stderr).toContain('remote <script src=> in source');
   });
 
-  it('fails on a remote <link href>', () => {
-    writeSrc(tmp, 'index.tsx', `// ${LINK_REMOTE_HTML}\n`);
+  it.each([
+    LINK_REMOTE_HTML,
+    `<link\n  rel="stylesheet"\n  href = '${HTTPS}'\n/>`,
+    `<LINK rel="stylesheet" HREF="${HTTPS}">`,
+  ])('fails on a remote <link href> (%#)', (markup) => {
+    writeSrc(tmp, 'index.tsx', `${markup}\n`);
     const r = runScript(tmp, html);
     expect(r.status).toBe(1);
     expect(r.stderr).toContain('remote <link href=> in source');
+  });
+
+  it.each([
+    `<a href="${HTTPS}">Open</a>`,
+    `<link rel="stylesheet" href="/theme.css" />\n<a\n  href="${HTTPS}"\n>Open</a>`,
+  ])('allows external navigation anchors (%#)', (markup) => {
+    writeSrc(tmp, 'navigation.tsx', `${markup}\n`);
+    const r = runScript(tmp, html);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('dashboard source scan: OK');
   });
 
   it('fails on a remote @import url() in CSS', () => {

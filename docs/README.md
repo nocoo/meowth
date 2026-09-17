@@ -53,3 +53,5 @@ Latest: [Transient assistant progress](features/15-transient-assistant-progress.
 | Chat activity disclosures / focused layout / agent picker | [`features/10`](./features/10-chat-reading-and-interaction.md) |
 | Shared Chat rendering / complete session transcripts | [`features/11`](./features/11-session-chat-transcript.md) |
 | Opt-in public assistant previews / safe activity | [`features/15`](./features/15-transient-assistant-progress.md) |
+
+[Agent workflow and local services](02-agent-workflow.md) documents the local service topology and development constraints.

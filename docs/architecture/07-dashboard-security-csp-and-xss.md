@@ -272,15 +272,15 @@ fail() {
 check_pattern() {
   local pattern="$1" desc="$2"
   shift 2
-  if rg -n "$pattern" "$@" >/dev/null 2>&1; then
-    rg -n "$pattern" "$@"
+  if rg -nU "$pattern" "$@" >/dev/null 2>&1; then
+    rg -nU "$pattern" "$@"
     fail "$desc"
   fi
 }
 
 # 禁止源码引入远程脚本/样式/字体
 check_pattern 'src=["'\'']https?://' 'remote <script src=> in source' "$SRC" "$HTML"
-check_pattern 'href=["'\'']https?://' 'remote <link href=> in source' "$SRC" "$HTML"
+check_pattern '(?i)<link\b[^>]*\bhref\s*=\s*["'\'']https?://' 'remote <link href=> in source' "$SRC" "$HTML"
 check_pattern '@import\s+url\(["'\'']https?:' 'remote @import url() in source' "$SRC"
 
 # 禁止 eval / new Function（即使 Biome 漏过）

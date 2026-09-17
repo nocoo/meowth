@@ -1,4 +1,5 @@
 import { THEME_STORAGE_KEY } from '@/lib/theme-init';
+import { TooltipProvider } from '@nocoo/basalt';
 import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -29,9 +30,11 @@ function renderAt(path = '/setup') {
     { initialEntries: [path] },
   );
   return render(
-    <ThemeProvider defaultTheme="light" storageKey={THEME_STORAGE_KEY} persist={false}>
-      <RouterProvider router={router} />
-    </ThemeProvider>,
+    <TooltipProvider>
+      <ThemeProvider defaultTheme="light" storageKey={THEME_STORAGE_KEY} persist={false}>
+        <RouterProvider router={router} />
+      </ThemeProvider>
+    </TooltipProvider>,
   );
 }
 

@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@nocoo/basalt';
 import { type BasaltTheme, useTheme } from '@nocoo/basalt/providers/theme';
 import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -33,20 +34,24 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
   const label = isDark ? 'Switch to light theme' : 'Switch to dark theme';
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      className={cn('text-basalt-muted-foreground', className)}
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      aria-label={label}
-      title={label}
-    >
-      {isDark ? (
-        <Sun className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-      ) : (
-        <Moon className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-      )}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className={cn('text-basalt-muted-foreground', className)}
+          onClick={() => setTheme(isDark ? 'light' : 'dark')}
+          aria-label={label}
+        >
+          {isDark ? (
+            <Sun className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+          ) : (
+            <Moon className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
   );
 }

@@ -32,8 +32,8 @@ fail() {
 check_pattern() {
   local pattern="$1" desc="$2"
   shift 2
-  if rg -n "$pattern" "$@" >/dev/null 2>&1; then
-    rg -n "$pattern" "$@" >&2 || true
+  if rg -nU "$pattern" "$@" >/dev/null 2>&1; then
+    rg -nU "$pattern" "$@" >&2 || true
     fail "$desc"
   fi
 }
@@ -58,7 +58,7 @@ check_console_outside_logger() {
 
 # 1) Remote refs in source / HTML.
 check_pattern 'src=["'\'']https?://' 'remote <script src=> in source' "$SRC" "$HTML"
-check_pattern 'href=["'\'']https?://' 'remote <link href=> in source' "$SRC" "$HTML"
+check_pattern '(?i)<link\b[^>]*\bhref\s*=\s*["'\'']https?://' 'remote <link href=> in source' "$SRC" "$HTML"
 check_pattern '@import\s+url\(["'\'']https?:' 'remote @import url() in source' "$SRC"
 
 # 2) Dynamic code.
