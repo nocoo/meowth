@@ -101,6 +101,43 @@ describe('check-dashboard-source.sh', () => {
     expect(r.stderr).toContain('remote <link href=> in source');
   });
 
+  it('allows remote navigation without crossing adjacent link tags', () => {
+    writeSrc(
+      tmp,
+      'navigation.tsx',
+      `<><link rel="stylesheet" href="/local.css" />
+        <a
+          href="${HTTPS}"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Catalogue</a></>`,
+    );
+    writeFileSync(html, `<link href="/local.css"><a href="${HTTPS}">Help</a>`);
+    const r = runScript(tmp, html);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('dashboard source scan: OK');
+  });
+
+  it.each([
+    `<link
+ rel="stylesheet"
+ href="${HTTPS}">`,
+    `<link href='${HTTPS}' rel='stylesheet'>`,
+    `<link rel="preload" as="font" href="${HTTPS}">`,
+    `<link rel="modulepreload" href="${HTTPS}">`,
+    `<LINK REL="stylesheet" HREF = "http://example.com/style.css">`,
+  ])('rejects remote link resources in source and HTML: %s', (markup) => {
+    writeSrc(tmp, 'resource.tsx', markup);
+    let r = runScript(tmp, html);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('remote <link href=> in source');
+    writeSrc(tmp, 'resource.tsx', 'export const clean = true;');
+    writeFileSync(html, markup);
+    r = runScript(tmp, html);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('remote <link href=> in source');
+  });
+
   it('fails on a remote @import url() in CSS', () => {
     writeSrc(tmp, 'styles.css', `${IMPORT_REMOTE_CSS}\n`);
     const r = runScript(tmp, html);

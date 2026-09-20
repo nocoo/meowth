@@ -255,6 +255,8 @@ Vite dev server 自己注入 HMR 需要的 inline script / inline style；这与
 
 ### 5.2 源码层 grep 兜底
 
+远程 `href` 检查仅针对 `<link>` 资源标签（含样式、字体与预加载），允许普通 `<a href>` 外链导航。匹配支持跨行属性，但不得跨越相邻标签；CSP 与其余源码规则保持不变。
+
 CI 跑（[`08`](08-6dq-hooks-wiring.md) G1），`scripts/check-dashboard-source.sh`：
 
 ```bash
@@ -280,7 +282,7 @@ check_pattern() {
 
 # 禁止源码引入远程脚本/样式/字体
 check_pattern 'src=["'\'']https?://' 'remote <script src=> in source' "$SRC" "$HTML"
-check_pattern 'href=["'\'']https?://' 'remote <link href=> in source' "$SRC" "$HTML"
+check_pattern '<link\b[^<>]*\bhref\s*=\s*["'\'']https?://' 'remote <link href=> in source' --multiline --ignore-case "$SRC" "$HTML"
 check_pattern '@import\s+url\(["'\'']https?:' 'remote @import url() in source' "$SRC"
 
 # 禁止 eval / new Function（即使 Biome 漏过）
