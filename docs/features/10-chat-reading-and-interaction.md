@@ -41,7 +41,7 @@ conversation, cancellation, retry, or continuation contracts.
 | State and transport | `apps/dashboard/src/viewmodels/useChatViewModel.ts`, `models/chat.ts` |
 | Hermes tool notifications | `daemon/pkg/agent/hermes.go`, `daemon/pkg/agent/hermes_test.go` |
 | Validation | Adjacent unit tests, `apps/dashboard/e2e/ui/`, `e2e/real/run-chat.ts` |
-| Runtime contract | Root `CLAUDE.md`: canonical HTTPS origin and ports 7040/37040 |
+| Runtime contract | Root `AGENTS.md`: canonical HTTPS origin and ports 7040/37040 |
 
 ## Atomic commit plan
 
@@ -125,7 +125,7 @@ captures; those review images are in `/tmp/meowth-tool-final-review/`.
 The final embedded build is running with the normal local configuration on
 7040, with the existing Vite service on 37040. Both loopback and canonical
 HTTPS health checks passed. Startup commands and the single browser URL are
-documented in root `CLAUDE.md`.
+documented in root `AGENTS.md`.
 
 ### Real-agent investigation
 

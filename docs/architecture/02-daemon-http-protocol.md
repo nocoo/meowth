@@ -678,4 +678,4 @@ Content-Type: application/problem+json; charset=utf-8
   - `05-remote-access-modes.md`（bind 校验，本文档假设已通过）
   - `07-dashboard-security-csp-and-xss.md`（security_headers middleware 实现）
   - `08-6dq-hooks-wiring.md`（L1/L2 跑这些端点的工具链）
-- 工作约束：[`../../CLAUDE.md`](../../CLAUDE.md)
+- 工作约束：[`../../AGENTS.md`](../../AGENTS.md)

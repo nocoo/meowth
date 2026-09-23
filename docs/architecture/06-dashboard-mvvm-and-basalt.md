@@ -977,4 +977,4 @@ Bug-fix gate snapshot (BF5 time): dashboard L1 76 files / 458 tests; Playwright 
   - `07-dashboard-security-csp-and-xss.md`（**所有**安全细节：CSP / sanitizer / secret modal 遮罩 / error log 脱敏）
   - `08-6dq-hooks-wiring.md`（L1 vitest / L3 Playwright 工具链与 CI）
 - 参考实现：`~/workspace/personal/basalt`（source-copy 来源）
-- 工作约束：[`../../CLAUDE.md`](../../CLAUDE.md)
+- 工作约束：[`../../AGENTS.md`](../../AGENTS.md)

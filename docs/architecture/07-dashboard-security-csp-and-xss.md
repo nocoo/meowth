@@ -564,4 +564,4 @@ dashboard **不**引入会动态求值用户输入的库：
   - [`05-remote-access-modes.md`](05-remote-access-modes.md)（daemon 不持 TLS，HSTS 由反代）
   - [`06-dashboard-mvvm-and-basalt.md`](06-dashboard-mvvm-and-basalt.md)（dashboard 目录、Setup 决策树、`SecretReveal` 出现位置）
   - `08-6dq-hooks-wiring.md`（G1/G2/D/L1/L3 工具链与 CI matrix）
-- 工作约束：[`../../CLAUDE.md`](../../CLAUDE.md)
+- 工作约束：[`../../AGENTS.md`](../../AGENTS.md)

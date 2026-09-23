@@ -52,24 +52,25 @@ pnpm scan:d1
 
 ## Verification
 
-6DQ = L1/L2/L3 + G1/G2 + D1 (test isolation). Status: `enforced`, `planned`, `manual`, or `N/A`; partial enforcement below does not certify the full required bar.
-L1 requires statements, branches, functions and lines each ≥95%, with no skipped/focused tests; preserve any stricter package threshold. Native tools must identify unmeasured metrics as gaps.
-G1 requires check-only strict analysis/formatting with zero errors/warnings. G2 requires dependency and secret scans, with missing required scanners failing.
+6DQ = unified L1 (absorbing former G1) + L2/L3 + G2 + D1 (test isolation). Status: `enforced`, `planned`, `manual`, or `N/A`; partial enforcement below does not certify the full required bar.
+L1 requires statements, branches, functions and lines each ≥95% plus check-only strict analysis/formatting with zero errors/warnings, installed snapshot hooks and proven rejection, with no skipped/focused tests; preserve any stricter package threshold. Native tools must identify unmeasured metrics as gaps.
+G2 requires dependency and secret scans, with missing required scanners failing.
 
 | Dimension | Status | Required proof and current evidence/gap |
 |---|---|---|
-| L1 Go | planned | Hooks/CI gate package statement coverage at 95% with 15 frozen lower floors (69–94%). Other metrics and full 95% remain gaps; do not lower/add baselines. |
-| L1 TypeScript | planned | Dashboard/shared collect four metrics, but the shell gate checks per-file statements with frozen 82/87 floors and structural exemptions. Require all four 95% without weakening floors. |
+| L1 — complete unified contract | planned | Required: all four coverage metrics ≥95%, check-only strict static lanes, installed index-snapshot hook with proven rejection, under 30s. Current gaps: no index-snapshot hook; local pre-commit autofixes instead of check-only; snapshot scope, rejection proof and timing are unverified. Subcheck rows below describe current configuration. |
+| L1 subcheck — Go coverage | planned | Hooks/CI gate package statement coverage at 95% with 15 frozen lower floors (69–94%). Other metrics and full 95% remain gaps; do not lower/add baselines. |
+| L1 subcheck — TypeScript coverage | planned | Dashboard/shared collect four metrics, but the shell gate checks per-file statements with frozen 82/87 floors and structural exemptions. Require all four 95% without weakening floors. |
+| L1 subcheck — static lanes (former G1) | enforced in CI, gap locally | CI runs daemon fmt/vet/golangci-lint and dashboard format/lint/types/dependency boundaries/source checks as check-only gates. Local pre-commit still autofixes staged source, so the local check-only lane is not enforced; unified L1 remains planned. |
 | L2 HTTP / CLI | planned | `test:l2` runs five real local daemon/CLI matrices with fake agent backends; `test:l2:embed` checks embedded serving. Complete 100% route/command mapping is not yet enforced. |
 | L3 dashboard / CLI | planned | CI runs UI, embed and mint Playwright projects; the dev project and real-agent Chat lane are separate. Require complete page/CLI workflow proof; real providers remain explicitly manual. |
-| G1 Go / TS | enforced | CI runs daemon fmt/vet/golangci-lint and dashboard format/lint/types/dependency boundaries/source checks. Local pre-commit still autofixes staged source. |
 | G2 | enforced | Pre-push/CI scan pnpm/Go dependencies and secrets through OSV, govulncheck and gitleaks. |
 | D1 | planned | Homes and DB markers separate test/prod; L2 creates unique child homes. Arbitrary test-home overrides and browser marker-file cleanup lack canonical-path ownership guards; static `scan:d1` alone is insufficient. |
 
-Pre-commit currently runs lint-staged only (Biome/gofmt autofix for source). Pre-push runs vet/types, both coverage gates, L2 and G2 sequentially; it does not build the dashboard. CI supplies broader G1/build/L3. Existing hooks do not check index/push-ref snapshots.
+Pre-commit currently runs lint-staged only (Biome/gofmt autofix for source). Pre-push runs vet/types, both coverage gates, L2 and G2 sequentially; it does not build the dashboard. CI supplies broader static/build/L3. Existing hooks do not check index/push-ref snapshots.
 
-Target hooks: pre-commit checks G1 + L1 against the index snapshot (`git checkout-index`) in <30s; pre-push checks L2 and G2 in parallel against every stdin push ref/commit in <3min, plus build where applicable. L3 runs in CI or an explicit manual lane.
-Never bypass commit/push hooks, force-push, or use autofix in checks. Documentation changes do not authorize deploying or implementing new gates.
+Target hooks: pre-commit checks unified L1 (coverage plus static lanes) against the index snapshot (`git checkout-index`) in <30s; pre-push checks L2 and G2 in parallel against every stdin push ref/commit in <3min, plus build where applicable. L3 runs in CI or an explicit manual lane.
+Never bypass commit/push hooks, force-push, or use autofix in checks. Documentation changes do not authorize deploying or implementing new gates. The owner merged former G1 into L1 on 2026-09-21; the framework keeps the 6DQ name.
 
 ## Resources / Isolation
 

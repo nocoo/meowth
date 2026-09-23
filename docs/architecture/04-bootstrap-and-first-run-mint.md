@@ -549,4 +549,4 @@ V1 **唯一**恢复路径：`meowthd bootstrap-token`（§8）应急通路。
   - `06-dashboard-mvvm-and-basalt.md`（`/setup` 页面手输入框 + mint 表单两种 UI 模式）
   - `07-dashboard-security-csp-and-xss.md`（dashboard 显示 secret 的 UX）
   - `08-6dq-hooks-wiring.md`（跨进程测试 harness 怎么搭）
-- 工作约束：[`../../CLAUDE.md`](../../CLAUDE.md)
+- 工作约束：[`../../AGENTS.md`](../../AGENTS.md)

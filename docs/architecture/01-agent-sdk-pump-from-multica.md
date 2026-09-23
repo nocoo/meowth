@@ -453,7 +453,7 @@ chore(daemon): pump multica pkg/agent to <NEW_SHA>     # 仅 vendor + LICENSE/NO
 chore(daemon): re-trim agent SDK after pump <NEW_SHA>  # 裁剪 7 处 + 删除新增被裁文件
 ```
 
-理由（与 CLAUDE.md 原子化提交规则一致）：
+理由（与 AGENTS.md 原子化提交规则一致）：
 
 - vendor commit 可以独立 `git revert`，回到上一个 SHA
 - 裁剪 commit 独立审计、独立回滚（仅在 vendor commit 之上 cherry-pick 历史裁剪 patch）
@@ -576,7 +576,7 @@ CI 默认**不安装**任何真实 CLI，因此 CI gate 永不依赖 §未决问
 ## 12. 相关文档
 
 - 上层：[`docs/01-project-overview.md`](../01-project-overview.md) §7.2 / §9.2
-- 工作约束：[`CLAUDE.md`](../../CLAUDE.md)
+- 工作约束：[`AGENTS.md`](../../AGENTS.md)
 - 兄弟文档：
   - `02-daemon-http-protocol.md`（在 vendor 后的 `Backend.Execute` 上构建 HTTP）
   - `08-6dq-hooks-wiring.md`（CLI smoke gate 与 fake backend fixture）

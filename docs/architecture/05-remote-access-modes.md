@@ -524,4 +524,4 @@ ingress:
   - [`04-bootstrap-and-first-run-mint.md`](04-bootstrap-and-first-run-mint.md)（mint endpoint 通过 `IsLocal()` 决定挂载）
   - `06-dashboard-mvvm-and-basalt.md`（Settings 页面是否提供 mode UI，§13 #3）
   - `08-6dq-hooks-wiring.md`（L2 启动期校验测试 harness）
-- 工作约束：[`../../CLAUDE.md`](../../CLAUDE.md)
+- 工作约束：[`../../AGENTS.md`](../../AGENTS.md)

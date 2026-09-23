@@ -637,4 +637,4 @@ type TokenView struct {
   - `07-dashboard-security-csp-and-xss.md`（dashboard 端 secret 显示 UX）
   - `08-6dq-hooks-wiring.md`（D1 静态校验脚本 + L1/L2 跑 token + migration）
 - 实现参考：raven `~/workspace/personal/raven/packages/proxy/src/lib/app-dirs.ts`（`DIR_MODE`/`FILE_MODE` 模式）
-- 工作约束：[`../../CLAUDE.md`](../../CLAUDE.md)
+- 工作约束：[`../../AGENTS.md`](../../AGENTS.md)
