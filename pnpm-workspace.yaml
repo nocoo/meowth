@@ -5,7 +5,7 @@ allowBuilds:
   '@biomejs/biome': true
   esbuild: false
 minimumReleaseAgeExclude:
-  - '@nocoo/basalt@2.1.8'
+  - '@nocoo/basalt@2.2.0'
 onlyBuiltDependencies:
   - '@biomejs/biome'
 overrides:
@@ -13,10 +13,10 @@ overrides:
   esbuild: "0.28.1"
   # G2 (`pnpm scan:osv`) gates transitive advisories in the lockfile.
   js-yaml: "4.3.2"
-  fast-uri: "3.1.6"
+  fast-uri: "3.1.8"
   postcss: "8.5.23"
   nanoid: "3.3.18"
-  brace-expansion@2: "2.1.4"
-  brace-expansion@5: "5.0.9"
+  brace-expansion@2: "2.1.7"
+  brace-expansion@5: "5.0.12"
 patchedDependencies:
-  '@nocoo/basalt@2.1.8': patches/@nocoo__basalt@2.1.8.patch
+  '@nocoo/basalt@2.2.0': patches/@nocoo__basalt@2.2.0.patch
