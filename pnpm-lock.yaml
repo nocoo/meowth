@@ -78,8 +78,8 @@ importers:
         version: 3.7.0
     devDependencies:
       '@playwright/test':
-        specifier: 1.61.1
-        version: 1.61.1
+        specifier: 1.64.0
+        version: 1.64.0
       '@tailwindcss/vite':
         specifier: 4.3.3
         version: 4.3.3(vite@8.3.4(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
@@ -476,9 +476,9 @@ packages:
   '@oxc-project/types@0.153.0':
     resolution: {integrity: sha512-jSNrRIyvPVLL5E1z/tS5zLAprosGz/FuI1PWwEOz59j3E4TTTzSpqKb/RDGqJhhW0QHYISGXxq582wGx6T11Tw==}
 
-  '@playwright/test@1.61.1':
-    resolution: {integrity: sha512-8nKv6+0RJSL9FE4jYOEGXnPeM/Hg12qZpmqzZjRh3qM0Y7c3z1mrOTfFLids72RDQYVh9WpLEfR5WdpNX4fkig==}
-    engines: {node: '>=18'}
+  '@playwright/test@1.64.0':
+    resolution: {integrity: sha512-oTN9FNYuN6bqQMwiho6jJKLCG2/QOYCixGXuCjRmzOq23eODeukuY2XiAVoVpAECbuezMt1MHQjAiQxK8F+Y+g==}
+    engines: {node: '>=20'}
     hasBin: true
 
   '@radix-ui/number@1.1.3':
@@ -1852,11 +1852,6 @@ packages:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
     engines: {node: '>=8'}
 
-  fsevents@2.3.2:
-    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
-    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
-    os: [darwin]
-
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -2489,14 +2484,14 @@ packages:
     engines: {node: '>=0.10'}
     hasBin: true
 
-  playwright-core@1.61.1:
-    resolution: {integrity: sha512-h7Qlt6m4REp25qvIdvbDtVmD4LqVXfpRxhORv9L0jzETM05p4fuPJ3dKyuSXQxDSbXnmS79HAgi9589lGSpLkg==}
-    engines: {node: '>=18'}
+  playwright-core@1.64.0:
+    resolution: {integrity: sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5DStt+aduIVbt+E8WygXYpg==}
+    engines: {node: '>=20'}
     hasBin: true
 
-  playwright@1.61.1:
-    resolution: {integrity: sha512-DWnY5o3YbLWK4GovuAVwpqL+1VwGNdUGrRr++8j8PtQQzvAVZUIMjKQ90fY689sEJZJBbZVw1rXaOKSTitkzPQ==}
-    engines: {node: '>=18'}
+  playwright@1.64.0:
+    resolution: {integrity: sha512-kVzTnYFYEyQ9RGzBjNCd2+yEqWmVbxl3AHPynv3qQ6JTjv4a+kwRcnqQwIpuP3NnrnIrE/Q6wWAIAvMfIE2/Yg==}
+    engines: {node: '>=20'}
     hasBin: true
 
   pluralize@8.0.0:
@@ -3280,9 +3275,9 @@ snapshots:
 
   '@oxc-project/types@0.153.0': {}
 
-  '@playwright/test@1.61.1':
+  '@playwright/test@1.64.0':
     dependencies:
-      playwright: 1.61.1
+      playwright: 1.64.0
 
   '@radix-ui/number@1.1.3': {}
 
@@ -4575,9 +4570,6 @@ snapshots:
     dependencies:
       to-regex-range: 5.0.1
 
-  fsevents@2.3.2:
-    optional: true
-
   fsevents@2.3.3:
     optional: true
 
@@ -5360,13 +5352,11 @@ snapshots:
 
   pidtree@0.6.1: {}
 
-  playwright-core@1.61.1: {}
+  playwright-core@1.64.0: {}
 
-  playwright@1.61.1:
+  playwright@1.64.0:
     dependencies:
-      playwright-core: 1.61.1
-    optionalDependencies:
-      fsevents: 2.3.2
+      playwright-core: 1.64.0
 
   pluralize@8.0.0: {}
 
