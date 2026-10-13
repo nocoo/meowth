@@ -43,7 +43,7 @@
     "@types/node": "^20.19.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "6.0.3",
+    "@vitejs/plugin-react": "6.1.2",
     "@vitest/coverage-v8": "4.1.11",
     "dependency-cruiser": "16.10.4",
     "jsdom": "~26.1.0",
