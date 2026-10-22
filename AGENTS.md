@@ -35,7 +35,7 @@ This file is the quality contract; hooks, CI and config are enforcement. Close i
 
 ## Commands
 
-Run from root with pnpm 11.6.0, the Go toolchain in `daemon/go.mod` (1.26.6), Node matching CI 22.23.2, Bash 4+ and installed scanners. Ordinary L2 uses fake backends; real-agent lanes are opt-in and require a disposable test home.
+Run from root with pnpm 11.6.0, the Go toolchain in `daemon/go.mod` (1.26.6), Node matching CI 22.23.4, Bash 4+ and installed scanners. Ordinary L2 uses fake backends; real-agent lanes are opt-in and require a disposable test home.
 
 ```bash
 pnpm install --frozen-lockfile
