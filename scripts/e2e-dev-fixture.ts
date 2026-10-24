@@ -89,7 +89,7 @@ process.on('SIGHUP', () => {
   process.exit(129);
 });
 
-let serveRef: ReturnType<typeof spawn> | undefined = undefined;
+let serveRef: ReturnType<typeof spawn> | undefined;
 
 // Build meowthd once and exec it directly so a SIGTERM from
 // Playwright reaches the actual daemon rather than a `go run`

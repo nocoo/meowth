@@ -1,13 +1,13 @@
+import { LayerCard } from '@nocoo/basalt';
+import { SectionRule } from '@nocoo/basalt/components/section-rule';
+import { Activity, ArrowUpRight, Bot, KeyRound, ListTree, MessageSquare } from 'lucide-react';
+import { Link } from 'react-router';
 import SessionStatusBadge from '@/components/SessionStatusBadge';
 import StatCard from '@/components/StatCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { displayLabel } from '@/lib/labels';
 import type { OverviewData } from '@/viewmodels/useOverviewViewModel';
-import { LayerCard } from '@nocoo/basalt';
-import { SectionRule } from '@nocoo/basalt/components/section-rule';
-import { Activity, ArrowUpRight, Bot, KeyRound, ListTree, MessageSquare } from 'lucide-react';
-import { Link } from 'react-router';
 
 export interface OverviewContentProps {
   data: OverviewData;

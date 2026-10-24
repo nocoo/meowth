@@ -1,7 +1,7 @@
-import type { ChatTurn, Envelope } from '@/viewmodels/useChatViewModel';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import type { ChatTurn, Envelope } from '@/viewmodels/useChatViewModel';
 import MessageList from './MessageList';
 
 function makeEnvelope(over: Partial<Envelope> & Pick<Envelope, 'type'>): Envelope {

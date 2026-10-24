@@ -1,7 +1,7 @@
-import type { SessionsViewModel } from '@/viewmodels/useSessionsViewModel';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SessionsViewModel } from '@/viewmodels/useSessionsViewModel';
 import SessionsListPage from './SessionsListPage';
 
 // Page shell tests for Phase 2 Stage C3a. Mocks

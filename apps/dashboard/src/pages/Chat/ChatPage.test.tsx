@@ -1,7 +1,7 @@
-import type { ChatViewModel } from '@/viewmodels/useChatViewModel';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ChatViewModel } from '@/viewmodels/useChatViewModel';
 
 // useChatViewModel is mocked so we can drive ChatPage through
 // each agentsStatus branch deterministically.

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildExecRequest,
   CHAT_SEMANTIC_INACTIVITY_TIMEOUT_MS,
   CHAT_TIMEOUT_MS,
-  buildExecRequest,
   deriveTurnStatusFromEnvelopes,
   extractResumeSessionId,
   extractSessionId,

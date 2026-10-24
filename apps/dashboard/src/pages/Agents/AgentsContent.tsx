@@ -1,3 +1,4 @@
+import { Bot } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -11,7 +12,6 @@ import {
 } from '@/components/ui/table';
 import { displayLabel } from '@/lib/labels';
 import type { Agent } from '@/viewmodels/useAgentsViewModel';
-import { Bot } from 'lucide-react';
 
 // docs/architecture/06 §7.2 + features/02 §4.4 — Phase 2 Stage C2.
 // Pure-props Content component. Receives the resolved agents list

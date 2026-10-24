@@ -1,3 +1,5 @@
+import { lazy, Suspense } from 'react';
+import { createBrowserRouter, Navigate, Outlet, type RouteObject } from 'react-router';
 import AuthGate from '@/components/AuthGate';
 import { BasaltRouteProviders } from '@/components/basalt-providers';
 import { AppShell } from '@/components/layout';
@@ -8,8 +10,6 @@ import SessionsListPage, { SessionDetailPage } from '@/pages/Sessions';
 import SettingsPage from '@/pages/Settings';
 import SetupPage from '@/pages/Setup';
 import TokensPage from '@/pages/Tokens';
-import { Suspense, lazy } from 'react';
-import { Navigate, Outlet, type RouteObject, createBrowserRouter } from 'react-router';
 
 const ChatPage = lazy(() => import('@/pages/Chat'));
 

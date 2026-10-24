@@ -2,6 +2,11 @@ import { act, render, renderHook, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SidebarProvider, useSidebar } from './sidebar-context';
 
+function BareConsumer() {
+  useSidebar();
+  return <div />;
+}
+
 describe('SidebarProvider / useSidebar (Stage B1)', () => {
   it('default state: collapsed=false, mobileOpen=false', () => {
     const { result } = renderHook(() => useSidebar(), {
@@ -38,10 +43,6 @@ describe('SidebarProvider / useSidebar (Stage B1)', () => {
   });
 
   it('useSidebar throws outside a provider', () => {
-    function BareConsumer() {
-      useSidebar();
-      return <div />;
-    }
     // Render must throw; testing-library propagates the error so
     // we wrap to capture.
     expect(() => render(<BareConsumer />)).toThrow(

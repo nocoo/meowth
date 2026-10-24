@@ -1,3 +1,5 @@
+import { CodeXml, Compass, Pi, Sparkles } from 'lucide-react';
+import { useId } from 'react';
 import { Github } from '@/components/icons/github';
 import {
   Select,
@@ -10,8 +12,6 @@ import {
 } from '@/components/ui/select';
 import { displayLabel } from '@/lib/labels';
 import type { Agent, AgentType } from '@/viewmodels/useChatViewModel';
-import { CodeXml, Compass, Pi, Sparkles } from 'lucide-react';
-import { useId } from 'react';
 
 const AGENT_PRESENTATION = {
   claude: { icon: Sparkles, description: 'Anthropic · Claude Code' },

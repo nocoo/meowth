@@ -1,10 +1,10 @@
-import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import { TooltipProvider } from '@nocoo/basalt';
 import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { RouterProvider, createMemoryRouter } from 'react-router';
+import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import SetupPage from './SetupPage';
 
 // We let the page hit the real useSetupViewModel; it then issues

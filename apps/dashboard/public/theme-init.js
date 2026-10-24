@@ -1,8 +1,10 @@
-(function () {
+(() => {
   var stored = null;
   try {
     stored = window.localStorage.getItem('meowth_theme');
-  } catch (e) {}
+  } catch {
+    /* ignore: storage can be blocked */
+  }
   var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   var isDark = stored === 'dark' || (stored !== 'light' && prefersDark);
   document.documentElement.classList.toggle('dark', isDark);

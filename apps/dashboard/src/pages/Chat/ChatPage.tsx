@@ -1,7 +1,7 @@
+import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import useChatViewModel from '@/viewmodels/useChatViewModel';
-import { AlertCircle } from 'lucide-react';
 import ChatContent from './ChatContent';
 import ChatSkeleton from './ChatSkeleton';
 

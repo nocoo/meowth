@@ -1,10 +1,10 @@
+import { ChatInbox } from '@nocoo/basalt/components/chat-inbox';
+import { ArrowUpRight, History, Search, SquarePen } from 'lucide-react';
+import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { chatStatusLabel, displayLabel } from '@/lib/labels';
 import type { ChatViewModel } from '@/viewmodels/useChatViewModel';
-import { ChatInbox } from '@nocoo/basalt/components/chat-inbox';
-import { ArrowUpRight, History, Search, SquarePen } from 'lucide-react';
-import { Link } from 'react-router';
 
 export default function ChatSidebar({ vm, onNavigate }: { vm: ChatViewModel; onNavigate(): void }) {
   return (

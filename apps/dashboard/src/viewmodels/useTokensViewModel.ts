@@ -1,6 +1,6 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createToken, listTokens, revokeToken } from '@/models/tokens';
 import type { TokenView } from '@/models/types';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
 export type { TokenView } from '@/models/types';

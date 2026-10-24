@@ -19,7 +19,6 @@ afterEach(() => {
     Object.defineProperty(navigator, 'clipboard', originalClipboardDescriptor);
   } else {
     // jsdom may not ship clipboard at all; remove our stub.
-    // biome-ignore lint/performance/noDelete: needed to restore the absent property
     delete (navigator as { clipboard?: unknown }).clipboard;
   }
 });

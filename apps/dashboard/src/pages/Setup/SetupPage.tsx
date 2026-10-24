@@ -1,10 +1,10 @@
+import { Button, Input } from '@nocoo/basalt';
+import { Field } from '@nocoo/basalt/components/field';
+import { useId, useState } from 'react';
 import { HexlyLink } from '@/components/HexlyLink';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Notice } from '@/components/ui/notice';
 import useSetupViewModel from '@/viewmodels/useSetupViewModel';
-import { Button, Input } from '@nocoo/basalt';
-import { Field } from '@nocoo/basalt/components/field';
-import { useId, useState } from 'react';
 
 const BADGE_SHADOW = [
   '0 1px 2px rgba(0,0,0,0.06)',
@@ -29,14 +29,35 @@ const RADIAL_GLOW = [
 ].join(' ');
 
 function Barcode() {
-  const bars = [2, 1, 3, 1, 2, 1, 1, 3, 1, 2, 1, 3, 2, 1, 1, 2, 3, 1, 2, 1];
+  const bars = [
+    { id: 'b1', width: 2 },
+    { id: 'b2', width: 1 },
+    { id: 'b3', width: 3 },
+    { id: 'b4', width: 1 },
+    { id: 'b5', width: 2 },
+    { id: 'b6', width: 1 },
+    { id: 'b7', width: 1 },
+    { id: 'b8', width: 3 },
+    { id: 'b9', width: 1 },
+    { id: 'b10', width: 2 },
+    { id: 'b11', width: 1 },
+    { id: 'b12', width: 3 },
+    { id: 'b13', width: 2 },
+    { id: 'b14', width: 1 },
+    { id: 'b15', width: 1 },
+    { id: 'b16', width: 2 },
+    { id: 'b17', width: 3 },
+    { id: 'b18', width: 1 },
+    { id: 'b19', width: 2 },
+    { id: 'b20', width: 1 },
+  ];
   return (
     <div className="flex h-full items-stretch gap-[1.5px]">
-      {bars.map((w, i) => (
+      {bars.map((bar, i) => (
         <div
-          key={`${i}-${w}`}
+          key={bar.id}
           className="bg-basalt-primary-foreground rounded-[0.5px]"
-          style={{ width: `${w * 1.5}px`, opacity: i % 3 === 0 ? 0.9 : 0.5 }}
+          style={{ width: `${bar.width * 1.5}px`, opacity: i % 3 === 0 ? 0.9 : 0.5 }}
         />
       ))}
     </div>
@@ -215,4 +236,5 @@ export default function SetupPage() {
     </div>
   );
 }
+
 import BrandMark from '@/components/BrandMark';

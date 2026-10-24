@@ -1,3 +1,6 @@
+import { ChatBubble } from '@nocoo/basalt/components/chat-bubble';
+import { ArrowUpRight, Bot, RotateCcw } from 'lucide-react';
+import { Link } from 'react-router';
 import CopyButton from '@/components/CopyButton';
 import MessageText from '@/components/MessageText';
 import { Button } from '@/components/ui/button';
@@ -5,9 +8,6 @@ import { Notice } from '@/components/ui/notice';
 import { chatStatusLabel } from '@/lib/labels';
 import type { ChatTurnStatus } from '@/models/chat';
 import type { Envelope, Session } from '@/models/types';
-import { ChatBubble } from '@nocoo/basalt/components/chat-bubble';
-import { ArrowUpRight, Bot, RotateCcw } from 'lucide-react';
-import { Link } from 'react-router';
 import MessageActivity from './MessageActivity';
 import MessageBubble from './MessageBubble';
 import { groupEnvelopes, groupMessageActivity, messageField, messageKind } from './messageGroups';
@@ -96,6 +96,7 @@ export default function AgentResponse({
             )}
             {pending ? (
               <div
+                role="status"
                 data-bubble-kind="streaming-pending"
                 aria-label="Waiting for response"
                 className="flex items-center gap-2 text-sm text-basalt-muted-foreground"

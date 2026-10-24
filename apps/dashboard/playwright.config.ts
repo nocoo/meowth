@@ -1,4 +1,4 @@
-import { type PlaywrightTestConfig, defineConfig } from '@playwright/test';
+import { defineConfig, type PlaywrightTestConfig } from '@playwright/test';
 
 // docs/architecture/08-6dq-hooks-wiring.md §3.4 — L3 fixtures.
 //   - dashboard-dev        → §3.4.1 Vite dev + meowthd path A on :47041 (Vite :47040)

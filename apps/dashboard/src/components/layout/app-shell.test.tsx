@@ -1,4 +1,3 @@
-import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import { TooltipProvider } from '@nocoo/basalt';
 import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -6,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import type React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import { AppShell } from './app-shell';
 
 // Stage B1 — AppShell tests. The mobile Sheet a11y contract (route

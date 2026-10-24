@@ -1,3 +1,5 @@
+import { ListTree } from 'lucide-react';
+import { Link } from 'react-router';
 import SessionStatusBadge from '@/components/SessionStatusBadge';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -11,8 +13,6 @@ import {
 } from '@/components/ui/table';
 import { displayLabel } from '@/lib/labels';
 import type { Session } from '@/viewmodels/useSessionsViewModel';
-import { ListTree } from 'lucide-react';
-import { Link } from 'react-router';
 
 // docs/architecture/06 §7.3 + features/02 §4.4 — Phase 2 Stage C3a.
 // Pure-props Content component for SessionsList. Receives the

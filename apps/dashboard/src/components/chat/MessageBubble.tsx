@@ -1,8 +1,3 @@
-import MessageMarkdown from '@/components/MessageMarkdown';
-import MessageText from '@/components/MessageText';
-import { Notice } from '@/components/ui/notice';
-import { displayLabel } from '@/lib/labels';
-import type { Envelope } from '@/models/types';
 import {
   Brain,
   Check,
@@ -15,6 +10,11 @@ import {
   X,
 } from 'lucide-react';
 import { Link } from 'react-router';
+import MessageMarkdown from '@/components/MessageMarkdown';
+import MessageText from '@/components/MessageText';
+import { Notice } from '@/components/ui/notice';
+import { displayLabel } from '@/lib/labels';
+import type { Envelope } from '@/models/types';
 import ActivityDisclosure from './ActivityDisclosure';
 
 // docs/features/03 §5.1 dispatch table + §5.2 sanitizer rule +

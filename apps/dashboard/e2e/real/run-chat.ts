@@ -7,8 +7,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { type Browser, type Page, chromium, expect } from '@playwright/test';
-import { type ViteDevServer, createServer as createViteServer } from 'vite';
+import { type Browser, chromium, expect, type Page } from '@playwright/test';
+import { createServer as createViteServer, type ViteDevServer } from 'vite';
 import { buildMeowthd } from '../../../../scripts/lib/build-meowthd';
 import type { Agent, Envelope } from '../../src/models/types';
 
@@ -71,7 +71,9 @@ async function waitReady(url: string, child: ChildProcess) {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(1000) });
       if (response.ok) return;
-    } catch {}
+    } catch {
+      /* noop: best-effort cleanup */
+    }
     await delay(200);
   }
   throw new Error(`Fixture did not become ready: ${url}`);

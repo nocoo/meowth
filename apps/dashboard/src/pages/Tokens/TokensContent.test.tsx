@@ -1,7 +1,7 @@
-import type { TokenView } from '@/viewmodels/useTokensViewModel';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import type { TokenView } from '@/viewmodels/useTokensViewModel';
 import TokensContent from './TokensContent';
 
 // Pure-props Content tests for Phase 2 Stage C4.

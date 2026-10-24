@@ -1,7 +1,3 @@
-import BrandMark from '@/components/BrandMark';
-import { NAV_GROUPS, NAV_ITEMS, type NavGroup, isItemActive } from '@/lib/navigation';
-import { cn } from '@/lib/utils';
-import { APP_VERSION } from '@/lib/version';
 import {
   Avatar,
   AvatarFallback,
@@ -19,6 +15,10 @@ import {
 } from '@nocoo/basalt';
 import { PanelLeft } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router';
+import BrandMark from '@/components/BrandMark';
+import { isItemActive, NAV_GROUPS, NAV_ITEMS, type NavGroup } from '@/lib/navigation';
+import { cn } from '@/lib/utils';
+import { APP_VERSION } from '@/lib/version';
 import { useSidebar } from './sidebar-context';
 
 interface SidebarProps {

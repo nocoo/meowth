@@ -36,8 +36,8 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  rmSync,
   rmdirSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
@@ -96,7 +96,7 @@ let serveChild: ChildProcess | null = null;
 let serveExited = false;
 
 function cleanup(): void {
-  if (serveChild && serveChild.pid && !serveExited) {
+  if (serveChild?.pid && !serveExited) {
     try {
       serveChild.kill('SIGKILL');
     } catch {
@@ -305,13 +305,7 @@ function parseRecorderFile(path: string): { rows: RecorderRow[]; raw: string } {
 // would slip past the prefix-only tolerance via (1) and (2)
 // here.
 function redactionScan(rootBearer: string): void {
-  const everywhereForbidden = [
-    'mws_',
-    'Authorization',
-    'Bearer ',
-    PROMPT_T1,
-    PROMPT_T2,
-  ];
+  const everywhereForbidden = ['mws_', 'Authorization', 'Bearer ', PROMPT_T1, PROMPT_T2];
   // The minted root token (`mwt_` + 39 base62 chars). Locked
   // against the verbatim value so even a partial-but-revealing
   // leak fails the scan.

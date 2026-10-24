@@ -1,7 +1,7 @@
-import type { TokensViewModel } from '@/viewmodels/useTokensViewModel';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TokensViewModel } from '@/viewmodels/useTokensViewModel';
 import TokensPage from './TokensPage';
 
 // Page shell tests for Phase 2 Stage C4. Mocks

@@ -1,8 +1,8 @@
+import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useAgentsViewModel from '@/viewmodels/useAgentsViewModel';
-import { AlertCircle } from 'lucide-react';
 import AgentsContent from './AgentsContent';
 import AgentsSkeleton from './AgentsSkeleton';
 

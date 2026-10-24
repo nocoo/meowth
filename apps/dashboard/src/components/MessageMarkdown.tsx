@@ -1,10 +1,10 @@
+import { Code, CodeHighlighted } from '@nocoo/basalt/components/code';
+import { memo, type ReactElement } from 'react';
+import Markdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ansiToPlainText } from '@/lib/ansi';
 import { displayLabel } from '@/lib/labels';
 import { cn } from '@/lib/utils';
-import { Code, CodeHighlighted } from '@nocoo/basalt/components/code';
-import { type ReactElement, memo } from 'react';
-import Markdown, { type Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import CopyButton from './CopyButton';
 import './message-markdown.css';
 
@@ -77,7 +77,10 @@ const components: Components = {
 const MessageMarkdown = memo(function MessageMarkdown({
   content,
   className,
-}: { content: string; className?: string }) {
+}: {
+  content: string;
+  className?: string;
+}) {
   return (
     <div className={cn('chat-markdown min-w-0', className)}>
       <Markdown remarkPlugins={[remarkGfm]} components={components}>

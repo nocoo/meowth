@@ -37,8 +37,8 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  rmSync,
   rmdirSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
@@ -78,7 +78,7 @@ let serveChild: ChildProcess | null = null;
 let serveExited = false;
 
 function cleanup(): void {
-  if (serveChild && serveChild.pid && !serveExited) {
+  if (serveChild?.pid && !serveExited) {
     try {
       serveChild.kill('SIGKILL');
     } catch {
@@ -266,7 +266,7 @@ async function main(): Promise<void> {
     if (r.status !== 200) throw new Error(`status=${r.status}`);
     expectNosniff(r, 'E1');
     const body = r.body as { agents: Array<{ type: string; installed: boolean }> };
-    if (!body.agents || body.agents.length !== 5) {
+    if (body.agents?.length !== 5) {
       throw new Error(`expected 5 agents, got ${body.agents?.length ?? 0}`);
     }
     for (const a of body.agents) {

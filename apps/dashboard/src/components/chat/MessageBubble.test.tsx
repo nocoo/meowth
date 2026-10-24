@@ -1,7 +1,7 @@
-import type { Envelope } from '@/models/types';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
+import type { Envelope } from '@/models/types';
 import MessageBubble from './MessageBubble';
 
 function makeEnvelope(over: Partial<Envelope> & Pick<Envelope, 'type'>): Envelope {

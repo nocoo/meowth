@@ -1,8 +1,8 @@
-import MessageText from '@/components/MessageText';
-import AgentResponse from '@/components/chat/AgentResponse';
-import type { ChatTurn } from '@/viewmodels/useChatViewModel';
 import { ChatBubble } from '@nocoo/basalt/components/chat-bubble';
 import { Sparkles } from 'lucide-react';
+import AgentResponse from '@/components/chat/AgentResponse';
+import MessageText from '@/components/MessageText';
+import type { ChatTurn } from '@/viewmodels/useChatViewModel';
 
 export interface MessageListProps {
   turns: readonly ChatTurn[];

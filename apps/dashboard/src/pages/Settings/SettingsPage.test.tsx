@@ -1,6 +1,6 @@
-import type { SettingsViewModel } from '@/viewmodels/useSettingsViewModel';
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SettingsViewModel } from '@/viewmodels/useSettingsViewModel';
 import SettingsPage from './SettingsPage';
 
 // Page shell tests for Phase 2 Stage C5. Mocks

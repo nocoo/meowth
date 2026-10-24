@@ -1,10 +1,3 @@
-import { HexlyLink } from '@/components/HexlyLink';
-import ThemeToggle from '@/components/ThemeToggle';
-import { Github } from '@/components/icons/github';
-import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { activeNavItem } from '@/lib/navigation';
-import { cn } from '@/lib/utils';
 import {
   ContentIsland,
   Sheet,
@@ -24,6 +17,13 @@ import {
 import { Menu } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router';
+import { HexlyLink } from '@/components/HexlyLink';
+import { Github } from '@/components/icons/github';
+import ThemeToggle from '@/components/ThemeToggle';
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { activeNavItem } from '@/lib/navigation';
+import { cn } from '@/lib/utils';
 import { Sidebar } from './sidebar';
 import { SidebarProvider, useSidebar } from './sidebar-context';
 

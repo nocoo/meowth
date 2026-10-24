@@ -1,6 +1,6 @@
+import { useCallback, useEffect, useState } from 'react';
 import { fetchAgents } from '@/models/agents';
 import type { Agent } from '@/models/types';
-import { useCallback, useEffect, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
 export type { Agent } from '@/models/types';

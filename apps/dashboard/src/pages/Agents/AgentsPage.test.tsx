@@ -1,6 +1,6 @@
-import type { AgentsViewModel } from '@/viewmodels/useAgentsViewModel';
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AgentsViewModel } from '@/viewmodels/useAgentsViewModel';
 import AgentsPage from './AgentsPage';
 
 // Page shell tests for Phase 2 Stage C2. Mocks

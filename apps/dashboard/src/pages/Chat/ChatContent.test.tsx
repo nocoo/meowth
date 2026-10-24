@@ -1,7 +1,7 @@
-import type { ChatTurn, ChatViewModel } from '@/viewmodels/useChatViewModel';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ChatTurn, ChatViewModel } from '@/viewmodels/useChatViewModel';
 import ChatContent from './ChatContent';
 
 function makeVM(over: Partial<ChatViewModel> = {}): ChatViewModel {

@@ -1,6 +1,6 @@
+import { useCallback, useEffect, useState } from 'react';
 import { getSession, getSessionMessages } from '@/models/sessions';
 import type { Envelope, Session } from '@/models/types';
-import { useCallback, useEffect, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
 // 06 §7.3 — Session detail viewmodel.

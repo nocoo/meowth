@@ -1,11 +1,11 @@
-import { Skeleton } from '@/components/ui/skeleton';
 import { LayerCard } from '@nocoo/basalt';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const SKELETON_KEYS = ['daemon', 'tokens', 'sessions', 'agents'] as const;
 
 export default function OverviewSkeleton() {
   return (
-    <div className="space-y-6" aria-label="Loading overview" aria-busy="true">
+    <div role="status" className="space-y-6" aria-label="Loading overview" aria-busy="true">
       <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         {SKELETON_KEYS.map((key) => (
           <LayerCard
