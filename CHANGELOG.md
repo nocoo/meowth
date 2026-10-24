@@ -4,6 +4,21 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.4] - 2026-10-24
+
+### Changed
+
+- Upgrade `@nocoo/basalt` to 3.2.1 and rebuild the dashboard sidebar on its row
+  controls, group labels, template header and token-based version pill.
+- Let the shared chat components own bubble paint and the code panel own its
+  copy control, replacing the local bubble and copy overrides.
+- Upgrade Biome to 2.6.2 (both configurations migrated), Vitest and
+  `@vitest/coverage-v8` to 5.0.5, jsdom to 30.1.3, `@testing-library/jest-dom`
+  to 7.0.1, `@types/node` to 26.6.5, dependency-cruiser to 18.7.0 and
+  lint-staged to 17.6.0.
+- Override `fast-uri` to 3.1.9 so the dependency scan stops reporting the
+  advisories published against 3.1.8.
+
 ## [0.7.1] — 2026-09-09
 
 Patch release: pin `@nocoo/basalt` to 2.1.2, clear two G2 advisories
