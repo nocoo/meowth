@@ -186,8 +186,9 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     const overlay = document.querySelector('.fixed.inset-0.bg-black\\/50');
     expect(overlay).toBeTruthy();
     if (!overlay) throw new Error('sheet overlay not found');
-    fireEvent.pointerDown(overlay);
-    fireEvent.pointerUp(overlay);
+    // jsdom 30 implements PointerEvent, so Radix registers the pointer
+    // sequence itself; userEvent emits the full realistic sequence.
+    await userEvent.click(overlay);
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
