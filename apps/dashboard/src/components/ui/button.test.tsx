@@ -6,12 +6,14 @@ describe('Button', () => {
   it('renders default size as h-10 form primary', () => {
     render(<Button>Save</Button>);
     const btn = screen.getByRole('button', { name: 'Save' });
-    expect(btn.className).toContain('h-10');
+    expect(btn.className).toContain('basalt-action-lg');
   });
 
   it('maps xs to compact height', () => {
     render(<Button size="xs">Compact</Button>);
-    expect(screen.getByRole('button', { name: 'Compact' }).className).toContain('h-8');
+    expect(screen.getByRole('button', { name: 'Compact' }).className).toContain(
+      'basalt-action-sm',
+    );
   });
 
   it('renders as Slot child when asChild=true', () => {

@@ -5,7 +5,7 @@ allowBuilds:
   '@biomejs/biome': true
   esbuild: false
 minimumReleaseAgeExclude:
-  - '@nocoo/basalt@2.2.0'
+  - '@nocoo/basalt@3.2.1'
   - vite@8.3.5
   - lucide-react@1.61.0
 onlyBuiltDependencies:
@@ -22,4 +22,4 @@ overrides:
   brace-expansion@2: "2.1.7"
   brace-expansion@5: "5.0.12"
 patchedDependencies:
-  '@nocoo/basalt@2.2.0': patches/@nocoo__basalt@2.2.0.patch
+  '@nocoo/basalt@3.2.1': patches/@nocoo__basalt@3.2.1.patch

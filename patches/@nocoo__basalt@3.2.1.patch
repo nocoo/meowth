@@ -1,0 +1,16 @@
+diff --git a/dist/components/chat-composer.js b/dist/components/chat-composer.js
+index 7f000a6b2c14f55e64dcf3b0ebcb96298a3e50fd..f7a0f5f7d7ea00211ebb55e417ad52b656664e76 100644
+--- a/dist/components/chat-composer.js
++++ b/dist/components/chat-composer.js
+@@ -105,7 +105,10 @@ function p({ disabled: p = !1, streaming: m = !1, label: h = "Message", placehol
+ 						type: "button",
+ 						size: "icon",
+ 						variant: "secondary",
+-						onClick: v,
++						onClick: (event) => {
++							event.preventDefault();
++							v?.();
++						},
+ 						disabled: p || !v,
+ 						"aria-label": b,
+ 						children: /* @__PURE__ */ d(c, {

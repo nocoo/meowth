@@ -69,7 +69,7 @@ describe('AppShell (Stage B1) — desktop layout', () => {
     const { container } = render(<ShellWithChildPage child={<div>x</div>} />);
     const header = container.querySelector('header');
     expect(header).toBeTruthy();
-    expect(header?.className).toContain('h-14');
+    expect(header?.className).toContain('h-basalt-14');
     expect(header?.className).not.toMatch(/border-b/);
   });
 
@@ -183,7 +183,7 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
-    const overlay = document.querySelector('.fixed.inset-0.bg-black\\/50');
+    const overlay = document.querySelector('.basalt-sheet-overlay');
     expect(overlay).toBeTruthy();
     if (!overlay) throw new Error('sheet overlay not found');
     // jsdom 30 implements PointerEvent, so Radix registers the pointer

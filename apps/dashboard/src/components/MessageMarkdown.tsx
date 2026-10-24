@@ -5,7 +5,6 @@ import remarkGfm from 'remark-gfm';
 import { ansiToPlainText } from '@/lib/ansi';
 import { displayLabel } from '@/lib/labels';
 import { cn } from '@/lib/utils';
-import CopyButton from './CopyButton';
 import './message-markdown.css';
 
 const LANGUAGE_LABELS: Record<string, string> = {
@@ -33,15 +32,12 @@ function MarkdownCode({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="chat-code" data-language={language}>
-      <div className="flex items-center justify-between gap-3 border-b border-basalt-border/60 px-3 py-1.5">
-        <span className="text-xs font-medium text-basalt-muted-foreground">{label}</span>
-        <CopyButton text={content} label="Copy code" />
-      </div>
       <CodeHighlighted
         code={content}
+        title={label}
         aria-label={`${label} code`}
         tabIndex={0}
-        className="max-w-full rounded-none border-0 bg-transparent p-4 text-[13px] shadow-none ring-0"
+        className="max-w-full rounded-none border-0 bg-transparent text-[13px] shadow-none ring-0"
       />
     </div>
   );

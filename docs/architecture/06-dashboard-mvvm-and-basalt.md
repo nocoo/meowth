@@ -2,7 +2,7 @@
 
 > **更新规则**：本文档定义 `apps/dashboard/` 的目录结构、basalt 接入、Vite + Tailwind v4 + React 19 工程接入、MVVM 三段式分层、核心页面 + `/setup` 入口判定。
 > 任何 dashboard 目录拓扑、basalt 接入方式、MVVM 边界、`/setup` 决策树的改动，必须先回到这里更新，再向下推进。
-> Chrome 与常见控件现从 **`@nocoo/basalt@2.1.0` npm 包**导入（[`features/07`](../features/07-dashboard-basalt-package.md)）。下文 §4 的 source-copy 清单是历史记录，不再是落地路径。
+> Chrome 与常见控件现从 **`@nocoo/basalt@3.2.1` npm 包**导入（2026-10-24 由 2.2.0 升级；`patches/@nocoo__basalt@3.2.1.patch` 继续修正 composer 停止按钮的默认动作）（[`features/07`](../features/07-dashboard-basalt-package.md)）。下文 §4 的 source-copy 清单是历史记录，不再是落地路径。
 > 历史在 `git log -- docs/architecture/06-dashboard-mvvm-and-basalt.md`。
 
 > 上层依据：[`docs/01-project-overview.md`](../01-project-overview.md) §7.5、§9.2 Phase 3.13–3.20。
