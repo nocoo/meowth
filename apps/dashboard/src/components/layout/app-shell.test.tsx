@@ -1,6 +1,6 @@
 import { TooltipProvider } from '@nocoo/basalt';
 import { ThemeProvider } from '@nocoo/basalt/providers/theme';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -164,16 +164,12 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
-    // Click an inner sidebar NavLink to trigger a route change; the
-    // AppShell's `useLocation` effect should then call
-    // `setMobileOpen(false)`. The mobile drawer renders the Sidebar
-    // with `mobile=true`, so its 5 nav items are inside the dialog.
-    const agentsLink = screen
-      .getAllByRole('link', { name: 'Agents' })
-      .find((el) => el.getAttribute('href') === '/agents');
-    expect(agentsLink).toBeDefined();
-    if (!agentsLink) throw new Error('agents link not found');
-    await userEvent.click(agentsLink);
+    // Activate a sidebar row to trigger a route change; the AppShell's
+    // `useLocation` effect should then call `setMobileOpen(false)`. The
+    // mobile drawer renders the Sidebar with `mobile=true`, so its 5 nav
+    // items are inside the dialog.
+    const dialog = screen.getByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Agents' }));
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });

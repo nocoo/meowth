@@ -19,20 +19,23 @@ describe('Sidebar (Stage B1)', () => {
   it('renders the five product nav items in expanded desktop state', () => {
     renderSidebar();
     for (const label of ['Overview', 'Agents', 'Sessions', 'Tokens', 'Settings']) {
-      expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     }
   });
 
-  it('marks the active route via NavLink isActive style', () => {
+  it('marks the active route with aria-current', async () => {
     renderSidebar({ route: '/agents' });
-    const active = screen.getByRole('link', { name: 'Agents' });
-    expect(active.className).toContain('bg-basalt-primary/10');
+    const active = screen.getByRole('button', { name: 'Agents' });
+    expect(active).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: 'Overview' })).not.toHaveAttribute('aria-current');
   });
 
   it('keeps Sessions highlighted under /sessions/<id> via isItemActive', () => {
     renderSidebar({ route: '/sessions/abc' });
-    const sessions = screen.getByRole('link', { name: 'Sessions' });
-    expect(sessions.className).toContain('bg-basalt-primary/10');
+    expect(screen.getByRole('button', { name: 'Sessions' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 
   it('renders an "M" Avatar fallback at the bottom (no user data)', () => {
@@ -53,7 +56,7 @@ describe('Sidebar (Stage B1)', () => {
     renderSidebar({ mobile: true });
     expect(screen.queryByRole('button', { name: 'Collapse sidebar' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Expand sidebar' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
   });
 
   it('desktop expanded mode exposes a "Collapse sidebar" toggle button', () => {
@@ -102,26 +105,25 @@ describe('Sidebar (Stage B1)', () => {
     expect(screen.getByAltText('Meowth')).toBeInTheDocument();
   });
 
-  it('collapsed links keep their flex class through tooltip composition', async () => {
+  it('collapsed rows stay reachable through tooltip composition', async () => {
     const user = userEvent.setup();
     renderSidebar();
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
-    for (const link of screen.getAllByRole('link')) {
-      expect(link).toHaveClass('flex');
-      expect(link.className).not.toContain('=>');
+    for (const label of ['Overview', 'Agents', 'Sessions', 'Tokens', 'Settings']) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     }
   });
 
-  it('collapsed groups hide their links from keyboard navigation', async () => {
+  it('collapses a group from its label', async () => {
     const user = userEvent.setup();
     renderSidebar();
     const dashboard = screen.getByRole('button', { name: 'Dashboard' });
     expect(dashboard).toHaveAttribute('aria-expanded', 'true');
     await user.click(dashboard);
     expect(dashboard).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Overview' })).not.toBeInTheDocument();
     await user.click(dashboard);
-    expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
   });
 
   it('collapsed mode renders the flat icon rail with all five nav items + Expand button', async () => {
@@ -131,7 +133,7 @@ describe('Sidebar (Stage B1)', () => {
     expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Collapse sidebar' })).not.toBeInTheDocument();
     for (const label of ['Overview', 'Agents', 'Sessions', 'Tokens', 'Settings']) {
-      expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     }
   });
 

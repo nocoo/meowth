@@ -6,6 +6,8 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarHeader,
+  SidebarIconItem,
+  SidebarItem,
   SidebarNav,
   SidebarUser,
   Tooltip,
@@ -14,9 +16,9 @@ import {
   TooltipTrigger,
 } from '@nocoo/basalt';
 import { PanelLeft } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import BrandMark from '@/components/BrandMark';
-import { isItemActive, NAV_GROUPS, NAV_ITEMS, type NavGroup } from '@/lib/navigation';
+import { isItemActive, NAV_GROUPS, NAV_ITEMS } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/lib/version';
 import { useSidebar } from './sidebar-context';
@@ -28,6 +30,7 @@ interface SidebarProps {
 export function Sidebar({ mobile = false }: SidebarProps) {
   const { collapsed, toggle } = useSidebar();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const isCollapsed = mobile ? false : collapsed;
 
   return (
@@ -38,19 +41,29 @@ export function Sidebar({ mobile = false }: SidebarProps) {
         className={cn('motion-reduce:transition-none', mobile && 'h-full')}
       >
         {isCollapsed ? (
-          <CollapsedView pathname={pathname} toggle={toggle} />
+          <CollapsedView pathname={pathname} toggle={toggle} navigate={navigate} />
         ) : (
-          <ExpandedView pathname={pathname} toggle={toggle} mobile={mobile} />
+          <ExpandedView pathname={pathname} toggle={toggle} mobile={mobile} navigate={navigate} />
         )}
       </BasaltSidebar>
     </TooltipProvider>
   );
 }
 
-function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => void }) {
+type Navigate = ReturnType<typeof useNavigate>;
+
+function CollapsedView({
+  pathname,
+  toggle,
+  navigate,
+}: {
+  pathname: string;
+  toggle: () => void;
+  navigate: Navigate;
+}) {
   return (
     <>
-      <SidebarHeader className="justify-center px-0">
+      <SidebarHeader>
         <BrandMark alt="Meowth" />
       </SidebarHeader>
 
@@ -58,29 +71,24 @@ function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => v
         type="button"
         variant="ghost"
         size="icon"
-        className="mb-2 self-center h-10 w-10"
+        className="mb-basalt-space-sm self-center"
         onClick={toggle}
         aria-label="Expand sidebar"
       >
         <PanelLeft className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
       </Button>
 
-      <SidebarNav aria-label="Pages" className="w-full items-center gap-1 pt-1">
+      <SidebarNav aria-label="Pages">
         {NAV_ITEMS.map((item) => (
           <Tooltip key={item.to} delayDuration={0}>
             <TooltipTrigger asChild>
-              <NavLink
-                to={item.to}
+              <SidebarIconItem
                 aria-label={item.label}
-                className={cn(
-                  'flex h-10 w-10 items-center justify-center self-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-basalt-ring motion-reduce:transition-none',
-                  isItemActive(item, pathname)
-                    ? 'bg-basalt-primary/10 text-basalt-primary'
-                    : 'text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground',
-                )}
+                active={isItemActive(item, pathname)}
+                onClick={() => navigate(item.to)}
               >
                 <item.Icon className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-              </NavLink>
+              </SidebarIconItem>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={8}>
               {item.label}
@@ -89,8 +97,8 @@ function CollapsedView({ pathname, toggle }: { pathname: string; toggle: () => v
         ))}
       </SidebarNav>
 
-      <SidebarFooter className="flex w-full justify-center px-0">
-        <Avatar className="h-9 w-9">
+      <SidebarFooter>
+        <Avatar className="h-9 w-9 self-center">
           <AvatarFallback>M</AvatarFallback>
         </Avatar>
       </SidebarFooter>
@@ -102,18 +110,22 @@ function ExpandedView({
   pathname,
   toggle,
   mobile,
+  navigate,
 }: {
   pathname: string;
   toggle: () => void;
   mobile: boolean;
+  navigate: Navigate;
 }) {
   return (
     <>
-      <SidebarHeader className="pl-6 pr-3">
+      <SidebarHeader>
         <div className="flex w-full items-center justify-between">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-center gap-basalt-space-lg">
             <BrandMark alt="Meowth" />
-            <span className="truncate text-sm font-semibold tracking-tight">Meowth</span>
+            <span className="truncate text-lg font-semibold text-basalt-foreground md:text-xl">
+              Meowth
+            </span>
             <VersionPill />
           </div>
           {mobile ? null : (
@@ -131,9 +143,27 @@ function ExpandedView({
         </div>
       </SidebarHeader>
 
-      <SidebarNav aria-label="Pages" className="pt-1">
+      <SidebarNav aria-label="Pages">
         {NAV_GROUPS.map((group) => (
-          <NavGroupSection key={group.label} group={group} pathname={pathname} />
+          <SidebarGroup
+            key={group.label}
+            label={
+              <span data-testid={`sidebar-group-label-${group.label.toLowerCase()}`}>
+                {group.label}
+              </span>
+            }
+          >
+            {group.items.map((item) => (
+              <SidebarItem
+                key={item.to}
+                active={isItemActive(item, pathname)}
+                onClick={() => navigate(item.to)}
+              >
+                <item.Icon className="h-4 w-4 shrink-0" aria-hidden="true" strokeWidth={1.5} />
+                <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+              </SidebarItem>
+            ))}
+          </SidebarGroup>
         ))}
       </SidebarNav>
 
@@ -152,42 +182,11 @@ function ExpandedView({
   );
 }
 
-function NavGroupSection({ group, pathname }: { group: NavGroup; pathname: string }) {
-  const slug = group.label.toLowerCase();
-  return (
-    <SidebarGroup
-      label={
-        <span data-testid={`sidebar-group-label-${slug}`} className="text-xs font-medium">
-          {group.label}
-        </span>
-      }
-    >
-      {group.items.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          className={({ isActive }) =>
-            cn(
-              'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-basalt-ring motion-reduce:transition-none',
-              isActive || isItemActive(item, pathname)
-                ? 'bg-basalt-primary/10 font-medium text-basalt-primary'
-                : 'text-basalt-muted-foreground hover:bg-basalt-accent hover:text-basalt-foreground',
-            )
-          }
-        >
-          <item.Icon className="h-4 w-4 shrink-0" aria-hidden="true" strokeWidth={1.5} />
-          <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
-        </NavLink>
-      ))}
-    </SidebarGroup>
-  );
-}
-
 function VersionPill() {
   return (
     <span
       data-testid="sidebar-version-pill"
-      className="bg-basalt-secondary text-basalt-muted-foreground rounded-md px-1.5 py-0.5 font-mono text-[10px]"
+      className="shrink-0 rounded-md bg-basalt-secondary text-basalt-muted-foreground px-basalt-space-md py-basalt-space-xs font-mono text-[10px] leading-none font-medium"
     >
       v{APP_VERSION}
     </span>
