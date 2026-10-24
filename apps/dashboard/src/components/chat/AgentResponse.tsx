@@ -74,11 +74,7 @@ export default function AgentResponse({
         {agentName}
       </div>
       {content.length > 0 || pending ? (
-        <ChatBubble
-          variant="assistant"
-          streaming={writing}
-          className="chat-response min-w-0 w-full max-w-full ring-0"
-        >
+        <ChatBubble variant="assistant" streaming={writing} className="min-w-0 w-full max-w-full">
           <div className="min-w-0 space-y-4">
             {groupMessageActivity(content).map((group, groupIndex, allGroups) =>
               group.kind === 'activity' ? (

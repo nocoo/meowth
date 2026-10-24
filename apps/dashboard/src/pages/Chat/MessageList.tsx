@@ -41,10 +41,7 @@ export default function MessageList({ turns, agentName, onRetry }: MessageListPr
         const canRetry = last && turn.status !== 'streaming' && turn.status !== 'completed';
         return (
           <article key={turn.id} aria-label={`Turn ${index + 1}`} className="min-w-0 space-y-7">
-            <ChatBubble
-              variant="user"
-              className="chat-user-bubble max-w-[90%] px-4 py-3 text-[15px] leading-6 sm:max-w-[85%] sm:px-5"
-            >
+            <ChatBubble variant="user" className="max-w-[90%] text-basalt-base sm:max-w-[85%]">
               <MessageText
                 content={turn.userPrompt}
                 className="font-basalt-sans text-[15px] leading-6"

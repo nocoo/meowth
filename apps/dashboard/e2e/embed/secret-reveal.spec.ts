@@ -35,7 +35,7 @@ test('Create token → reveal → copy → done leaves no plaintext behind', asy
   await handpasteToken(page);
   const rootToken = readRootToken();
 
-  await page.getByRole('link', { name: /Tokens/ }).click();
+  await page.getByRole('button', { name: /Tokens/ }).click();
   await page.waitForURL(/\/tokens$/);
   await page.getByRole('button', { name: /Create token/i }).click();
 

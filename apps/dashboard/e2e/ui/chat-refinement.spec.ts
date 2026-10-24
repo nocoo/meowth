@@ -169,8 +169,8 @@ for (const theme of ['light', 'dark'] as const) {
         await activity.getByRole('button', { name: 'Used 1 tool' }).click();
         await expect(activity.getByText(/Layout loaded/)).toHaveCount(0);
         await expect(page.getByRole('heading', { name: 'A calmer workspace' })).toBeVisible();
-        const assistant = page.locator('.chat-response');
-        await expect(assistant).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+        const assistant = page.locator('section[aria-label$="response"]');
+        await expect(assistant.locator('[data-basalt-surface]')).toHaveCount(1);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
         );

@@ -66,17 +66,15 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.getByRole('heading', { name: 'Session review' })).toBeVisible();
         expect(cursors).toEqual([null, '4']);
         await expect(page.locator('html')).toHaveAttribute('data-mode', theme);
-        await expect(page.locator('.chat-response')).toHaveCSS(
-          'background-color',
-          'rgba(0, 0, 0, 0)',
-        );
+        const response = page.locator('section[aria-label$="response"]');
+        await expect(response.locator('[data-basalt-surface]')).toHaveCount(1);
         await expect(page.locator('[data-bubble-kind="text"]')).toHaveCount(1);
-        await expect(page.locator('.chat-response strong')).toHaveText('shared transcript');
+        await expect(response.locator('strong')).toHaveText('shared transcript');
         await expect(page.getByRole('cell', { name: '22', exact: true })).toHaveCSS(
           'text-align',
           'right',
         );
-        await page.getByRole('button', { name: 'Copy code', exact: true }).click();
+        await page.getByRole('button', { name: 'Copy code' }).click();
         expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(CODE);
         await expect(page.getByText('Completed in 1.5s')).toBeVisible();
         await expect(page.getByRole('link', { name: /session details/i })).toHaveCount(0);
