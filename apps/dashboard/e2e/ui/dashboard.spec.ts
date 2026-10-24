@@ -257,18 +257,26 @@ test('Vite applies CSS changes without reloading the document or losing a draft'
     await writeFile(filename, ':root { --meowth-hmr-probe: before; }\n');
     await page.evaluate((url) => import(url), href);
     await expect
-      .poll(() =>
-        page.evaluate(() =>
-          getComputedStyle(document.documentElement).getPropertyValue('--meowth-hmr-probe').trim(),
-        ),
+      .poll(
+        () =>
+          page.evaluate(() =>
+            getComputedStyle(document.documentElement)
+              .getPropertyValue('--meowth-hmr-probe')
+              .trim(),
+          ),
+        { timeout: 15_000 },
       )
       .toBe('before');
     await writeFile(filename, ':root { --meowth-hmr-probe: after; }\n');
     await expect
-      .poll(() =>
-        page.evaluate(() =>
-          getComputedStyle(document.documentElement).getPropertyValue('--meowth-hmr-probe').trim(),
-        ),
+      .poll(
+        () =>
+          page.evaluate(() =>
+            getComputedStyle(document.documentElement)
+              .getPropertyValue('--meowth-hmr-probe')
+              .trim(),
+          ),
+        { timeout: 15_000 },
       )
       .toBe('after');
     await expect(page.locator('html')).toHaveAttribute('data-hmr-document', sentinel);

@@ -89,7 +89,9 @@ for (const theme of ['light', 'dark'] as const) {
         const tool = page.getByRole('button', { name: 'Read file', exact: true });
         await expect(tool).toHaveAttribute('aria-expanded', 'false');
         await tool.click();
+        await expect(tool).toHaveAttribute('aria-expanded', 'true');
         const result = page.locator('[data-bubble-kind="tool-result"]');
+        await expect(result).toBeVisible();
         await expect(result).toContainText(TOOL_OUTPUT);
         await expect(result.locator('img')).toHaveCount(0);
         await expect(page.getByText(/truncated/)).toHaveCount(0);
