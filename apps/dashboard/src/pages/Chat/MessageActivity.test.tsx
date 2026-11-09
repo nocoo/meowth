@@ -1,7 +1,7 @@
-import type { ChatTurn, Envelope } from '@/viewmodels/useChatViewModel';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
+import type { ChatTurn, Envelope } from '@/viewmodels/useChatViewModel';
 import MessageList from './MessageList';
 
 function event(kind: string, seq: number, payload = {}): Envelope {

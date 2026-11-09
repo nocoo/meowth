@@ -46,13 +46,20 @@ for (const theme of ['light', 'dark'] as const) {
 
     test('navigation and controls share the same readable accent', async ({ page }, testInfo) => {
       await page.goto('/tokens');
-      const active = page.getByRole('link', { name: 'Tokens', exact: true });
+      const active = page.getByRole('button', { name: 'Tokens', exact: true });
       const create = page.getByRole('button', { name: 'Create token', exact: true });
       await expect(create).toBeVisible();
       await expect(active).toHaveAttribute('aria-current', 'page');
-      const textColor = await active.evaluate((element) => getComputedStyle(element).color);
-      const fill = await create.evaluate((element) => getComputedStyle(element).backgroundColor);
-      expect(textColor).toBe(fill);
+      // The Basalt row paints a selected surface rather than accent text, so
+      // assert the visible selection instead of colour equality, then keep the
+      // readability check for both the row and the primary action.
+      const activeFill = await active.evaluate(
+        (element) => getComputedStyle(element).backgroundColor,
+      );
+      const inactiveFill = await page
+        .getByRole('button', { name: 'Settings', exact: true })
+        .evaluate((element) => getComputedStyle(element).backgroundColor);
+      expect(activeFill).not.toBe(inactiveFill);
 
       const contrast = await create.evaluate((element) => {
         const luminance = (color: string) => {
@@ -75,6 +82,27 @@ for (const theme of ['light', 'dark'] as const) {
         );
       });
       expect(contrast).toBeGreaterThanOrEqual(4.5);
+      const rowContrast = await active.evaluate((element) => {
+        const luminance = (color: string) => {
+          const channels =
+            color
+              .match(/[\d.]+/g)
+              ?.slice(0, 3)
+              .map(Number) ?? [];
+          const linear = channels.map((channel) => {
+            const value = channel / 255;
+            return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+          });
+          return (linear[0] ?? 0) * 0.2126 + (linear[1] ?? 0) * 0.7152 + (linear[2] ?? 0) * 0.0722;
+        };
+        const style = getComputedStyle(element);
+        const foreground = luminance(style.color);
+        const background = luminance(style.backgroundColor);
+        return (
+          (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
+        );
+      });
+      expect(rowContrast).toBeGreaterThanOrEqual(4.5);
       await create.click();
       const dialog = page.getByRole('dialog', { name: 'Create token' });
       await expect(dialog).toHaveCSS('opacity', '1');
@@ -93,7 +121,9 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(page.getByText('Reachable', { exact: true })).toBeVisible();
       const logo = page.getByAltText('Meowth', { exact: true });
       const before = await logo.boundingBox();
-      const icons = page.getByRole('navigation', { name: 'Pages' }).locator('a svg');
+      const icons = page
+        .getByRole('navigation', { name: 'Pages' })
+        .locator('[data-sidebar-row] svg');
       const positions = await icons.evaluateAll((elements) =>
         elements.map((element) => {
           const rect = element.getBoundingClientRect();
@@ -117,11 +147,12 @@ for (const theme of ['light', 'dark'] as const) {
       ];
       for (const control of toolbar) {
         const box = await control.boundingBox();
-        expect([box?.width, box?.height]).toEqual([32, 32]);
+        // Basalt 3.x sizes header icon actions from its 34px action token.
+        expect([box?.width, box?.height]).toEqual([34, 34]);
       }
 
       await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
-      await expect(page.getByRole('link', { name: 'Overview', exact: true })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Overview', exact: true })).toHaveCount(0);
       await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
       await page.getByRole('button', { name: 'Collapse sidebar' }).click();
       await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
@@ -142,7 +173,7 @@ for (const theme of ['light', 'dark'] as const) {
       });
       expect(centers.length).toBeGreaterThanOrEqual(8);
       for (const offset of centers) expect(offset).toBeLessThanOrEqual(0.5);
-      await expect(page.getByRole('link', { name: 'Overview', exact: true })).toHaveAttribute(
+      await expect(page.getByRole('button', { name: 'Overview', exact: true })).toHaveAttribute(
         'aria-current',
         'page',
       );
@@ -172,7 +203,7 @@ for (const theme of ['light', 'dark'] as const) {
       }
 
       await page.getByRole('button', { name: 'Open navigation' }).click();
-      await page.getByRole('link', { name: 'Agents', exact: true }).click();
+      await page.getByRole('button', { name: 'Agents', exact: true }).click();
       await expect(page).toHaveURL(/\/agents$/);
       await expect(page.getByRole('dialog', { name: 'Navigation' })).toHaveCount(0);
       await page.goto('/chat');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NAV_GROUPS, NAV_ITEMS, activeNavItem, isItemActive } from './navigation';
+import { activeNavItem, isItemActive, NAV_GROUPS, NAV_ITEMS } from './navigation';
 
 describe('NAV_ITEMS / activeNavItem (Stage B1)', () => {
   it('exposes the six product pages in display order', () => {

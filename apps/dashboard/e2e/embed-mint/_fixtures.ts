@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type Page, expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 // Setup-code handoff between scripts/e2e-embed-mint-fixture.ts
 // and the embed-mint specs. The fixture writes the freshly minted

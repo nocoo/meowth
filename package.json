@@ -1,10 +1,10 @@
 {
   "name": "meowth",
-  "version": "0.7.1",
+  "version": "0.7.5",
   "private": true,
   "packageManager": "pnpm@11.6.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "build": "turbo run build",
@@ -13,7 +13,8 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "test": "pnpm test:hooks && turbo run test",
+    "test:hooks": "node --test scripts/__tests__/lint-staged-config.test.cjs",
     "clean": "turbo run clean && rm -rf node_modules",
     "daemon:build": "pnpm --filter @meowth/dashboard build && bash scripts/prepare-dashboard-embed.sh && bash scripts/build-daemon.sh",
     "daemon:vet": "cd daemon && go vet ./...",
@@ -53,11 +54,11 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.6.2",
     "husky": "9.1.7",
-    "lint-staged": "15.5.2",
-    "tsx": "4.22.4",
-    "turbo": "^2.3.3",
+    "lint-staged": "17.6.0",
+    "tsx": "4.23.15",
+    "turbo": "^2.11.10",
     "typescript": "^7.0.2"
   }
 }

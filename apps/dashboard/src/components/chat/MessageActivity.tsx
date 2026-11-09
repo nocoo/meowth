@@ -1,6 +1,6 @@
+import { Brain, ListChecks, Terminal } from 'lucide-react';
 import { displayLabel } from '@/lib/labels';
 import type { Envelope } from '@/models/types';
-import { Brain, ListChecks, Terminal } from 'lucide-react';
 import ActivityDisclosure from './ActivityDisclosure';
 import MessageBubble from './MessageBubble';
 import { groupActivitySteps, messageField, messageKind } from './messageGroups';

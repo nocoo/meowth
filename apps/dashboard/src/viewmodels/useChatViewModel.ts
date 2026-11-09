@@ -1,5 +1,7 @@
-import { execAgent, fetchAgents } from '@/models/agents';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AgentType } from '@/models/agents';
+import { execAgent, fetchAgents } from '@/models/agents';
+import type { ChatConversation, ChatConversationSummary, ChatTurn } from '@/models/chat';
 import {
   buildExecRequest,
   conversationSummaries,
@@ -7,10 +9,8 @@ import {
   extractSessionId,
   latestResumeSessionId,
 } from '@/models/chat';
-import type { ChatConversation, ChatConversationSummary, ChatTurn } from '@/models/chat';
 import { decodeChunk } from '@/models/envelope';
 import type { Agent, Envelope } from '@/models/types';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
 export type { AgentType } from '@/models/agents';
@@ -299,4 +299,5 @@ export default function useChatViewModel(): ChatViewModel {
     refresh: () => setAgentsNonce((value) => value + 1),
   };
 }
+
 import { isApiError } from '@/lib/api';

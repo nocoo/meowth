@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 // docs/architecture/07 §7.1 — SecretReveal component contract.
 //
@@ -103,7 +103,8 @@ export default function SecretReveal({
   const display = masked ? maskFor(secret) : secret;
 
   return (
-    <div className="space-y-2" aria-label={label ?? 'Secret value'}>
+    // biome-ignore lint/a11y/useSemanticElements: labelled value cluster (output + copy button), not a field group.
+    <div role="group" className="space-y-2" aria-label={label ?? 'Secret value'}>
       <output
         id={fieldId}
         data-testid="secret-reveal-value"

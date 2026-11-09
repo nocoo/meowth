@@ -57,8 +57,9 @@ check_console_outside_logger() {
 }
 
 # 1) Remote refs in source / HTML.
+# Navigation anchors are allowed; remote link resources are not.
 check_pattern 'src=["'\'']https?://' 'remote <script src=> in source' "$SRC" "$HTML"
-check_pattern '(?i)<link\b[^>]*\bhref\s*=\s*["'\'']https?://' 'remote <link href=> in source' "$SRC" "$HTML"
+check_pattern '(?i)<link\b[^>]*\bhref\s*=\s*["'\'']https?://' 'remote <link href=> in source' --multiline --ignore-case "$SRC" "$HTML"
 check_pattern '@import\s+url\(["'\'']https?:' 'remote @import url() in source' "$SRC"
 
 # 2) Dynamic code.

@@ -1,12 +1,16 @@
-import { Button } from '@/components/ui/button';
 import { Check, Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 export default function CopyButton({
   text,
   label,
   iconOnly = false,
-}: { text: string; label: string; iconOnly?: boolean }) {
+}: {
+  text: string;
+  label: string;
+  iconOnly?: boolean;
+}) {
   const [status, setStatus] = useState<'idle' | 'copied' | 'error'>('idle');
 
   useEffect(() => {

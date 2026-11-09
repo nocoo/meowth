@@ -1,9 +1,9 @@
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@nocoo/basalt';
 import { type BasaltTheme, useTheme } from '@nocoo/basalt/providers/theme';
 import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 function systemPrefersDark(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;

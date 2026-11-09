@@ -33,8 +33,8 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  rmSync,
   rmdirSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
@@ -249,7 +249,7 @@ async function runForType(type: BackendType): Promise<void> {
     const lastEvent = r.events[r.events.length - 1] as
       | { type: string; payload: { status: string; error?: string } }
       | undefined;
-    if (!lastEvent || lastEvent.type !== 'session_ended') {
+    if (lastEvent?.type !== 'session_ended') {
       throw new Error(`last event not session_ended: ${JSON.stringify(lastEvent ?? {})}`);
     }
     if (lastEvent.payload.status !== 'completed') {

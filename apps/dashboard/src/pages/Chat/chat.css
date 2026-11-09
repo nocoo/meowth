@@ -101,14 +101,16 @@
   padding: 0.875rem;
   border-radius: 1.5rem;
   background: hsl(var(--basalt-control));
-  box-shadow: 0 0 0 1px hsl(var(--basalt-border) / 0.7), 0 4px 16px
-    hsl(var(--basalt-foreground) / 0.025);
+  box-shadow:
+    0 0 0 1px hsl(var(--basalt-border) / 0.7),
+    0 4px 16px hsl(var(--basalt-foreground) / 0.025);
   transition: box-shadow 150ms ease;
 }
 
 .chat-composer > div:focus-within {
-  box-shadow: 0 0 0 1px hsl(var(--basalt-ring) / 0.7), 0 4px 20px
-    hsl(var(--basalt-foreground) / 0.045);
+  box-shadow:
+    0 0 0 1px hsl(var(--basalt-ring) / 0.7),
+    0 4px 20px hsl(var(--basalt-foreground) / 0.045);
 }
 
 .chat-composer textarea {

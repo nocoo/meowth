@@ -546,7 +546,7 @@ echo "D1 static check: OK"
 
 ## 14. 遗留勘误清单（**只记录**，不在本 commit 补丁化前文）
 
-08 在 wire 过程中观察到以下前文不一致；本文档作为接线层**仅记录**，后续由独立 commit 处理（每条都需要单独 review + 单独原子化 commit，CLAUDE.md 规则）：
+08 在 wire 过程中观察到以下前文不一致；本文档作为接线层**仅记录**，后续由独立 commit 处理（每条都需要单独 review + 单独原子化 commit，AGENTS.md 规则）：
 
 | # | 涉及文档 | 不一致点 | 建议处置 |
 |---|---------|---------|---------|
@@ -588,4 +588,4 @@ Phase 3.1 落地另外引出的、**已在 doc alignment commit 中就地解决*
   - [`05`](05-remote-access-modes.md) §10（启动期校验矩阵 / 外部转发警告）
   - [`06`](06-dashboard-mvvm-and-basalt.md) §11（L1 viewmodel + L3 两套 fixture）
   - [`07`](07-dashboard-security-csp-and-xss.md) §11（G1/G2/build/L1/L3 安全测试矩阵）
-- 工作约束：[`../../CLAUDE.md`](../../CLAUDE.md)
+- 工作约束：[`../../AGENTS.md`](../../AGENTS.md)

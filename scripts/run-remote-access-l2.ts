@@ -36,8 +36,8 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
-  rmSync,
   rmdirSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';

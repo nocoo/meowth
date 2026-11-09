@@ -35,7 +35,7 @@ test('Create token → reveal → copy → done leaves no plaintext behind', asy
   await handpasteToken(page);
   const rootToken = readRootToken();
 
-  await page.getByRole('link', { name: /Tokens/ }).click();
+  await page.getByRole('button', { name: /Tokens/ }).click();
   await page.waitForURL(/\/tokens$/);
   await page.getByRole('button', { name: /Create token/i }).click();
 
@@ -75,7 +75,7 @@ test('Create token → reveal → copy → done leaves no plaintext behind', asy
   await expect(page.getByRole('cell', { name: 'reveal-spec' })).toBeVisible();
   await expect(page.getByRole('dialog', { name: /Create token/i })).toHaveCount(0);
 
-  const bodyText = await page.evaluate(() => document.body.innerText);
+  const bodyText = await page.evaluate(() => document.body.textContent);
   expect(bodyText).not.toContain(plaintext);
 
   // (4b) No visible alert / toast surface contains the plaintext.

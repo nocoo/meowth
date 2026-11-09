@@ -11,16 +11,14 @@ module.exports = {
     {
       name: 'pages-must-not-import-models',
       severity: 'error',
-      comment:
-        'Pages own JSX only; they must consume models exclusively through viewmodels.',
+      comment: 'Pages own JSX only; they must consume models exclusively through viewmodels.',
       from: { path: '^src/pages/' },
       to: { path: '^src/models/' },
     },
     {
       name: 'pages-must-not-import-api',
       severity: 'error',
-      comment:
-        'Pages must not call fetch / api directly; viewmodels orchestrate that.',
+      comment: 'Pages must not call fetch / api directly; viewmodels orchestrate that.',
       from: { path: '^src/pages/' },
       to: { path: '^src/lib/api' },
     },

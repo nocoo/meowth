@@ -1,11 +1,11 @@
+import { Button, LayerCard } from '@nocoo/basalt';
+import { LoadingScreen } from '@nocoo/basalt/components/loading-screen';
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { isApiError } from '@/lib/api';
 import { clearStoredToken, getStoredToken } from '@/lib/localStorage';
 import { fetchAgents } from '@/models/agents';
-import { Button, LayerCard } from '@nocoo/basalt';
-import { LoadingScreen } from '@nocoo/basalt/components/loading-screen';
-import { useCallback, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router';
 
 // docs/architecture/06 §10 — AuthGate hydrate.
 //
@@ -86,4 +86,5 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   if (phase === 'unreachable') return <DaemonUnreachable onRetry={onRetry} />;
   return <LoadingScreen label="Verifying token..." mark={<BrandMark size={32} />} />;
 }
+
 import BrandMark from '@/components/BrandMark';

@@ -10,7 +10,7 @@ test('Create token via dashboard reveals the new row by name (no plaintext check
   page,
 }) => {
   await handpasteToken(page);
-  await page.getByRole('link', { name: /Tokens/ }).click();
+  await page.getByRole('button', { name: /Tokens/ }).click();
   await page.waitForURL(/\/tokens$/);
   await page.getByRole('button', { name: /Create token/i }).click();
   const dialog = page.getByRole('dialog', { name: /Create token/i });

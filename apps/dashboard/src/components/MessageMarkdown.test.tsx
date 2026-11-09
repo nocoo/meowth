@@ -50,7 +50,7 @@ describe('MessageMarkdown', () => {
     expect(container.querySelector('pre span')).not.toBeNull();
     expect(container.querySelector('strong')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Copy code' }));
-    await waitFor(() => expect(screen.getByText('Copied')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument());
     expect(writeText).toHaveBeenCalledWith(source);
     vi.unstubAllGlobals();
   });
@@ -97,10 +97,12 @@ describe('MessageMarkdown', () => {
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
     render(<MessageMarkdown content={'```\nhello\n```'} />);
     fireEvent.click(screen.getByRole('button', { name: 'Copy code' }));
-    await waitFor(() => expect(screen.getByText('Copy failed · Retry')).toBeInTheDocument());
-    expect(screen.queryByText('Copied')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Copy code' }));
-    await waitFor(() => expect(screen.getByText('Copied')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Copy failed' })).toBeInTheDocument(),
+    );
+    expect(screen.queryByRole('button', { name: 'Copied' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Copy failed' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument());
     expect(writeText).toHaveBeenCalledTimes(2);
     vi.unstubAllGlobals();
   });

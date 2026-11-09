@@ -1,2 +1,2 @@
-export { default } from './SessionsListPage';
 export { default as SessionDetailPage } from './SessionDetailPage';
+export { default } from './SessionsListPage';

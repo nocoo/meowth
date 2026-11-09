@@ -1,3 +1,5 @@
+import { KeyRound } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -11,8 +13,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { TokenView } from '@/viewmodels/useTokensViewModel';
-import { KeyRound } from 'lucide-react';
-import { useState } from 'react';
 
 export interface TokensContentProps {
   tokens: readonly TokenView[];

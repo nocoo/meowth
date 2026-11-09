@@ -1,6 +1,6 @@
+import { useCallback, useEffect, useState } from 'react';
 import { APP_VERSION } from '@/lib/version';
 import { pingHealthz } from '@/models/health';
-import { useCallback, useEffect, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
 // docs/architecture/06 §7.5 — Settings viewmodel (read-only v1).

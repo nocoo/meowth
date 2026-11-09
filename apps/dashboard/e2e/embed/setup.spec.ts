@@ -11,7 +11,7 @@ test('handpaste token → /overview → /agents lists 5 fake backends', async ({
   await expect(
     page.locator('[data-basalt-surface-root]').getByRole('heading', { name: 'Overview' }),
   ).toBeVisible();
-  await page.getByRole('link', { name: /Agents/ }).click();
+  await page.getByRole('button', { name: /Agents/ }).click();
   await page.waitForURL(/\/agents$/);
   await expect(
     page.locator('[data-basalt-surface-root]').getByRole('heading', { name: 'Agents' }),

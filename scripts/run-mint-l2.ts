@@ -37,8 +37,8 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  rmSync,
   rmdirSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
@@ -140,7 +140,7 @@ function initSkipToken(runHome: string): string {
   return first;
 }
 
-function initPathA(runHome: string): string {
+function _initPathA(runHome: string): string {
   const r = execFileSync(meowthdBinary, ['init'], {
     encoding: 'utf8',
     env: { ...process.env, MEOWTH_TEST: '1', MEOWTH_TEST_HOME: runHome },
@@ -371,7 +371,7 @@ async function main(): Promise<void> {
         prefix?: string;
         created_via?: string;
       };
-      if (!minted.secret || !minted.secret.startsWith('mwt_') || minted.secret.length !== 43) {
+      if (!minted.secret?.startsWith('mwt_') || minted.secret.length !== 43) {
         throw new Error('M1 secret missing or malformed');
       }
       if (minted.prefix !== minted.secret.slice(0, PREFIX_LEN)) {
@@ -452,7 +452,7 @@ async function main(): Promise<void> {
         throw new Error(`M4 mint status=${mint.status}, want 201`);
       }
       const minted = mint.body as { secret?: string };
-      if (!minted.secret || !minted.secret.startsWith('mwt_')) {
+      if (!minted.secret?.startsWith('mwt_')) {
         throw new Error('M4 minted secret missing/malformed');
       }
     } finally {
@@ -507,7 +507,7 @@ async function main(): Promise<void> {
     if (r.kind !== 'success') throw new Error(`M6 serve failed: ${r.stderr}`);
     try {
       await pollHealthz(`http://${r.addr}`);
-      const wrong = 'mws_' + 'B'.repeat(39);
+      const wrong = `mws_${'B'.repeat(39)}`;
       for (let i = 0; i < 5; i++) {
         const m = await jsonReq(`http://${r.addr}`, 'POST', '/bootstrap/mint', {
           body: { setup_code: wrong },

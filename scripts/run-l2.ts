@@ -41,8 +41,8 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  rmSync,
   rmdirSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
@@ -125,7 +125,7 @@ let serveExited = false;
 function cleanup(): void {
   // Kill leftover serve child first so it cannot hold open file
   // handles inside runHome while we rmSync.
-  if (serveChild && serveChild.pid && !serveExited) {
+  if (serveChild?.pid && !serveExited) {
     try {
       serveChild.kill('SIGKILL');
     } catch {

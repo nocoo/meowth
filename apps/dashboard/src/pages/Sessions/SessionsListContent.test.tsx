@@ -1,7 +1,7 @@
-import type { Session } from '@/viewmodels/useSessionsViewModel';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
+import type { Session } from '@/viewmodels/useSessionsViewModel';
 import SessionsListContent from './SessionsListContent';
 
 // Pure-props Content tests for Phase 2 Stage C3a.

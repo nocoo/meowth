@@ -105,6 +105,13 @@ describe('check-dashboard-source.sh', () => {
     expect(r.stderr).toContain('remote <link href=> in source');
   });
 
+  it('fails on a remote <link href>', () => {
+    writeSrc(tmp, 'index.tsx', `// ${LINK_REMOTE_HTML}\n`);
+    const r = runScript(tmp, html);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('remote <link href=> in source');
+  });
+
   it.each([
     `<a href="${HTTPS}">Open</a>`,
     `<link rel="stylesheet" href="/theme.css" />\n<a\n  href="${HTTPS}"\n>Open</a>`,
@@ -113,6 +120,56 @@ describe('check-dashboard-source.sh', () => {
     const r = runScript(tmp, html);
     expect(r.status).toBe(0);
     expect(r.stdout).toContain('dashboard source scan: OK');
+  });
+
+  it('allows remote navigation without crossing adjacent link tags', () => {
+    writeSrc(
+      tmp,
+      'navigation.tsx',
+      `<><link rel="stylesheet" href="/local.css" />
+        <a
+          href="${HTTPS}"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Catalogue</a></>`,
+    );
+    writeFileSync(html, `<link href="/local.css"><a href="${HTTPS}">Help</a>`);
+    const r = runScript(tmp, html);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('dashboard source scan: OK');
+  });
+
+  it('allows adjacent JSX with escaped quotes and remote navigation', () => {
+    writeSrc(
+      tmp,
+      'navigation.tsx',
+      `<link title={"a \\"b"} /><a title={"c \\"d"} href="${HTTPS}">Help</a>`,
+    );
+    const r = runScript(tmp, html);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain('dashboard source scan: OK');
+  });
+
+  it.each([
+    `<link
+ rel="stylesheet"
+ href="${HTTPS}">`,
+    `<link href='${HTTPS}' rel='stylesheet'>`,
+    `<link rel="preload" as="font" href="${HTTPS}">`,
+    `<link rel="modulepreload" href="${HTTPS}">`,
+    `<LINK REL="stylesheet" HREF = "http://example.com/style.css">`,
+    `<link media={width < 600 ? 'all' : 'print'} href="${HTTPS}">`,
+    `<link title={"a \\"b"} href="${HTTPS}">`,
+  ])('rejects remote link resources in source and HTML: %s', (markup) => {
+    writeSrc(tmp, 'resource.tsx', markup);
+    let r = runScript(tmp, html);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('remote <link href=> in source');
+    writeSrc(tmp, 'resource.tsx', 'export const clean = true;');
+    writeFileSync(html, markup);
+    r = runScript(tmp, html);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('remote <link href=> in source');
   });
 
   it('fails on a remote @import url() in CSS', () => {

@@ -1,6 +1,6 @@
-import type { Agent } from '@/viewmodels/useChatViewModel';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import type { Agent } from '@/viewmodels/useChatViewModel';
 import AgentPicker from './AgentPicker';
 
 // Five agents: 3 installed, 2 not. Tests assert that AgentPicker

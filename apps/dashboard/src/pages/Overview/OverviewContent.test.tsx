@@ -1,8 +1,8 @@
-import type { OverviewData } from '@/viewmodels/useOverviewViewModel';
 import { render as renderUi, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
+import type { OverviewData } from '@/viewmodels/useOverviewViewModel';
 import OverviewContent from './OverviewContent';
 
 function render(element: ReactElement) {

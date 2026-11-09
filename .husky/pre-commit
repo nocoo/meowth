@@ -1,13 +1,62 @@
 #!/usr/bin/env sh
-# Phase 2.5 — G1 fast path placeholder.
-# Future steps wired by later commits (see docs/architecture/08-6dq-hooks-wiring.md §5.1):
-#   - gitleaks (Phase 2.10)
-#   - dependency-cruiser (Phase 06 boundary rules)
-#   - dashboard source scan (Phase 07)
-#   - D1 static check (Phase 03)
+set -eu
+export GIT_OPTIONAL_LOCKS=0
 
-set -e
+node <<'NODE'
+const { spawnSync } = require('node:child_process');
 
-pnpm exec lint-staged
+const result = spawnSync(
+  'git',
+  ['status', '--porcelain=v1', '-z', '--untracked-files=no'],
+  { encoding: null },
+);
+
+if (result.error) {
+  console.error(`pre-commit: unable to inspect Git status: ${result.error.message}`);
+  process.exit(1);
+}
+if (result.signal || result.status !== 0) {
+  if (result.stderr) process.stderr.write(result.stderr);
+  const reason = result.signal ? `signal ${result.signal}` : `status ${result.status}`;
+  console.error(`pre-commit: unable to inspect Git status (${reason})`);
+  process.exit(1);
+}
+
+const output = result.stdout;
+for (let offset = 0; offset < output.length; ) {
+  const end = output.indexOf(0, offset);
+  if (end < 0 || end - offset < 4 || output[offset + 2] !== 0x20) {
+    console.error('pre-commit: malformed Git status output');
+    process.exit(1);
+  }
+
+  const indexStatus = output[offset];
+  const worktreeStatus = output[offset + 1];
+  if (indexStatus !== 0x20 && worktreeStatus !== 0x20) {
+    console.error('pre-commit: partially staged tracked changes are not allowed');
+    process.exit(1);
+  }
+
+  offset = end + 1;
+  if (
+    indexStatus === 0x52 ||
+    indexStatus === 0x43 ||
+    worktreeStatus === 0x52 ||
+    worktreeStatus === 0x43
+  ) {
+    const originalPathEnd = output.indexOf(0, offset);
+    if (originalPathEnd <= offset) {
+      console.error('pre-commit: malformed Git rename/copy status output');
+      process.exit(1);
+    }
+    offset = originalPathEnd + 1;
+  }
+}
+NODE
+
+pnpm exec lint-staged \
+  --no-stash \
+  --no-hide-partially-staged \
+  --fail-on-changes
 
 echo "pre-commit: OK"

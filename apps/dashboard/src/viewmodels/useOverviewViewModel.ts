@@ -1,9 +1,9 @@
+import { useCallback, useEffect, useState } from 'react';
 import { fetchAgents } from '@/models/agents';
 import { pingHealthz } from '@/models/health';
 import { listSessions } from '@/models/sessions';
 import { listTokens } from '@/models/tokens';
 import type { Agent, HealthzResponse, Session, TokenView } from '@/models/types';
-import { useCallback, useEffect, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
 // docs/architecture/06 §7.1 — Overview viewmodel.

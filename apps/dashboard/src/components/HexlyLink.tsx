@@ -1,6 +1,6 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from '@nocoo/basalt';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@nocoo/basalt';
 
 export function HexlyIcon({ className }: { className?: string }) {
   return (

@@ -1,10 +1,10 @@
+import { AlertCircle } from 'lucide-react';
+import { lazy, Suspense } from 'react';
+import { useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useSessionDetailViewModel from '@/viewmodels/useSessionDetailViewModel';
-import { AlertCircle } from 'lucide-react';
-import { Suspense, lazy } from 'react';
-import { useParams } from 'react-router';
 import SessionDetailSkeleton from './SessionDetailSkeleton';
 
 const SessionDetailContent = lazy(() => import('./SessionDetailContent'));

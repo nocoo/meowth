@@ -1,5 +1,5 @@
-import SessionStatusBadge from '@/components/SessionStatusBadge';
 import AgentResponse from '@/components/chat/AgentResponse';
+import SessionStatusBadge from '@/components/SessionStatusBadge';
 import { Card } from '@/components/ui/card';
 import { displayLabel } from '@/lib/labels';
 import type { SessionInfo, SessionMessageRow } from '@/viewmodels/useSessionDetailViewModel';

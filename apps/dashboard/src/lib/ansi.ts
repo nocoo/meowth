@@ -14,8 +14,8 @@
 //   - No HTML string path, no innerHTML, no eval, no Function
 //     constructor.
 
+import { createElement, isValidElement, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { type ReactNode, createElement, isValidElement } from 'react';
 
 type AnsiColor =
   | 'black'

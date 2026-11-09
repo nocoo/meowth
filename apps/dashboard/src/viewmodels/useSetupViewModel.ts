@@ -15,12 +15,12 @@
 // UI can gray out the button) AND enforced inside `submitMint`,
 // which no-ops with an error state instead of calling the model.
 
+import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { isApiError } from '@/lib/api';
 import { clearStoredToken, setStoredToken } from '@/lib/localStorage';
 import { fetchAgents } from '@/models/agents';
 import { mintWithSetupCode } from '@/models/bootstrap';
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
 
 // Both token and setup-code share the same shape: prefix +
 // 39-char RFC4648 base32 body. The redactor in 3.16 is broader

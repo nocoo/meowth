@@ -1,11 +1,11 @@
-import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import { TooltipProvider } from '@nocoo/basalt';
 import { ThemeProvider } from '@nocoo/basalt/providers/theme';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import { AppShell } from './app-shell';
 
 // Stage B1 — AppShell tests. The mobile Sheet a11y contract (route
@@ -69,7 +69,7 @@ describe('AppShell (Stage B1) — desktop layout', () => {
     const { container } = render(<ShellWithChildPage child={<div>x</div>} />);
     const header = container.querySelector('header');
     expect(header).toBeTruthy();
-    expect(header?.className).toContain('h-14');
+    expect(header?.className).toContain('h-basalt-14');
     expect(header?.className).not.toMatch(/border-b/);
   });
 
@@ -164,16 +164,12 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
-    // Click an inner sidebar NavLink to trigger a route change; the
-    // AppShell's `useLocation` effect should then call
-    // `setMobileOpen(false)`. The mobile drawer renders the Sidebar
-    // with `mobile=true`, so its 5 nav items are inside the dialog.
-    const agentsLink = screen
-      .getAllByRole('link', { name: 'Agents' })
-      .find((el) => el.getAttribute('href') === '/agents');
-    expect(agentsLink).toBeDefined();
-    if (!agentsLink) throw new Error('agents link not found');
-    await userEvent.click(agentsLink);
+    // Activate a sidebar row to trigger a route change; the AppShell's
+    // `useLocation` effect should then call `setMobileOpen(false)`. The
+    // mobile drawer renders the Sidebar with `mobile=true`, so its 5 nav
+    // items are inside the dialog.
+    const dialog = screen.getByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Agents' }));
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
@@ -183,11 +179,12 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
-    const overlay = document.querySelector('.fixed.inset-0.bg-black\\/50');
+    const overlay = document.querySelector('.basalt-sheet-overlay');
     expect(overlay).toBeTruthy();
     if (!overlay) throw new Error('sheet overlay not found');
-    fireEvent.pointerDown(overlay);
-    fireEvent.pointerUp(overlay);
+    // jsdom 30 implements PointerEvent, so Radix registers the pointer
+    // sequence itself; userEvent emits the full realistic sequence.
+    await userEvent.click(overlay);
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });

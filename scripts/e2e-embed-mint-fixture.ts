@@ -16,8 +16,8 @@
  * path so 3.22's `meowthd-embed` is not overwritten.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { createServer, type AddressInfo } from 'node:net';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { type AddressInfo, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -114,20 +114,16 @@ async function main(): Promise<void> {
   log(`setup-code written to ${CODE_FILE} (0o600)`);
 
   log(`meowthd serve --listen-addr 127.0.0.1:${FIXED_PORT} (fake backend)`);
-  const serve = spawn(
-    BINARY,
-    ['serve', '--listen-addr', `127.0.0.1:${FIXED_PORT}`],
-    {
-      cwd: DAEMON_DIR,
-      env: {
-        ...process.env,
-        MEOWTH_TEST_HOME: home,
-        MEOWTH_TEST: '1',
-        MEOWTH_BACKEND_FACTORY: 'fake',
-      },
-      stdio: ['ignore', 'inherit', 'inherit'],
+  const serve = spawn(BINARY, ['serve', '--listen-addr', `127.0.0.1:${FIXED_PORT}`], {
+    cwd: DAEMON_DIR,
+    env: {
+      ...process.env,
+      MEOWTH_TEST_HOME: home,
+      MEOWTH_TEST: '1',
+      MEOWTH_BACKEND_FACTORY: 'fake',
     },
-  );
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
 
   function shutdown(signal: NodeJS.Signals, code: number): void {
     if (!serve.killed) {

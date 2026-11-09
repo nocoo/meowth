@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalEnv": ["MEOWTH_REAL_BACKENDS_L2"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   lint:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Print runner identity (pre-setup)
@@ -18,11 +18,11 @@ jobs:
           uname -m
           sw_vers
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ad43150de3a2be2fa464b5cd2f921dc4fa9f8f0f
+        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.2"
+          node-version: "22.23.4"
           install-policy: "blocked"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -36,11 +36,12 @@ jobs:
           go version
       - name: Install ripgrep
         run: brew install ripgrep
+      - run: pnpm test:hooks
       - run: pnpm daemon:g1
       - run: pnpm dashboard:g1
 
   build-darwin:
-    runs-on: macos-14
+    runs-on: macos-26
     strategy:
       fail-fast: false
       matrix:
@@ -48,11 +49,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ad43150de3a2be2fa464b5cd2f921dc4fa9f8f0f
+        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.2"
+          node-version: "22.23.4"
           install-policy: "blocked"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -66,7 +67,7 @@ jobs:
         run: pnpm daemon:build
 
   compile-windows:
-    runs-on: macos-14
+    runs-on: macos-26
     strategy:
       fail-fast: false
       matrix:
@@ -86,7 +87,7 @@ jobs:
         run: go test -exec true ./...
 
   l1-daemon:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -95,25 +96,25 @@ jobs:
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ad43150de3a2be2fa464b5cd2f921dc4fa9f8f0f
+        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.2"
+          node-version: "22.23.4"
           install-policy: "blocked"
       - run: pnpm daemon:test:cover
       - run: pnpm daemon:cover:check
 
   l1-dashboard:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ad43150de3a2be2fa464b5cd2f921dc4fa9f8f0f
+        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.2"
+          node-version: "22.23.4"
           install-policy: "blocked"
       - name: Install ripgrep
         run: brew install ripgrep
@@ -121,7 +122,7 @@ jobs:
       - run: pnpm dashboard:cover:check
 
   l2:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -130,16 +131,16 @@ jobs:
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ad43150de3a2be2fa464b5cd2f921dc4fa9f8f0f
+        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.2"
+          node-version: "22.23.4"
           install-policy: "blocked"
       - run: pnpm test:l2
 
   l2-embed:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -148,25 +149,25 @@ jobs:
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ad43150de3a2be2fa464b5cd2f921dc4fa9f8f0f
+        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.2"
+          node-version: "22.23.4"
           install-policy: "blocked"
       - run: pnpm daemon:build
       - run: pnpm test:l2:embed
 
   l3:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ad43150de3a2be2fa464b5cd2f921dc4fa9f8f0f
+        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.2"
+          node-version: "22.23.4"
           install-policy: "blocked"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -183,7 +184,7 @@ jobs:
         run: pnpm --filter @meowth/dashboard e2e --project=dashboard-ui --project=dashboard-embed --project=dashboard-embed-mint
 
   g2:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -192,11 +193,11 @@ jobs:
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ad43150de3a2be2fa464b5cd2f921dc4fa9f8f0f
+        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.2"
+          node-version: "22.23.4"
           install-policy: "blocked"
       - name: Install osv-scanner
         run: brew install osv-scanner
@@ -204,7 +205,7 @@ jobs:
       - run: pnpm scan:govulncheck
 
   secret-scan:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -213,10 +214,10 @@ jobs:
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ad43150de3a2be2fa464b5cd2f921dc4fa9f8f0f
+        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.2"
+          node-version: "22.23.4"
           install-policy: "blocked"
       - run: pnpm scan:gitleaks:detect

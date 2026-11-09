@@ -1,7 +1,7 @@
-import { isApiError } from '@/lib/api';
-import { clearStoredToken } from '@/lib/localStorage';
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
+import { isApiError } from '@/lib/api';
+import { clearStoredToken } from '@/lib/localStorage';
 
 // docs/architecture/06 §10 — shared 401 handling for protected
 // viewmodels. Returns a stable `handleError(err)` callback that:

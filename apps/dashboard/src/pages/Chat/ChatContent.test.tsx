@@ -1,7 +1,7 @@
-import type { ChatTurn, ChatViewModel } from '@/viewmodels/useChatViewModel';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ChatTurn, ChatViewModel } from '@/viewmodels/useChatViewModel';
 import ChatContent from './ChatContent';
 
 function makeVM(over: Partial<ChatViewModel> = {}): ChatViewModel {
@@ -168,14 +168,14 @@ describe('Chat workspace', () => {
 });
 
 describe('Basalt composer integration', () => {
-  it('sends trimmed text with Enter and clears the draft', () => {
+  it('sends trimmed text with Enter and clears the draft', async () => {
     const vm = makeVM();
     renderContent(vm);
     const field = screen.getByRole('textbox', { name: 'Message' });
     fireEvent.change(field, { target: { value: '  Hello\nworld  ' } });
     fireEvent.keyDown(field, { key: 'Enter' });
     expect(vm.composer.submit).toHaveBeenCalledWith('Hello\nworld');
-    expect(field).toHaveValue('');
+    await waitFor(() => expect(field).toHaveValue(''));
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
   });
 

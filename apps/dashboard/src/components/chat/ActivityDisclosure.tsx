@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import {
   Collapsible,
   CollapsibleContent,
@@ -6,6 +5,7 @@ import {
 } from '@nocoo/basalt/components/collapsible';
 import { ChevronRight, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
 
 export default function ActivityDisclosure({
   label,

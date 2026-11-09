@@ -66,7 +66,7 @@ V1 视为完成的客观条件（与 G1–G5 对应）：
 - **darwin 发布物**：正式二进制仍是 darwin-arm64 / darwin-amd64。Windows `meowthd.exe` 是实验产物，不走 release 管线
 - **零云依赖**：所有持久化在 `~/.meowth/`；不要求外部 Postgres / Redis
 - **Agent 优先**：所有改动必须能在 pre-commit / pre-push 自动证明正确性，不依赖人工 QA
-- **原子化提交**：任何改动都拆成可独立解释、独立回滚的 commit（详见 [CLAUDE.md](../CLAUDE.md)）
+- **原子化提交**：任何改动都拆成可独立解释、独立回滚的 commit（详见 [AGENTS.md](../AGENTS.md)）
 
 ---
 
@@ -495,7 +495,7 @@ token 存 `localStorage`，**XSS 即等价 root token 泄露**。必须把所有
 ## 10. 相关文档
 
 - [`/README.md`](../README.md) — 仓库入口
-- [`/CLAUDE.md`](../CLAUDE.md) — 工作约束
+- [`/AGENTS.md`](../AGENTS.md) — 工作约束
 - 待建（**Phase 1 计划**，见 §9.2）：
   - `docs/architecture/01-agent-sdk-pump-from-multica.md`
   - `docs/architecture/02-daemon-http-protocol.md`

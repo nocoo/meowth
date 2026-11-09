@@ -10,6 +10,7 @@ import '@testing-library/jest-dom/vitest';
 //     `document.body` and selector lookups see duplicate matches.
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
+
 afterEach(() => {
   cleanup();
 });
@@ -81,9 +82,15 @@ ensureStorage(window as Window & typeof globalThis, 'sessionStorage');
 //    here.
 if (typeof globalThis.ResizeObserver === 'undefined') {
   class ResizeObserverShim {
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
+    observe(): void {
+      /* noop: jsdom has no layout, L3 covers real resizing */
+    }
+    unobserve(): void {
+      /* noop */
+    }
+    disconnect(): void {
+      /* noop */
+    }
   }
   Object.defineProperty(globalThis, 'ResizeObserver', {
     configurable: true,
@@ -101,10 +108,18 @@ if (typeof window.matchMedia === 'undefined') {
         matches: false,
         media: query,
         onchange: null,
-        addListener: () => {},
-        removeListener: () => {},
-        addEventListener: () => {},
-        removeEventListener: () => {},
+        addListener: () => {
+          /* noop */
+        },
+        removeListener: () => {
+          /* noop */
+        },
+        addEventListener: () => {
+          /* noop */
+        },
+        removeEventListener: () => {
+          /* noop */
+        },
         dispatchEvent: () => false,
       }) as unknown as MediaQueryList,
   });
@@ -114,7 +129,9 @@ if (typeof window.matchMedia === 'undefined') {
 // Select calls it on focused items when the listbox opens. A no-op
 // keeps the open path under L1.
 if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoView !== 'function') {
-  Element.prototype.scrollIntoView = function scrollIntoViewShim(): void {};
+  Element.prototype.scrollIntoView = function scrollIntoViewShim(): void {
+    /* noop: jsdom has no scrolling */
+  };
 }
 
 // jsdom's PointerEvent / hasPointerCapture stubs are also missing from
@@ -127,6 +144,8 @@ if (typeof HTMLElement !== 'undefined') {
     };
   }
   if (typeof HTMLElement.prototype.releasePointerCapture !== 'function') {
-    HTMLElement.prototype.releasePointerCapture = function releasePointerCaptureShim(): void {};
+    HTMLElement.prototype.releasePointerCapture = function releasePointerCaptureShim(): void {
+      /* noop: jsdom has no pointer capture */
+    };
   }
 }

@@ -1,10 +1,10 @@
-import { THEME_STORAGE_KEY } from '@/lib/theme-init';
-import type { SetupViewModel } from '@/viewmodels/useSetupViewModel';
 import { TooltipProvider } from '@nocoo/basalt';
 import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { THEME_STORAGE_KEY } from '@/lib/theme-init';
+import type { SetupViewModel } from '@/viewmodels/useSetupViewModel';
 import SetupPage from './SetupPage';
 
 // Phase 2 Stage C6 — isolated coverage for the mint-disabled

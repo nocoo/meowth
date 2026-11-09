@@ -255,6 +255,10 @@ Vite dev server 自己注入 HMR 需要的 inline script / inline style；这与
 
 ### 5.2 源码层 grep 兜底
 
+远程 `href` 检查只扫描字面 `<link>` 开始、到首个 `>` 为止的片段（含样式、字体与预加载），并支持跨行与大小写不敏感匹配。正常闭合的 `<link>` 后接 `<a href="https://...">` 不会跨标签命中；JSX 表达式里的比较符 `<` 以及 JavaScript 转义引号不会改变该范围。
+
+这是一条文本正则兜底，**不是**完整 HTML/JSX parser。`\bhref` 可能命中属性名片段或引号内文本；引号内的 `>` 会提前结束匹配，因而可能漏检；尚未到语义解析或放宽 URL 形式时，不以此规则替代 CSP。CSP 与其余源码规则保持不变。
+
 CI 跑（[`08`](08-6dq-hooks-wiring.md) G1），`scripts/check-dashboard-source.sh`：
 
 ```bash
@@ -280,7 +284,7 @@ check_pattern() {
 
 # 禁止源码引入远程脚本/样式/字体
 check_pattern 'src=["'\'']https?://' 'remote <script src=> in source' "$SRC" "$HTML"
-check_pattern '(?i)<link\b[^>]*\bhref\s*=\s*["'\'']https?://' 'remote <link href=> in source' "$SRC" "$HTML"
+check_pattern '(?i)<link\b[^>]*\bhref\s*=\s*["'\'']https?://' 'remote <link href=> in source' --multiline --ignore-case "$SRC" "$HTML"
 check_pattern '@import\s+url\(["'\'']https?:' 'remote @import url() in source' "$SRC"
 
 # 禁止 eval / new Function（即使 Biome 漏过）
@@ -562,4 +566,4 @@ dashboard **不**引入会动态求值用户输入的库：
   - [`05-remote-access-modes.md`](05-remote-access-modes.md)（daemon 不持 TLS，HSTS 由反代）
   - [`06-dashboard-mvvm-and-basalt.md`](06-dashboard-mvvm-and-basalt.md)（dashboard 目录、Setup 决策树、`SecretReveal` 出现位置）
   - `08-6dq-hooks-wiring.md`（G1/G2/D/L1/L3 工具链与 CI matrix）
-- 工作约束：[`../../CLAUDE.md`](../../CLAUDE.md)
+- 工作约束：[`../../AGENTS.md`](../../AGENTS.md)

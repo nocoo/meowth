@@ -1,3 +1,4 @@
+import { type ReactElement, useId } from 'react';
 import SecretReveal from '@/components/SecretReveal';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,7 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Notice } from '@/components/ui/notice';
 import type { TokensViewModel } from '@/viewmodels/useTokensViewModel';
-import { type ReactElement, useId } from 'react';
 
 export interface TokensCreateDialogProps {
   vm: TokensViewModel;

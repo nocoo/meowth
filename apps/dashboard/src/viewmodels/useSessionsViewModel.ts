@@ -1,6 +1,6 @@
+import { useCallback, useEffect, useState } from 'react';
 import { listSessions } from '@/models/sessions';
 import type { Session } from '@/models/types';
-import { useCallback, useEffect, useState } from 'react';
 import useAuthErrorHandler from './useAuthErrorHandler';
 
 export type { Session } from '@/models/types';

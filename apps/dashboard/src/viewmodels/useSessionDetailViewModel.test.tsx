@@ -133,8 +133,8 @@ describe('useSessionDetailViewModel', () => {
       return u.includes(`/v1/sessions/${SID}/messages`);
     });
     expect(messagesCall).toBeDefined();
-    const msgUrl =
-      typeof messagesCall?.[0] === 'string' ? messagesCall[0] : (messagesCall?.[0] as Request).url;
+    const first = messagesCall?.[0];
+    const msgUrl = typeof first === 'string' ? first : (first as Request).url;
     expect(msgUrl).not.toContain('after_seq');
   });
 

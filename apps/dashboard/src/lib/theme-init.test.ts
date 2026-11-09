@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { THEME_STORAGE_KEY, applyStoredTheme } from './theme-init';
+import { applyStoredTheme, THEME_STORAGE_KEY } from './theme-init';
 
 afterEach(() => {
   window.localStorage.clear();

@@ -1,5 +1,5 @@
-import type { Envelope } from '@/models/types';
 import { describe, expect, it } from 'vitest';
+import type { Envelope } from '@/models/types';
 import { groupActivitySteps, groupEnvelopes, groupMessageActivity } from './messageGroups';
 
 function makeEnvelope(over: Partial<Envelope> & Pick<Envelope, 'type'>): Envelope {

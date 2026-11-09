@@ -366,4 +366,4 @@ export interface ChatViewModel {
 - [`docs/architecture/02-daemon-http-protocol.md`](../architecture/02-daemon-http-protocol.md) §4 / §5 / §7 — exec + envelope + cancel
 - [`docs/architecture/06-dashboard-mvvm-and-basalt.md`](../architecture/06-dashboard-mvvm-and-basalt.md) §6.1 / §7 — MVVM 分层 + 页面骨架
 - [`docs/architecture/07-dashboard-security-csp-and-xss.md`](../architecture/07-dashboard-security-csp-and-xss.md) §3 / §4 — sanitizer + CSP（Chat 消息渲染必经）
-- [`CLAUDE.md`](../../CLAUDE.md) — 文档驱动 + 原子化提交规程
+- [`AGENTS.md`](../../AGENTS.md) — 文档驱动 + 原子化提交规程

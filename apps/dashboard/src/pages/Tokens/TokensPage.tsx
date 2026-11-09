@@ -1,8 +1,8 @@
+import { AlertCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useTokensViewModel from '@/viewmodels/useTokensViewModel';
-import { AlertCircle, Plus } from 'lucide-react';
 import TokensContent from './TokensContent';
 import TokensCreateDialog from './TokensCreateDialog';
 import TokensSkeleton from './TokensSkeleton';

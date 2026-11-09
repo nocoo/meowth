@@ -1,8 +1,8 @@
+import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useSessionsViewModel from '@/viewmodels/useSessionsViewModel';
-import { AlertCircle } from 'lucide-react';
 import SessionsListContent from './SessionsListContent';
 import SessionsListSkeleton from './SessionsListSkeleton';
 

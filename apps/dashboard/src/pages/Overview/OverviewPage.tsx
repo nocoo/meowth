@@ -1,8 +1,8 @@
+import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import useOverviewViewModel from '@/viewmodels/useOverviewViewModel';
-import { AlertCircle } from 'lucide-react';
 import OverviewContent from './OverviewContent';
 import OverviewSkeleton from './OverviewSkeleton';
 

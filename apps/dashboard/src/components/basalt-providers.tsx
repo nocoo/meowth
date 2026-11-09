@@ -1,9 +1,9 @@
-import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import { LinkProvider, Toaster, TooltipProvider } from '@nocoo/basalt';
 import { AccentProvider } from '@nocoo/basalt/providers/accent';
 import { ThemeProvider } from '@nocoo/basalt/providers/theme';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 
 export const MEOWTH_ACCENT = {
   primary: { light: '217 91% 60%', dark: '217 91% 65%' },
