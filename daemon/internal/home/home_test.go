@@ -119,6 +119,9 @@ func TestEnsureDirFixesLooseMode(t *testing.T) {
 	if err := os.MkdirAll(target, 0o755); err != nil { //nolint:gosec // test intentionally seeds a too-wide directory to verify EnsureDir's chmod path.
 		t.Fatalf("seed: %v", err)
 	}
+	if err := os.Chmod(target, 0o755); err != nil { //nolint:gosec // test deliberately restores loose permissions inside t.TempDir()
+		t.Fatalf("chmod seed: %v", err)
+	}
 	if err := EnsureDir(target, DirMode); err != nil {
 		t.Fatalf("EnsureDir: %v", err)
 	}
@@ -148,6 +151,9 @@ func TestEnsureFileModeFixesLooseMode(t *testing.T) {
 	target := filepath.Join(tmp, "loose-file")
 	if err := os.WriteFile(target, []byte("x"), 0o644); err != nil { //nolint:gosec // test seeds an intentionally too-wide file to verify chmod path
 		t.Fatalf("seed: %v", err)
+	}
+	if err := os.Chmod(target, 0o644); err != nil { //nolint:gosec // test deliberately restores loose permissions inside t.TempDir()
+		t.Fatalf("chmod seed: %v", err)
 	}
 	if err := EnsureFileMode(target, FileMode); err != nil {
 		t.Fatalf("EnsureFileMode: %v", err)
