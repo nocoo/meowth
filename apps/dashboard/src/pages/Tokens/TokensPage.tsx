@@ -1,7 +1,7 @@
+import { PageHeader } from '@nocoo/basalt/components/page-header';
 import { AlertCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
 import useTokensViewModel from '@/viewmodels/useTokensViewModel';
 import TokensContent from './TokensContent';
 import TokensCreateDialog from './TokensCreateDialog';
@@ -22,9 +22,8 @@ export default function TokensPage() {
   return (
     <section className="space-y-6" aria-labelledby="tokens-heading">
       <PageHeader
-        title="Tokens"
+        title={<span id="tokens-heading">Tokens</span>}
         description="Manage access for the dashboard, CLI, and other clients."
-        headingId="tokens-heading"
         actions={
           <TokensCreateDialog
             vm={vm}

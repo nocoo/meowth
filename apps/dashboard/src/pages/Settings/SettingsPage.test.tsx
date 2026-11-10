@@ -40,6 +40,7 @@ describe('SettingsPage (shell, Stage C5)', () => {
     mockUseSettings.mockReturnValue(vmFor({ status: { kind: 'loading' }, version: '1.2.3' }));
     render(<SettingsPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByText('Settings')).toHaveAttribute('id', 'settings-heading');
     expect(screen.getByText('Dashboard build')).toBeInTheDocument();
     expect(screen.getByText('1.2.3')).toBeInTheDocument();
   });

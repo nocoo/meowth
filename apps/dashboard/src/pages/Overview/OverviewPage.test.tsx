@@ -45,6 +45,7 @@ describe('OverviewPage (shell, Stage C1)', () => {
     mockUseOverview.mockReturnValue(vm({ kind: 'loading' }));
     render(<OverviewPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByText('Overview')).toHaveAttribute('id', 'overview-heading');
   });
 
   it('loading branch shows the OverviewSkeleton placeholders', () => {

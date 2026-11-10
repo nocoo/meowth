@@ -1,9 +1,9 @@
+import { PageHeader } from '@nocoo/basalt/components/page-header';
 import { AlertCircle } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import { useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
 import useSessionDetailViewModel from '@/viewmodels/useSessionDetailViewModel';
 import SessionDetailSkeleton from './SessionDetailSkeleton';
 
@@ -25,8 +25,7 @@ export default function SessionDetailPage() {
     <section className="space-y-6" aria-labelledby="session-detail-heading">
       <PageHeader
         description="Conversation and run details."
-        title="Session"
-        headingId="session-detail-heading"
+        title={<span id="session-detail-heading">Session</span>}
       />
       {vm.status.kind === 'loading' ? (
         <SessionDetailSkeleton />

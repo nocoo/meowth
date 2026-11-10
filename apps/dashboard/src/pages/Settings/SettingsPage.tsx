@@ -1,6 +1,6 @@
+import { PageHeader } from '@nocoo/basalt/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
 import useSettingsViewModel from '@/viewmodels/useSettingsViewModel';
 import SettingsContent from './SettingsContent';
 import SettingsSkeleton from './SettingsSkeleton';
@@ -19,8 +19,7 @@ export default function SettingsPage() {
     <section className="space-y-6" aria-labelledby="settings-heading">
       <PageHeader
         description="Dashboard version and daemon connection."
-        title="Settings"
-        headingId="settings-heading"
+        title={<span id="settings-heading">Settings</span>}
       />
       <Card className="max-w-3xl space-y-5 p-6">
         <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-[10rem_1fr]">

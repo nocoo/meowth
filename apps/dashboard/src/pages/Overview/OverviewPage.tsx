@@ -1,7 +1,7 @@
+import { PageHeader } from '@nocoo/basalt/components/page-header';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
 import useOverviewViewModel from '@/viewmodels/useOverviewViewModel';
 import OverviewContent from './OverviewContent';
 import OverviewSkeleton from './OverviewSkeleton';
@@ -18,8 +18,7 @@ export default function OverviewPage() {
     <section className="space-y-6" aria-labelledby="overview-heading">
       <PageHeader
         description="A snapshot of your local coding agents and activity."
-        title="Overview"
-        headingId="overview-heading"
+        title={<span id="overview-heading">Overview</span>}
       />
       {vm.status.kind === 'loading' ? (
         <OverviewSkeleton />
