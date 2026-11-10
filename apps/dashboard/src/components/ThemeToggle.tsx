@@ -1,9 +1,7 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from '@nocoo/basalt';
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@nocoo/basalt';
 import { type BasaltTheme, useTheme } from '@nocoo/basalt/providers/theme';
 import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 function systemPrefersDark(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -39,8 +37,8 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
-          className={cn('text-basalt-muted-foreground', className)}
+          size="icon"
+          className={className}
           onClick={() => setTheme(isDark ? 'light' : 'dark')}
           aria-label={label}
         >
