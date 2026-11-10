@@ -47,6 +47,7 @@ describe('SessionsListPage (shell, Stage C3a)', () => {
     mockUseSessions.mockReturnValue(vm({ kind: 'loading' }));
     renderShell();
     expect(screen.getByRole('heading', { level: 1, name: 'Sessions' })).toBeInTheDocument();
+    expect(screen.getByText('Sessions')).toHaveAttribute('id', 'sessions-heading');
   });
 
   it('loading branch shows the SessionsListSkeleton (5 row × 5 col placeholders)', () => {

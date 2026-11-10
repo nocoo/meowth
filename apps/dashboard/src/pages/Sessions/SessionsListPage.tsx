@@ -1,7 +1,7 @@
+import { PageHeader } from '@nocoo/basalt/components/page-header';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
 import useSessionsViewModel from '@/viewmodels/useSessionsViewModel';
 import SessionsListContent from './SessionsListContent';
 import SessionsListSkeleton from './SessionsListSkeleton';
@@ -19,8 +19,7 @@ export default function SessionsListPage() {
     <section className="space-y-6" aria-labelledby="sessions-heading">
       <PageHeader
         description="Browse recent runs and inspect their output."
-        title="Sessions"
-        headingId="sessions-heading"
+        title={<span id="sessions-heading">Sessions</span>}
       />
       {vm.status.kind === 'loading' ? (
         <SessionsListSkeleton />
