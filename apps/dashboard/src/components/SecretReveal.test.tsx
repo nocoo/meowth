@@ -147,6 +147,21 @@ describe('SecretReveal', () => {
     expect(screen.getByTestId('secret-reveal-value').textContent).toBe('•'.repeat(SECRET.length));
   });
 
+  it('toggle Reveal while a restore timer is active clears the pending timer', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    installClipboard(() => Promise.resolve());
+    render(<SecretReveal secret={SECRET} revealRestoreMs={5000} />);
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Copy' }));
+    });
+    await user.click(screen.getByRole('button', { name: 'Hide' }));
+    await user.click(screen.getByRole('button', { name: 'Reveal' }));
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.getByTestId('secret-reveal-value').textContent).toBe(SECRET);
+  });
+
   it('unmount clears pending copy timers', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     installClipboard(() => Promise.resolve());

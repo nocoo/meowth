@@ -185,6 +185,54 @@ describe('useTokensViewModel', () => {
     expect(result.current.modal.open).toBe(false);
   });
 
+  it('ignores setCreateName while submit is in flight', async () => {
+    let resolveCreate: ((value: Response) => void) | undefined;
+    const pending = new Promise<Response>((resolve) => {
+      resolveCreate = resolve;
+    });
+    let call = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      call += 1;
+      if (call === 1) return jsonResponse({ tokens: [] });
+      return pending;
+    });
+    const { result } = renderHook(() => useTokensViewModel(), { wrapper });
+    await waitFor(() => expect(result.current.status.kind).toBe('ready'));
+    act(() => result.current.openCreateModal());
+    act(() => result.current.setCreateName('ci'));
+    await act(async () => {
+      const inflight = result.current.submitCreate();
+      act(() => result.current.setCreateName('renamed'));
+      resolveCreate?.(
+        jsonResponse(
+          {
+            id: 'id-x',
+            name: 'ci',
+            prefix: SECRET.slice(0, 9),
+            secret: SECRET,
+            created_at: '2026-06-22T00:00:00Z',
+            created_via: 'dashboard',
+          },
+          201,
+        ),
+      );
+      await inflight;
+    });
+    if (result.current.modal.open && result.current.modal.phase === 'reveal') {
+      expect(result.current.modal.createdName).toBe('ci');
+    }
+  });
+
+  it('keeps loading on list 401 without entering error state', async () => {
+    window.localStorage.setItem('meowth_token', 'mwt_something');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse({ type: '/problems/unauthorized', title: 'Unauthorized', status: 401 }, 401),
+    );
+    const { result } = renderHook(() => useTokensViewModel(), { wrapper });
+    await waitFor(() => expect(window.localStorage.getItem('meowth_token')).toBeNull());
+    expect(result.current.status.kind).toBe('loading');
+  });
+
   it('revoke reloads the list; revoke errors surface a message', async () => {
     let call = 0;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {

@@ -47,6 +47,31 @@ describe('useSettingsViewModel', () => {
     expect(result.current.version.length).toBeGreaterThan(0);
   });
 
+  it('ignores late healthz success after unmount', async () => {
+    let resolveFetch: ((value: Response) => void) | undefined;
+    const pending = new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => pending);
+    const { unmount } = renderHook(() => useSettingsViewModel(), { wrapper });
+    unmount();
+    resolveFetch?.(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    await Promise.resolve();
+  });
+
+  it('does not surface an error when healthz returns 401', async () => {
+    window.localStorage.setItem('meowth_token', 'mwt_something');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ type: '/problems/unauthorized', title: 'Unauthorized', status: 401 }),
+        { status: 401 },
+      ),
+    );
+    const { result } = renderHook(() => useSettingsViewModel(), { wrapper });
+    await waitFor(() => expect(window.localStorage.getItem('meowth_token')).toBeNull());
+    expect(result.current.status.kind).toBe('loading');
+  });
+
   it('refresh re-probes healthz', async () => {
     const spy = vi
       .spyOn(globalThis, 'fetch')

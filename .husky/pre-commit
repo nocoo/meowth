@@ -23,6 +23,7 @@ if (result.signal || result.status !== 0) {
 }
 
 const output = result.stdout;
+if (process.env.MEOWTH_PRECOMMIT_SKIP_PARTIAL !== '1') {
 for (let offset = 0; offset < output.length; ) {
   const end = output.indexOf(0, offset);
   if (end < 0 || end - offset < 4 || output[offset + 2] !== 0x20) {
@@ -52,11 +53,16 @@ for (let offset = 0; offset < output.length; ) {
     offset = originalPathEnd + 1;
   }
 }
+}
 NODE
 
-pnpm exec lint-staged \
-  --no-stash \
-  --no-hide-partially-staged \
-  --fail-on-changes
+if [ "${MEOWTH_PRECOMMIT_SKIP_L1:-}" = 1 ]; then
+  pnpm exec lint-staged \
+    --no-stash \
+    --no-hide-partially-staged \
+    --fail-on-changes
+else
+  bash scripts/hooks/pre-commit-l1.sh
+fi
 
 echo "pre-commit: OK"

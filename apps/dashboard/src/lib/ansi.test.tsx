@@ -1,7 +1,7 @@
 import { cleanup, render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ansiToReactNodes } from './ansi';
+import { ansiToPlainText, ansiToReactNodes } from './ansi';
 
 afterEach(() => {
   cleanup();
@@ -152,5 +152,37 @@ describe('ansiToReactNodes', () => {
     expect(first?.className).toContain('text-basalt-danger');
     expect(first?.textContent).toBe('A');
     expect(container.textContent).toBe('AB');
+  });
+
+  it('exercises the 256-color ramp and common SGR attribute toggles', () => {
+    for (let code = 0; code < 256; code += 1) {
+      ansiToReactNodes(`${ESC}[38;5;${code}mX${ESC}[48;5;${code}mY${ESC}[0m`);
+    }
+    const styled = ansiToReactNodes(
+      `${ESC}[3mI${ESC}[23m${ESC}[4mU${ESC}[24m${ESC}[2mD${ESC}[22m${ESC}[7mV${ESC}[27m${ESC}[0m`,
+    );
+    const { container } = render(<div>{styled}</div>);
+    expect(container.textContent).toBe('IUDV');
+  });
+
+  it('drops CSI sequences whose final byte is not SGR', () => {
+    expect(asString(ansiToReactNodes(`a${ESC}[10Hb${ESC}[31mc${ESC}[0m`))).toBe('abc');
+  });
+
+  it('flattens styled nodes to plain text via ansiToPlainText', () => {
+    expect(ansiToPlainText(`${ESC}[31mred${ESC}[0m plain`)).toBe('red plain');
+  });
+
+  it('ignores invalid 256-color codes and applies basic palette SGR numbers', () => {
+    const nodes = ansiToReactNodes(
+      `${ESC}[38;5;999mA${ESC}[48;5;-1mB${ESC}[32mC${ESC}[45mD${ESC}[0m`,
+    );
+    expect(asString(nodes)).toBe('ABCD');
+  });
+
+  it('renders bg classes for basic background SGR codes', () => {
+    const nodes = ansiToReactNodes(`${ESC}[41mA${ESC}[0m`);
+    const { container } = render(<div>{nodes}</div>);
+    expect(container.querySelector('span')?.className).toMatch(/bg-basalt-/);
   });
 });

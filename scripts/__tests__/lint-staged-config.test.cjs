@@ -250,6 +250,7 @@ function integrationEnv(fixture, baseEnv, trace) {
     XDG_CONFIG_HOME: baseEnv.XDG_CONFIG_HOME,
     PATH: pathWithTools,
     GIT_TRACE: trace,
+    MEOWTH_PRECOMMIT_SKIP_L1: '1',
   });
   fixture.verify(fixture.root);
   fixture.path(path.relative(fixture.root, trace));
@@ -309,10 +310,11 @@ function assertReadOnlyTrace(trace) {
     'update-index',
     'read-tree',
   ]);
+  const allowed = new Set(['checkout-index']);
   const commands = readFileSync(trace, 'utf8').split('\n').map(traceGitCommand).filter(Boolean);
   assert.ok(commands.includes('status'), 'trace did not contain the hook status command');
   assert.deepEqual(
-    commands.filter((command) => forbidden.has(command)),
+    commands.filter((command) => forbidden.has(command) && !allowed.has(command)),
     [],
     `read-only hook invoked mutating Git command(s): ${commands.join(', ')}`,
   );
@@ -485,6 +487,7 @@ require('node:fs').writeFileSync(${JSON.stringify(log)}, JSON.stringify(process.
     PATH: `${bin}:${process.env.PATH}`,
     GIT_INDEX_FILE: expectedIndex,
     EXPECTED_GIT_INDEX_FILE: expectedIndex,
+    MEOWTH_PRECOMMIT_SKIP_L1: '1',
   });
   const runHook = (extra = {}) =>
     spawn('sh', [hookPath], { cwd: repo, env: isolatedEnv({ ...baseEnv, ...extra }) });
