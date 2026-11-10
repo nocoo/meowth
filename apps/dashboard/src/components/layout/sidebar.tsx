@@ -125,7 +125,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
                         aria-hidden="true"
                         strokeWidth={1.5}
                       />
-                      <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+                      <span className="flex-1 truncate text-left">{item.label}</span>
                     </SidebarItem>
                   ))}
                 </SidebarGroup>
