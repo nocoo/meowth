@@ -32,7 +32,7 @@ Every token grants full API access. Backends start with automatic tool execution
 
 ### Build from source
 
-Install Node.js 24 LTS, the pnpm version specified in `package.json`, and Go 1.26.6 or later as required by `daemon/go.mod`. To start real conversations, install and authenticate at least one supported CLI.
+Install Node.js 26 LTS (e.g. 26.12.1, matching CI), the pnpm version specified in `package.json`, and Go 1.26.6 or later as required by `daemon/go.mod`. To start real conversations, install and authenticate at least one supported CLI.
 
 For a new installation:
 
