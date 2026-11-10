@@ -1,7 +1,7 @@
+import { PageHeader } from '@nocoo/basalt/components/page-header';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageHeader } from '@/components/ui/page-header';
 import useAgentsViewModel from '@/viewmodels/useAgentsViewModel';
 import AgentsContent from './AgentsContent';
 import AgentsSkeleton from './AgentsSkeleton';
@@ -18,8 +18,7 @@ export default function AgentsPage() {
     <section className="space-y-6" aria-labelledby="agents-heading">
       <PageHeader
         description="Coding backends available on this machine."
-        title="Agents"
-        headingId="agents-heading"
+        title={<span id="agents-heading">Agents</span>}
       />
       {vm.status.kind === 'loading' ? (
         <AgentsSkeleton />
