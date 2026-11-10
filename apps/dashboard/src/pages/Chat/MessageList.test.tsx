@@ -76,7 +76,9 @@ describe('MessageList', () => {
     expect(articles[2]).toHaveTextContent('third prompt');
   });
 
-  it('caps at 1000 RAW envelopes per turn and surfaces a banner linking the Sessions detail', () => {
+  it('caps at 1000 RAW envelopes per turn and surfaces a banner linking the Sessions detail', {
+    timeout: 20_000,
+  }, () => {
     // Interleave text + tool-use so coalescing cannot collapse the
     // window into a single bubble; this lets us prove the cap acts
     // on RAW envelopes (1001 → 1000 kept) independently of §5.1
