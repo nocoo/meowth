@@ -13,8 +13,7 @@ import type { ComponentType, SVGProps } from 'react';
 // rather than reaching into the rendered DOM, so future page
 // additions stay obvious in code review.
 //
-// Expanded sidebar uses NAV_GROUPS for the grouped layout (matches
-// surety's "label + grouped block" visual). Collapsed sidebar uses
+// Expanded sidebar uses NAV_GROUPS with basalt SidebarGroup. Collapsed sidebar uses
 // NAV_ITEMS (a flat rail) so the icon list stays compact and
 // group labels are hidden.
 //

@@ -66,32 +66,42 @@ export function Sidebar({ mobile = false }: SidebarProps) {
                 </span>
               </div>
               {mobile ? null : (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0"
-                  onClick={toggle}
-                  aria-label="Collapse sidebar"
-                >
-                  <PanelLeft className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggle}
+                      aria-label="Collapse sidebar"
+                    >
+                      <PanelLeft aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Collapse sidebar</TooltipContent>
+                </Tooltip>
               )}
             </div>
           )}
         </SidebarHeader>
 
         {isCollapsed ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="mb-basalt-space-sm self-center"
-            onClick={toggle}
-            aria-label="Expand sidebar"
-          >
-            <PanelLeft className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-          </Button>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={toggle}
+                aria-label="Expand sidebar"
+              >
+                <PanelLeft aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Expand sidebar
+            </TooltipContent>
+          </Tooltip>
         ) : null}
 
         <SidebarNav aria-label="Pages">
@@ -113,14 +123,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
                 </Tooltip>
               ))
             : NAV_GROUPS.map((group) => (
-                <SidebarGroup
-                  key={group.label}
-                  label={
-                    <span data-testid={`sidebar-group-label-${group.label.toLowerCase()}`}>
-                      {group.label}
-                    </span>
-                  }
-                >
+                <SidebarGroup key={group.label} label={group.label}>
                   {group.items.map((item) => (
                     <SidebarItem
                       key={item.to}
@@ -132,7 +135,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
                         aria-hidden="true"
                         strokeWidth={1.5}
                       />
-                      <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+                      <span className="flex-1 truncate text-left">{item.label}</span>
                     </SidebarItem>
                   ))}
                 </SidebarGroup>
