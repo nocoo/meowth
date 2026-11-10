@@ -32,7 +32,7 @@ Meowth 是面向个人开发环境的 coding-agent 控制台。它在本机运�
 
 ### 从源码安装
 
-准备 Node.js 24 LTS、`package.json` 指定的 pnpm，以及 `daemon/go.mod` 要求的 Go 1.26.6 或更新版本。要实际发起对话，还需安装并登录至少一种支持的 CLI。
+准备 Node.js 26 LTS（与 CI 一致，如 26.12.1）、`package.json` 指定的 pnpm，以及 `daemon/go.mod` 要求的 Go 1.26.6 或更新版本。要实际发起对话，还需安装并登录至少一种支持的 CLI。
 
 首次安装时运行：
 

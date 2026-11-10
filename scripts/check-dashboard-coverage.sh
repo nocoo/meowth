@@ -78,7 +78,7 @@ EOF
 )
 
 # Build a single tab-separated stream of `repo_relative_path\tpct` for
-# every covered file across both workspaces. Node 22+ provides the
+# every covered file across both workspaces. Node 26+ provides the
 # JSON parser; we relativize the absolute keys vitest emits so the
 # baseline map only ever uses stable repo-relative paths.
 ENTRIES=$(REPO_ROOT="$REPO_ROOT" node -e '

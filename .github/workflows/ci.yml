@@ -22,7 +22,7 @@ jobs:
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.4"
+          node-version: "26.12.1"
           install-policy: "blocked"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -53,7 +53,7 @@ jobs:
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.4"
+          node-version: "26.12.1"
           install-policy: "blocked"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -100,7 +100,7 @@ jobs:
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.4"
+          node-version: "26.12.1"
           install-policy: "blocked"
       - run: pnpm daemon:test:cover
       - run: pnpm daemon:cover:check
@@ -114,7 +114,7 @@ jobs:
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.4"
+          node-version: "26.12.1"
           install-policy: "blocked"
       - name: Install ripgrep
         run: brew install ripgrep
@@ -135,7 +135,7 @@ jobs:
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.4"
+          node-version: "26.12.1"
           install-policy: "blocked"
       - run: pnpm test:l2
 
@@ -153,7 +153,7 @@ jobs:
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.4"
+          node-version: "26.12.1"
           install-policy: "blocked"
       - run: pnpm daemon:build
       - run: pnpm test:l2:embed
@@ -167,7 +167,7 @@ jobs:
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.4"
+          node-version: "26.12.1"
           install-policy: "blocked"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -197,7 +197,7 @@ jobs:
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.4"
+          node-version: "26.12.1"
           install-policy: "blocked"
       - name: Install osv-scanner
         run: brew install osv-scanner
@@ -218,6 +218,6 @@ jobs:
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
-          node-version: "22.23.4"
+          node-version: "26.12.1"
           install-policy: "blocked"
       - run: pnpm scan:gitleaks:detect

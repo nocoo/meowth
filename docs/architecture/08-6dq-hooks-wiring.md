@@ -369,7 +369,7 @@ Phase 2.12 commit 落地 `.github/workflows/ci.yml` 时**必须**：
 
 `.github/workflows/ci.yml` 配置：
 
-- Node：22 LTS
+- Node：26 LTS（如 26.12.1，与 CI `node-version` 一致）
 - pnpm：11
 - Go：**跟随 `daemon/go.mod`** 的 `go` 行（[`01`](01-agent-sdk-pump-from-multica.md) §7 决策规则；Phase 3.1 实测锁定；CI 用 `actions/setup-go@v5` + `go-version-file: daemon/go.mod`）
 - Python：不需要
