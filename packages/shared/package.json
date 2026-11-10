@@ -1,6 +1,6 @@
 {
   "name": "@meowth/shared",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -21,9 +21,9 @@
     "clean": "rm -rf .turbo dist"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/coverage-v8": "5.1.0",
     "openapi-typescript": "7.13.0",
     "typescript": "^7.0.2",
-    "vitest": "5.0.5"
+    "vitest": "5.1.0"
   }
 }

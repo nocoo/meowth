@@ -116,6 +116,36 @@ describe('AuthGate', () => {
     expect(window.localStorage.getItem(TOKEN_KEY)).not.toBeNull();
   });
 
+  it('ignores late probe success after unmount', async () => {
+    window.localStorage.setItem(TOKEN_KEY, `mwt_${'G'.repeat(39)}`);
+    let resolveFetch: ((value: Response) => void) | undefined;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    const { unmount } = render(harness());
+    unmount();
+    resolveFetch?.(new Response(JSON.stringify({ agents: [] }), { status: 200 }));
+    await Promise.resolve();
+  });
+
+  it('ignores late probe failures after unmount', async () => {
+    window.localStorage.setItem(TOKEN_KEY, `mwt_${'F'.repeat(39)}`);
+    let rejectFetch: ((error: unknown) => void) | undefined;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      () =>
+        new Promise<Response>((_, reject) => {
+          rejectFetch = reject;
+        }),
+    );
+    const { unmount } = render(harness());
+    unmount();
+    rejectFetch?.(new TypeError('Failed to fetch'));
+    await Promise.resolve();
+  });
+
   it('does not render protected children while the probe is in flight', async () => {
     window.localStorage.setItem(TOKEN_KEY, `mwt_${'D'.repeat(39)}`);
     let resolveFetch: ((value: Response) => void) | undefined;

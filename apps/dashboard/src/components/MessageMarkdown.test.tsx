@@ -55,6 +55,12 @@ describe('MessageMarkdown', () => {
     vi.unstubAllGlobals();
   });
 
+  it('labels uncommon languages via displayLabel and tolerates bare inline code', () => {
+    render(<MessageMarkdown content={'```kotlin\nfun main() {}\n```\n\nBare `code`.'} />);
+    expect(screen.getByText('Kotlin')).toBeInTheDocument();
+    expect(screen.getByText('code').tagName).toBe('CODE');
+  });
+
   it('keeps unclosed streaming fences readable and handles unlabeled code', () => {
     const { container, rerender } = render(
       <MessageMarkdown content={'```python\nprint("hello")'} />,
@@ -80,6 +86,13 @@ describe('MessageMarkdown', () => {
     const imageLink = screen.getByRole('link', { name: 'Image: Untrusted' });
     expect(imageLink).toHaveAttribute('rel', 'noopener noreferrer');
     expect(imageLink).toHaveAttribute('href', 'https://example.com/image.png');
+  });
+
+  it('renders spans when markdown links or images have no destination', () => {
+    const { container } = render(<MessageMarkdown content={'[No href]() and ![Alt only]())'} />);
+    expect(screen.getByText('No href').tagName).toBe('SPAN');
+    expect(container.querySelector('a[href]')).toBeNull();
+    expect(screen.getByText('Alt only').tagName).toBe('SPAN');
   });
 
   it('drops ANSI and terminal-control payloads before parsing Markdown', () => {

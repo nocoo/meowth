@@ -92,6 +92,18 @@ describe('useOverviewViewModel', () => {
     await Promise.resolve();
   });
 
+  it('ignores rejected fetch after unmount', async () => {
+    let rejectFetch: ((error: unknown) => void) | undefined;
+    const pending = new Promise<Response>((_, reject) => {
+      rejectFetch = reject;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => pending);
+    const { unmount } = renderHook(() => useOverviewViewModel(), { wrapper });
+    unmount();
+    rejectFetch?.(new TypeError('Failed to fetch'));
+    await Promise.resolve();
+  });
+
   it('stays loading when listTokens returns 401', async () => {
     window.localStorage.setItem('meowth_token', 'mwt_something');
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(

@@ -25,6 +25,12 @@ describe('applyStoredTheme', () => {
     expect(document.documentElement.getAttribute('data-mode')).toBe('light');
   });
 
+  it('follows system dark preference when stored value is unrecognized', () => {
+    applyStoredTheme(document.documentElement, { getItem: () => 'sepia' }, { matches: true });
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(document.documentElement.getAttribute('data-mode')).toBe('dark');
+  });
+
   it('falls back to system preference when the key is missing', () => {
     const storage = { getItem: () => null };
     applyStoredTheme(document.documentElement, storage, { matches: true });
@@ -47,6 +53,17 @@ describe('applyStoredTheme', () => {
 
   it('treats missing matchMedia as light', () => {
     applyStoredTheme(document.documentElement, { getItem: () => null }, undefined);
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+    expect(document.documentElement.getAttribute('data-mode')).toBe('light');
+  });
+
+  it('treats a throwing media query read as light preference', () => {
+    const media = {
+      get matches(): boolean {
+        throw new Error('unsupported');
+      },
+    } as Pick<MediaQueryList, 'matches'>;
+    applyStoredTheme(document.documentElement, { getItem: () => null }, media);
     expect(document.documentElement.classList.contains('dark')).toBe(false);
     expect(document.documentElement.getAttribute('data-mode')).toBe('light');
   });

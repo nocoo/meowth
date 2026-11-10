@@ -86,6 +86,18 @@ describe('useAgentsViewModel', () => {
     await Promise.resolve();
   });
 
+  it('ignores rejected fetch after unmount', async () => {
+    let rejectFetch: ((error: unknown) => void) | undefined;
+    const pending = new Promise<Response>((_, reject) => {
+      rejectFetch = reject;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => pending);
+    const { unmount } = renderHook(() => useAgentsViewModel(), { wrapper });
+    unmount();
+    rejectFetch?.(new TypeError('Failed to fetch'));
+    await Promise.resolve();
+  });
+
   it('refresh re-fetches agents', async () => {
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(

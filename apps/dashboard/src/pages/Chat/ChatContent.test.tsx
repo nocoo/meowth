@@ -75,6 +75,13 @@ describe('Chat workspace', () => {
     expect(screen.getByRole('textbox', { name: 'Message' })).toBeEnabled();
   });
 
+  it('shows inbox placeholders when the conversation list is empty', () => {
+    renderContent(makeVM({ conversations: [], search: '' }));
+    expect(screen.getByText('Your conversations will appear here.')).toBeInTheDocument();
+    renderContent(makeVM({ conversations: [], search: 'missing' }));
+    expect(screen.getByText('No conversations found.')).toBeInTheDocument();
+  });
+
   it('wires new chat, search, and conversation selection to the workspace', () => {
     const vm = makeVM({
       conversations: [

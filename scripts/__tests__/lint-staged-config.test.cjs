@@ -16,7 +16,9 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const repoRoot = path.resolve(__dirname, '../..');
+const repoRoot = process.env.MEOWTH_REPO_ROOT
+  ? path.resolve(process.env.MEOWTH_REPO_ROOT)
+  : path.resolve(__dirname, '../..');
 const config = require(path.join(repoRoot, 'lint-staged.config.cjs'));
 const biomeTask = config['{apps,packages}/**/*.{ts,tsx}'].task;
 const goTask = config['daemon/**/*.go'].task;
