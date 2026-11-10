@@ -27,6 +27,14 @@ interface SidebarProps {
   mobile?: boolean;
 }
 
+function SidebarUserAvatar() {
+  return (
+    <Avatar>
+      <AvatarFallback>M</AvatarFallback>
+    </Avatar>
+  );
+}
+
 export function Sidebar({ mobile = false }: SidebarProps) {
   const { collapsed, toggle } = useSidebar();
   const { pathname } = useLocation();
@@ -132,21 +140,11 @@ export function Sidebar({ mobile = false }: SidebarProps) {
         </SidebarNav>
 
         <SidebarFooter>
-          {isCollapsed ? (
-            <Avatar className="h-9 w-9 self-center">
-              <AvatarFallback>M</AvatarFallback>
-            </Avatar>
-          ) : (
-            <SidebarUser
-              name="Meowth"
-              email="Local daemon"
-              avatar={
-                <Avatar className="h-9 w-9 shrink-0">
-                  <AvatarFallback>M</AvatarFallback>
-                </Avatar>
-              }
-            />
-          )}
+          <SidebarUser
+            name="Meowth"
+            email={isCollapsed ? undefined : 'Local daemon'}
+            avatar={<SidebarUserAvatar />}
+          />
         </SidebarFooter>
       </BasaltSidebar>
     </TooltipProvider>
