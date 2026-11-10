@@ -1,4 +1,5 @@
 import {
+  Button,
   ContentIsland,
   Sheet,
   SheetContent,
@@ -20,7 +21,6 @@ import { Outlet, useLocation } from 'react-router';
 import { HexlyLink } from '@/components/HexlyLink';
 import { Github } from '@/components/icons/github';
 import ThemeToggle from '@/components/ThemeToggle';
-import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { activeNavItem } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -78,7 +78,7 @@ function AppShellInner() {
                 ref={menuTriggerRef}
                 type="button"
                 variant="ghost"
-                size="icon-sm"
+                size="icon"
                 onClick={() => setMobileOpen(true)}
                 aria-label="Open navigation"
               >
@@ -92,12 +92,7 @@ function AppShellInner() {
             <>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-basalt-muted-foreground"
-                  >
+                  <Button asChild variant="ghost" size="icon">
                     <a
                       href={GITHUB_REPO_URL}
                       target="_blank"

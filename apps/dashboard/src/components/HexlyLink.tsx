@@ -1,6 +1,4 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from '@nocoo/basalt';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@nocoo/basalt';
 
 export function HexlyIcon({ className }: { className?: string }) {
   return (
@@ -26,12 +24,7 @@ export function HexlyLink({ className }: { className?: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          asChild
-          variant="ghost"
-          size="icon-sm"
-          className={cn('text-basalt-muted-foreground', className)}
-        >
+        <Button asChild variant="ghost" size="icon" className={className}>
           <a
             href="https://hexly.ai/projects/meowth"
             target="_blank"
