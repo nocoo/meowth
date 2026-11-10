@@ -1,0 +1,324 @@
+# macOS 原生槽位作业（由 CI 以 job key quality 调用）；命令与 base-ci quality.yml 解耦。
+on:
+  workflow_call:
+    inputs:
+      slot-l15:
+        description: "Enable L1.5 Worker runtime slot (unused in this repo)"
+        type: boolean
+        default: false
+      slot-p1:
+        description: "Enable P1 package check slot (unused in this repo)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  s1-typecheck:
+    name: "S1: Typecheck"
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
+        with:
+          package-manager: "pnpm"
+          runtime-version: "11.6.0"
+          node-version: "26.12.1"
+          install-policy: "blocked"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: S1 dashboard typecheck
+        run: pnpm dashboard:typecheck
+      - name: S1 daemon vet
+        run: pnpm daemon:vet
+
+  s2-lint:
+    name: "S2: Lint"
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
+        with:
+          package-manager: "pnpm"
+          runtime-version: "11.6.0"
+          node-version: "26.12.1"
+          install-policy: "blocked"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: Install ripgrep
+        run: brew install ripgrep
+      - run: pnpm test:hooks
+      - run: pnpm daemon:fmt:check
+      - run: pnpm daemon:lint
+      - run: pnpm dashboard:fmt:check
+      - run: pnpm dashboard:lint
+      - run: pnpm dashboard:depcruise
+      - run: pnpm scan:dashboard-source
+
+  s3-workflow-lint:
+    name: "S3: Workflow Lint"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install verified actionlint
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
+            -o "$RUNNER_TEMP/actionlint.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+      - name: Validate workflow syntax
+        run: |
+          "${RUNNER_TEMP}/actionlint" .github/workflows/ci.yml .github/workflows/quality-macos.yml
+      - name: Check immutable shared workflow references
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, yaml
+          files = list(pathlib.Path(".github/workflows").glob("*.y*ml"))
+          references = []
+          for path in files:
+              data = yaml.safe_load(path.read_text())
+              for job in data.get("jobs", {}).values():
+                  references.extend(item["uses"] for item in [job, *job.get("steps", [])] if "uses" in item)
+          for ref in references:
+              if ref.startswith("nocoo/base-ci/") and not re.fullmatch(r"nocoo/base-ci/[^@]+@[a-f0-9]{40}", ref):
+                  raise SystemExit(f"Shared CI reference must use a full commit SHA: {ref}")
+          print(f"Validated {len(files)} workflow files and immutable base-ci references")
+          PY
+      - name: Check YAML style
+        run: |
+          python3 -m pip install --quiet "yamllint==1.38.0"
+          yamllint -d "{extends: default, rules: {line-length: disable, document-start: disable, truthy: disable}}" .github/workflows/*.yml
+
+  g1-secret-scan:
+    name: "G1: Secret Scan"
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
+        with:
+          package-manager: "pnpm"
+          runtime-version: "11.6.0"
+          node-version: "26.12.1"
+          install-policy: "blocked"
+      - name: G1 gitleaks detect
+        run: pnpm scan:gitleaks:detect
+
+  g2-dependency-vulnerabilities:
+    name: "G2: Dependency Vulnerabilities"
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
+        with:
+          package-manager: "pnpm"
+          runtime-version: "11.6.0"
+          node-version: "26.12.1"
+          install-policy: "blocked"
+      - name: Install osv-scanner
+        run: brew install osv-scanner
+      - name: G2 OSV lockfile scan
+        run: pnpm scan:osv
+      - name: G2 govulncheck
+        run: pnpm scan:govulncheck
+
+  b1-build:
+    name: "B1: Build"
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
+        with:
+          package-manager: "pnpm"
+          runtime-version: "11.6.0"
+          node-version: "26.12.1"
+          install-policy: "blocked"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: B1 pnpm daemon:build darwin/arm64
+        env:
+          GOOS: darwin
+          GOARCH: arm64
+        run: pnpm daemon:build
+      - name: B1 pnpm daemon:build darwin/amd64
+        env:
+          GOOS: darwin
+          GOARCH: amd64
+        run: pnpm daemon:build
+
+  l1-unit-tests:
+    name: "L1: Unit Tests & Coverage"
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
+        with:
+          package-manager: "pnpm"
+          runtime-version: "11.6.0"
+          node-version: "26.12.1"
+          install-policy: "blocked"
+      - name: Install ripgrep
+        run: brew install ripgrep
+      - name: L1 daemon unit tests and coverage
+        run: pnpm daemon:test:cover && pnpm daemon:cover:check
+      - name: L1 dashboard unit tests and coverage
+        run: pnpm dashboard:test:cover && pnpm dashboard:cover:check
+
+  l15-worker-runtime:
+    name: "L1.5: Worker Runtime Tests"
+    if: inputs.slot-l15
+    runs-on: macos-26
+    steps:
+      - run: echo "槽位不适用：非 Cloudflare Worker 项目"
+
+  l2-api-e2e:
+    name: "L2: API E2E"
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
+        with:
+          package-manager: "pnpm"
+          runtime-version: "11.6.0"
+          node-version: "26.12.1"
+          install-policy: "blocked"
+      - name: L2 daemon HTTP/CLI matrices (fake backends)
+        run: pnpm test:l2
+      - name: L2 embedded dashboard serving
+        run: pnpm daemon:build && pnpm test:l2:embed
+
+  l3-browser-e2e:
+    name: "L3: Browser E2E"
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup JS and dependencies
+        uses: nocoo/base-ci/.github/actions/setup-js@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
+        with:
+          package-manager: "pnpm"
+          runtime-version: "11.6.0"
+          node-version: "26.12.1"
+          install-policy: "blocked"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/dashboard/package.json') }}
+      - name: L3 install Playwright browsers
+        run: pnpm --filter @meowth/dashboard e2e:install
+      - name: L3 Playwright (UI + embed + embed-mint)
+        run: pnpm --filter @meowth/dashboard e2e --project=dashboard-ui --project=dashboard-embed --project=dashboard-embed-mint
+
+  p1-package-check:
+    name: "P1: Package Check"
+    if: inputs.slot-p1
+    runs-on: macos-26
+    steps:
+      - run: echo "槽位不适用：private 包不发布 npm"
+
+  # 槽位外（docs/features/06-experimental-windows.md）
+  compile-windows:
+    name: compile-windows
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: compile daemon for windows/amd64
+        working-directory: daemon
+        env:
+          GOOS: windows
+          GOARCH: amd64
+        run: go test -exec true ./...
+      - name: compile daemon for windows/arm64
+        working-directory: daemon
+        env:
+          GOOS: windows
+          GOARCH: arm64
+        run: go test -exec true ./...
+
+  z1-gate:
+    name: "Z1: Gate"
+    runs-on: ubuntu-latest
+    needs:
+      - s1-typecheck
+      - s2-lint
+      - s3-workflow-lint
+      - g1-secret-scan
+      - g2-dependency-vulnerabilities
+      - b1-build
+      - l1-unit-tests
+      - l15-worker-runtime
+      - l2-api-e2e
+      - l3-browser-e2e
+      - p1-package-check
+      - compile-windows
+    if: always()
+    steps:
+      - name: Z1 aggregate slot jobs
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          skip_ok = {"l15-worker-runtime", "p1-package-check"}
+          bad = [
+              job
+              for job, meta in needs.items()
+              if meta.get("result") != "success"
+              and not (job in skip_ok and meta.get("result") == "skipped")
+          ]
+          if bad:
+              print("CI jobs not successful:", ", ".join(bad))
+              sys.exit(1)
+          print("All required CI jobs succeeded.")
+          PY
