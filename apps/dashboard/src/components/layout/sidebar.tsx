@@ -113,14 +113,7 @@ export function Sidebar({ mobile = false }: SidebarProps) {
                 </Tooltip>
               ))
             : NAV_GROUPS.map((group) => (
-                <SidebarGroup
-                  key={group.label}
-                  label={
-                    <span data-testid={`sidebar-group-label-${group.label.toLowerCase()}`}>
-                      {group.label}
-                    </span>
-                  }
-                >
+                <SidebarGroup key={group.label} label={group.label}>
                   {group.items.map((item) => (
                     <SidebarItem
                       key={item.to}

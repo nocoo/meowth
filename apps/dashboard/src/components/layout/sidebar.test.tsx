@@ -83,8 +83,8 @@ describe('Sidebar (Stage B1)', () => {
 
   it('expanded mode renders group labels: Dashboard + System', () => {
     renderSidebar();
-    expect(screen.getByTestId('sidebar-group-label-dashboard')).toHaveTextContent('Dashboard');
-    expect(screen.getByTestId('sidebar-group-label-system')).toHaveTextContent('System');
+    expect(screen.getByRole('button', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'System' })).toBeInTheDocument();
   });
 
   it('collapsed mode hides the version pill and group labels (icon rail only)', async () => {
@@ -92,8 +92,8 @@ describe('Sidebar (Stage B1)', () => {
     renderSidebar();
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
     expect(screen.queryByTestId('sidebar-version-pill')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('sidebar-group-label-dashboard')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('sidebar-group-label-system')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Dashboard' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'System' })).not.toBeInTheDocument();
   });
 
   it('collapsed mode keeps the logo in place at the top (does not jump out)', async () => {
