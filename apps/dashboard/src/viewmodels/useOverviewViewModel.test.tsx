@@ -57,6 +57,54 @@ describe('useOverviewViewModel', () => {
     await waitFor(() => expect(result.current.status.kind).toBe('error'));
   });
 
+  it('includes null health when healthz fails while other data loads', async () => {
+    let call = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      call += 1;
+      const url = String(input);
+      if (call === 1 || url.includes('healthz')) {
+        return new Response('', { status: 503 });
+      }
+      if (url.includes('tokens')) {
+        return new Response(JSON.stringify({ tokens: [{ id: 't1' }] }), { status: 200 });
+      }
+      if (url.includes('sessions')) {
+        return new Response(JSON.stringify({ sessions: [] }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ agents: [] }), { status: 200 });
+    });
+    const { result } = renderHook(() => useOverviewViewModel(), { wrapper });
+    await waitFor(() => expect(result.current.status.kind).toBe('ready'));
+    if (result.current.status.kind === 'ready') {
+      expect(result.current.status.data.health).toBeNull();
+    }
+  });
+
+  it('does not update state after unmount while requests are in flight', async () => {
+    let resolveFetch: ((value: Response) => void) | undefined;
+    const pending = new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => pending);
+    const { unmount } = renderHook(() => useOverviewViewModel(), { wrapper });
+    unmount();
+    resolveFetch?.(new Response(JSON.stringify({ tokens: [] }), { status: 200 }));
+    await Promise.resolve();
+  });
+
+  it('stays loading when listTokens returns 401', async () => {
+    window.localStorage.setItem('meowth_token', 'mwt_something');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ type: '/problems/unauthorized', title: 'Unauthorized', status: 401 }),
+        { status: 401 },
+      ),
+    );
+    const { result } = renderHook(() => useOverviewViewModel(), { wrapper });
+    await waitFor(() => expect(window.localStorage.getItem('meowth_token')).toBeNull());
+    expect(result.current.status.kind).toBe('loading');
+  });
+
   it('refresh re-runs the fetches', async () => {
     mockResponses();
     const spy = vi.spyOn(globalThis, 'fetch');

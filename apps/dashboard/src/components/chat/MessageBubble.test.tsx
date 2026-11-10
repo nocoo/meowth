@@ -114,6 +114,22 @@ describe('MessageBubble dispatch (§5.1)', () => {
     expect(screen.getByRole('link')).toHaveAttribute('href', '/sessions/sid-tu');
   });
 
+  it('renders tool-result expanded when requested', () => {
+    const output = 'expanded output';
+    render(
+      <MemoryRouter>
+        <MessageBubble
+          envelope={makeEnvelope({
+            type: 'message',
+            payload: { kind: 'tool-result', output },
+          })}
+          expanded
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(output)).toBeInTheDocument();
+  });
+
   it('message.kind=tool-result → output is collapsed initially', () => {
     renderBubble(
       makeEnvelope({
@@ -233,6 +249,37 @@ describe('MessageBubble dispatch (§5.1)', () => {
       }),
     );
     expect(screen.getByText(/Cancelled/)).toBeInTheDocument();
+  });
+
+  it('session_ended failed with an error string appends the error text', () => {
+    renderBubble(
+      makeEnvelope({
+        type: 'session_ended',
+        payload: { status: 'failed', error: 'disk full' },
+      }),
+    );
+    expect(screen.getByText('Failed: disk full')).toBeInTheDocument();
+  });
+
+  it('session_ended completed with duration_ms appends formatted duration', () => {
+    renderBubble(
+      makeEnvelope({
+        type: 'session_ended',
+        payload: { status: 'completed', duration_ms: 90_000 },
+      }),
+    );
+    expect(screen.getByText('Completed in 90.0s')).toBeInTheDocument();
+  });
+
+  it('session_ended ignores non-numeric duration_ms', () => {
+    renderBubble(
+      makeEnvelope({
+        type: 'session_ended',
+        payload: { status: 'completed', duration_ms: 'nope' },
+      }),
+    );
+    expect(screen.getByText('Completed')).toBeInTheDocument();
+    expect(screen.queryByText(/in /)).toBeNull();
   });
 
   it('session_ended completed without duration_ms → prefix only, no "in"', () => {

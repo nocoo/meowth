@@ -94,6 +94,28 @@ describe('AuthGate', () => {
     expect(attempt).toBeGreaterThanOrEqual(2);
   });
 
+  it('redirects to /setup when the stored token is an empty string', async () => {
+    window.localStorage.setItem(TOKEN_KEY, '');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    render(harness());
+    await waitFor(() => expect(screen.getByTestId('setup-sentinel')).toBeInTheDocument());
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('shows DaemonUnreachable on non-401 ApiError from the probe', async () => {
+    window.localStorage.setItem(TOKEN_KEY, `mwt_${'E'.repeat(39)}`);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ type: '/problems/x', title: 'Bad gateway', status: 502 }), {
+        status: 502,
+      }),
+    );
+    render(harness());
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Daemon unreachable' })).toBeInTheDocument(),
+    );
+    expect(window.localStorage.getItem(TOKEN_KEY)).not.toBeNull();
+  });
+
   it('does not render protected children while the probe is in flight', async () => {
     window.localStorage.setItem(TOKEN_KEY, `mwt_${'D'.repeat(39)}`);
     let resolveFetch: ((value: Response) => void) | undefined;

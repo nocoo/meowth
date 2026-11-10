@@ -53,6 +53,31 @@ describe('useSessionsViewModel', () => {
     }
   });
 
+  it('surfaces problem.title on non-401 ApiError', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ type: '/problems/x', title: 'List failed', status: 500 }), {
+        status: 500,
+      }),
+    );
+    const { result } = renderHook(() => useSessionsViewModel(), { wrapper });
+    await waitFor(() => expect(result.current.status.kind).toBe('error'));
+    if (result.current.status.kind === 'error') {
+      expect(result.current.status.message).toBe('List failed');
+    }
+  });
+
+  it('ignores list results after unmount', async () => {
+    let resolveFetch: ((value: Response) => void) | undefined;
+    const pending = new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => pending);
+    const { unmount } = renderHook(() => useSessionsViewModel(), { wrapper });
+    unmount();
+    resolveFetch?.(new Response(JSON.stringify({ sessions: [] }), { status: 200 }));
+    await Promise.resolve();
+  });
+
   it('refresh re-fetches sessions', async () => {
     const spy = vi
       .spyOn(globalThis, 'fetch')

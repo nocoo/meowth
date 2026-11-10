@@ -57,6 +57,35 @@ describe('useAgentsViewModel', () => {
     }
   });
 
+  it('stays loading on 401 without surfacing an error', async () => {
+    window.localStorage.setItem('meowth_token', 'mwt_something');
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ type: '/problems/unauthorized', title: 'Unauthorized', status: 401 }),
+        { status: 401 },
+      ),
+    );
+    const { result } = renderHook(() => useAgentsViewModel(), { wrapper });
+    await waitFor(() => expect(window.localStorage.getItem('meowth_token')).toBeNull());
+    expect(result.current.status.kind).toBe('loading');
+  });
+
+  it('does not apply fetch results after unmount', async () => {
+    let resolveFetch: ((value: Response) => void) | undefined;
+    const pending = new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => pending);
+    const { unmount } = renderHook(() => useAgentsViewModel(), { wrapper });
+    unmount();
+    resolveFetch?.(
+      new Response(JSON.stringify({ agents: [] }), {
+        status: 200,
+      }),
+    );
+    await Promise.resolve();
+  });
+
   it('refresh re-fetches agents', async () => {
     const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(

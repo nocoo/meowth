@@ -58,18 +58,18 @@ G2 requires dependency and secret scans, with missing required scanners failing.
 
 | Dimension | Status | Required proof and current evidence/gap |
 |---|---|---|
-| L1 — complete unified contract | planned | Required: all four coverage metrics ≥95%, check-only strict static lanes, installed index-snapshot hook with proven rejection, under 30s. Current gaps: no index-snapshot hook; local pre-commit autofixes instead of check-only; snapshot scope, rejection proof and timing are unverified. Subcheck rows below describe current configuration. |
-| L1 subcheck — Go coverage | planned | Hooks/CI gate package statement coverage at 95% with 15 frozen lower floors (69–94%). Other metrics and full 95% remain gaps; do not lower/add baselines. |
-| L1 subcheck — TypeScript coverage | planned | Dashboard/shared collect four metrics, but the shell gate checks per-file statements with frozen 82/87 floors and structural exemptions. Require all four 95% without weakening floors. |
-| L1 subcheck — static lanes (former G1) | enforced in CI, gap locally | CI runs daemon fmt/vet/golangci-lint and dashboard format/lint/types/dependency boundaries/source checks as check-only gates. Local pre-commit still autofixes staged source, so the local check-only lane is not enforced; unified L1 remains planned. |
+| L1 — complete unified contract | partial (B→A) | Pre-commit runs `scripts/hooks/pre-commit-l1.sh` on a `git checkout-index` snapshot: staged gitleaks, hook contract tests, check-only `daemon:g1` + `dashboard:g1`, parallel UT + package coverage gates, and merged TypeScript four-metric gate (`scripts/check-l1-ts-four-metrics.sh`). Rejection cases are proven in `scripts/__tests__/pre-commit-l1.test.cjs`. **Attainment gap:** merged TS branches `93.97%` (floor `95%`) as of last `pnpm dashboard:test:cover`; statements/functions/lines meet `95%`. **Timing gap:** full L1 pre-commit is ~90–120s warm (not <30s). Go branch/function/line metrics are not measured natively. |
+| L1 subcheck — Go coverage | partial | Pre-commit/CI gate per-package **statement** coverage at 95% with frozen baseline floors (69–94%). Branches/functions/lines unmeasured — reported as a native-tool gap. |
+| L1 subcheck — TypeScript coverage | partial | Four-metric merged gate at 95% on vitest scope (structural exempt list aligned with `check-dashboard-coverage.sh`). Branches still below floor until lifted; per-file statement baselines (82/87) remain on pre-push/CI package gate. |
+| L1 subcheck — static lanes (former G1) | enforced locally + CI | Pre-commit snapshot runs check-only fmt/lint/types/depcruise/source scans (no autofix). `MEOWTH_PRECOMMIT_SKIP_L1=1` keeps lint-staged-only for hook harness fixtures. |
 | L2 HTTP / CLI | planned | `test:l2` runs five real local daemon/CLI matrices with fake agent backends; `test:l2:embed` checks embedded serving. Complete 100% route/command mapping is not yet enforced. |
 | L3 dashboard / CLI | planned | CI runs UI, embed and mint Playwright projects; the dev project and real-agent Chat lane are separate. Require complete page/CLI workflow proof; real providers remain explicitly manual. |
 | G2 | enforced | Pre-push/CI scan pnpm/Go dependencies and secrets through OSV, govulncheck and gitleaks. |
 | D1 | planned | Homes and DB markers separate test/prod; L2 creates unique child homes. Arbitrary test-home overrides and browser marker-file cleanup lack canonical-path ownership guards; static `scan:d1` alone is insufficient. |
 
-Pre-commit currently runs lint-staged only (Biome/gofmt autofix for source). Pre-push runs vet/types, both coverage gates, L2 and G2 sequentially; it does not build the dashboard. CI supplies broader static/build/L3. Existing hooks do not check index/push-ref snapshots.
+Pre-commit enforces unified L1 on the Git index snapshot (`git checkout-index`). Pre-push still runs vet/types, package coverage gates, L2 and G2 sequentially. CI supplies broader static/build/L3.
 
-Target hooks: pre-commit checks unified L1 (coverage plus static lanes) against the index snapshot (`git checkout-index`) in <30s; pre-push checks L2 and G2 in parallel against every stdin push ref/commit in <3min, plus build where applicable. L3 runs in CI or an explicit manual lane.
+Target hooks: pre-commit unified L1 **under 30s** on ordinary commits (timing gap open); pre-push checks L2 and G2 in parallel against every stdin push ref/commit in <3min, plus build where applicable. L3 runs in CI or an explicit manual lane. Close TS branch coverage to ≥95% before claiming S-tier L1 attainment.
 Never bypass commit/push hooks, force-push, or use autofix in checks. Documentation changes do not authorize deploying or implementing new gates. The owner merged former G1 into L1 on 2026-09-21; the framework keeps the 6DQ name.
 
 ## Resources / Isolation
