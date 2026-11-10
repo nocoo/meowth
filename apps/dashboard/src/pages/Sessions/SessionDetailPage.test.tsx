@@ -53,6 +53,7 @@ describe('SessionDetailPage (shell, Stage C3b)', () => {
     mockUseDetail.mockImplementation((sid: string) => vmFor(sid, { kind: 'loading' }));
     renderShellAt();
     expect(screen.getByRole('heading', { level: 1, name: 'Session' })).toBeInTheDocument();
+    expect(screen.getByText('Session')).toHaveAttribute('id', 'session-detail-heading');
   });
 
   it('loading branch renders the SessionDetailSkeleton (no content yet)', () => {
