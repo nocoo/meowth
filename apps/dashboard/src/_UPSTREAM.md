@@ -25,7 +25,6 @@ These connect Basalt controls to Meowth's layout and behavior:
 - `components/ui/skeleton.tsx` — pulse placeholder
 - `components/ui/empty-state.tsx` — LayerCard.Empty adapter
 - `components/ui/button.tsx` — size map (`xs` / `icon-sm`)
-- `components/ui/page-header.tsx` — headingId adapter
 - `components/ThemeToggle.tsx` — `meowth_theme` two-state storage
 - `components/SecretReveal.tsx` — token one-shot reveal (architecture/07)
 - Chat bubbles / composer / AgentPicker
