@@ -18,7 +18,7 @@ jobs:
           uname -m
           sw_vers
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
+        uses: nocoo/base-ci/.github/actions/setup-js@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -49,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
+        uses: nocoo/base-ci/.github/actions/setup-js@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -96,7 +96,7 @@ jobs:
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
+        uses: nocoo/base-ci/.github/actions/setup-js@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -110,7 +110,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
+        uses: nocoo/base-ci/.github/actions/setup-js@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -131,7 +131,7 @@ jobs:
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
+        uses: nocoo/base-ci/.github/actions/setup-js@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -149,7 +149,7 @@ jobs:
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
+        uses: nocoo/base-ci/.github/actions/setup-js@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -163,7 +163,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
+        uses: nocoo/base-ci/.github/actions/setup-js@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -193,7 +193,7 @@ jobs:
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
+        uses: nocoo/base-ci/.github/actions/setup-js@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -214,7 +214,7 @@ jobs:
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
+        uses: nocoo/base-ci/.github/actions/setup-js@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
