@@ -56,6 +56,7 @@ describe('TokensPage (shell, Stage C4)', () => {
     mockUseTokens.mockReturnValue(vmFor({ status: { kind: 'loading' } }));
     render(<TokensPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Tokens' })).toBeInTheDocument();
+    expect(screen.getByText('Tokens')).toHaveAttribute('id', 'tokens-heading');
     expect(screen.getByRole('button', { name: 'Create token' })).toBeInTheDocument();
   });
 
