@@ -59,6 +59,18 @@ describe('useSettingsViewModel', () => {
     await Promise.resolve();
   });
 
+  it('ignores rejected healthz fetch after unmount', async () => {
+    let rejectFetch: ((error: unknown) => void) | undefined;
+    const pending = new Promise<Response>((_, reject) => {
+      rejectFetch = reject;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => pending);
+    const { unmount } = renderHook(() => useSettingsViewModel(), { wrapper });
+    unmount();
+    rejectFetch?.(new TypeError('Failed to fetch'));
+    await Promise.resolve();
+  });
+
   it('does not surface an error when healthz returns 401', async () => {
     window.localStorage.setItem('meowth_token', 'mwt_something');
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(

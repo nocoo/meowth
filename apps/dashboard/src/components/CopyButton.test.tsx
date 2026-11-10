@@ -53,6 +53,29 @@ describe('CopyButton', () => {
     vi.useRealTimers();
   });
 
+  it('uses icon-only titles for copied and error states', async () => {
+    const writeText = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('denied'));
+    stubClipboard(writeText);
+    render(<CopyButton text="payload" label="Copy payload" iconOnly />);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy payload' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Copy payload' })).toHaveAttribute(
+        'title',
+        'Copied',
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Copy payload' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Copy payload' })).toHaveAttribute(
+        'title',
+        'Copy failed · Retry',
+      ),
+    );
+  });
+
   it('keeps the feedback out of the button title when the label is visible', () => {
     stubClipboard(vi.fn().mockResolvedValue(undefined));
     render(<CopyButton text="hello" label="Copy response" iconOnly />);

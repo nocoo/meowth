@@ -131,6 +131,18 @@ describe('agent availability', () => {
     await act(async () => resolve(Response.json({ agents: AGENTS })));
     expect(result.current.agentsStatus.kind).toBe('loading');
   });
+
+  it('ignores rejected availability fetch after unmount', async () => {
+    let reject: (error: unknown) => void = () => undefined;
+    vi.spyOn(globalThis, 'fetch').mockReturnValue(
+      new Promise((_, done) => {
+        reject = done;
+      }),
+    );
+    const { unmount } = renderHook(() => useChatViewModel(), { wrapper });
+    unmount();
+    await act(async () => reject(new TypeError('Failed to fetch')));
+  });
 });
 
 describe('streaming and continuation', () => {

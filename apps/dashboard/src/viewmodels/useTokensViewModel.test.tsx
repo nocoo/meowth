@@ -256,4 +256,16 @@ describe('useTokensViewModel', () => {
       expect(result.current.status.message).toBe('still in use');
     }
   });
+
+  it('ignores rejected token list fetch after unmount', async () => {
+    let rejectFetch: ((error: unknown) => void) | undefined;
+    const pending = new Promise<Response>((_, reject) => {
+      rejectFetch = reject;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => pending);
+    const { unmount } = renderHook(() => useTokensViewModel(), { wrapper });
+    unmount();
+    rejectFetch?.(new TypeError('Failed to fetch'));
+    await Promise.resolve();
+  });
 });

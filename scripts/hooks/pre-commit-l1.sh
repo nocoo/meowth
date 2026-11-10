@@ -81,6 +81,8 @@ export PATH="$snapshot/node_modules/.bin:${PATH:-}"
 
 cd "$snapshot"
 
+export MEOWTH_REPO_ROOT="$repo"
+
 echo "pre-commit: hook contract tests"
 pnpm test:hooks
 

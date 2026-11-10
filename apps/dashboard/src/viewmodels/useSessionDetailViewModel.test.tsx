@@ -212,4 +212,28 @@ describe('useSessionDetailViewModel', () => {
     act(() => result.current.refresh());
     await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(before));
   });
+
+  it('ignores session snapshot results after unmount', async () => {
+    let resolveFetch: ((value: Response) => void) | undefined;
+    const pending = new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => pending);
+    const { unmount } = renderHook(() => useSessionDetailViewModel(SID), { wrapper });
+    unmount();
+    resolveFetch?.(new Response(JSON.stringify({ id: SID }), { status: 200 }));
+    await Promise.resolve();
+  });
+
+  it('ignores rejected session fetch after unmount', async () => {
+    let rejectFetch: ((error: unknown) => void) | undefined;
+    const pending = new Promise<Response>((_, reject) => {
+      rejectFetch = reject;
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => pending);
+    const { unmount } = renderHook(() => useSessionDetailViewModel(SID), { wrapper });
+    unmount();
+    rejectFetch?.(new TypeError('Failed to fetch'));
+    await Promise.resolve();
+  });
 });
