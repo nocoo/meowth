@@ -2,7 +2,10 @@
 # na L1.5, P1 (skipped)。检查名前缀 quality / 与 fan-out 一致；命令逻辑不变。nocoo/base-ci v2026.12。
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
