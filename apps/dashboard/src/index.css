@@ -3,8 +3,6 @@
 @import "@nocoo/basalt/styles/tailwind";
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 @layer base {
   html,
   body,
@@ -25,9 +23,5 @@
     font-family:
       var(--basalt-font-sans), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
       "Noto Sans SC", sans-serif;
-  }
-
-  * {
-    @apply border-basalt-border;
   }
 }

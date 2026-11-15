@@ -1,8 +1,7 @@
-import { Button, Input } from '@nocoo/basalt';
+import { Button, Input, ThemeToggle } from '@nocoo/basalt';
+import { HexlyLink } from '@nocoo/basalt/components/app-header';
 import { Field } from '@nocoo/basalt/components/field';
 import { useId, useState } from 'react';
-import { HexlyLink } from '@/components/HexlyLink';
-import ThemeToggle from '@/components/ThemeToggle';
 import { Notice } from '@/components/ui/notice';
 import useSetupViewModel from '@/viewmodels/useSetupViewModel';
 
@@ -89,7 +88,7 @@ export default function SetupPage() {
     <div className="bg-basalt-background relative flex min-h-dvh flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-0" style={{ background: RADIAL_GLOW }} />
       <div className="absolute top-4 right-4 z-10 flex items-center gap-1">
-        <HexlyLink />
+        <HexlyLink project="meowth" name="Meowth" />
         <ThemeToggle />
       </div>
 
@@ -97,7 +96,7 @@ export default function SetupPage() {
         <div className="flex flex-col items-center">
           <div
             data-basalt-surface-root=""
-            className="bg-basalt-card ring-black/[0.08] dark:ring-white/[0.06] relative flex aspect-[54/86] w-72 flex-col overflow-hidden rounded-2xl ring-1"
+            className="bg-basalt-card ring-black/[0.08] basalt-dark:ring-white/[0.06] relative flex aspect-[54/86] w-72 flex-col overflow-hidden rounded-2xl ring-1"
             style={{ boxShadow: BADGE_SHADOW }}
           >
             <div className="bg-basalt-primary px-5 py-4">

@@ -138,7 +138,9 @@ for (const theme of ['light', 'dark'] as const) {
       expect(positions).toHaveLength(6);
       expect(new Set(positions.map((position) => position.x)).size).toBe(1);
       for (const icon of positions) {
-        expect([icon.width, icon.height, icon.stroke]).toEqual([16, 16, '1.5']);
+        // Basalt 3.3.6 sidebar rows size their first-child svg at
+        // --basalt-size-sidebar-brand-slot (20px), overriding h-4/w-4.
+        expect([icon.width, icon.height, icon.stroke]).toEqual([20, 20, '1.5']);
       }
       await expect(page.getByRole('button', { name: 'Refresh page data' })).toHaveCount(0);
       const toolbar = [

@@ -3,19 +3,16 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { Sidebar } from './sidebar';
-import { SidebarProvider } from './sidebar-context';
 
 function renderSidebar(opts: { mobile?: boolean; route?: string } = {}) {
   return render(
     <MemoryRouter initialEntries={[opts.route ?? '/overview']}>
-      <SidebarProvider>
-        <Sidebar mobile={opts.mobile ?? false} />
-      </SidebarProvider>
+      <Sidebar mobile={opts.mobile ?? false} />
     </MemoryRouter>,
   );
 }
 
-describe('Sidebar (Stage B1)', () => {
+describe('Sidebar (basalt 3.3.6 rail)', () => {
   it('renders the five product nav items in expanded desktop state', () => {
     renderSidebar();
     for (const label of ['Overview', 'Agents', 'Sessions', 'Tokens', 'Settings']) {
@@ -23,7 +20,7 @@ describe('Sidebar (Stage B1)', () => {
     }
   });
 
-  it('marks the active route with aria-current', async () => {
+  it('marks the active route with aria-current', () => {
     renderSidebar({ route: '/agents' });
     const active = screen.getByRole('button', { name: 'Agents' });
     expect(active).toHaveAttribute('aria-current', 'page');
@@ -45,18 +42,7 @@ describe('Sidebar (Stage B1)', () => {
 
   it('expanded user section shows the "Meowth" name and "Local daemon" subtitle', () => {
     renderSidebar();
-    // "Meowth" also appears in the header brand + logo alt-text; the
-    // user section specifically pairs it with the "Local daemon"
-    // subtitle, so assert the subtitle here and rely on the
-    // brand/header tests above for the name.
     expect(screen.getByText('Local daemon')).toBeInTheDocument();
-  });
-
-  it('mobile mode disables the desktop chrome (no sticky h-screen, no toggle)', () => {
-    renderSidebar({ mobile: true });
-    expect(screen.queryByRole('button', { name: 'Collapse sidebar' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Expand sidebar' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
   });
 
   it('desktop expanded mode exposes a "Collapse sidebar" toggle button', () => {
@@ -69,49 +55,26 @@ describe('Sidebar (Stage B1)', () => {
     expect(screen.getByRole('complementary', { name: 'Primary navigation' })).toBeInTheDocument();
   });
 
-  it('expanded mode renders the version pill (v<APP_VERSION>)', () => {
-    renderSidebar();
-    const pill = screen.getByTestId('sidebar-version-pill');
-    expect(pill).toBeInTheDocument();
-    expect(pill.textContent ?? '').toMatch(/^v\S+$/);
+  it('expanded mode renders the SidebarBrand version badge (v<APP_VERSION>)', () => {
+    const { container } = renderSidebar();
+    const badge = container.querySelector('[data-slot="sidebar-brand-version"]');
+    expect(badge).toBeTruthy();
+    expect(badge?.textContent ?? '').toMatch(/^v\S+$/);
   });
 
-  it('mobile mode also renders the version pill', () => {
-    renderSidebar({ mobile: true });
-    expect(screen.getByTestId('sidebar-version-pill')).toBeInTheDocument();
+  it('mobile mode renders the version badge and a dismiss control instead of collapse', () => {
+    const { container } = renderSidebar({ mobile: true });
+    expect(container.querySelector('[data-slot="sidebar-brand-version"]')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Collapse sidebar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Expand sidebar' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close navigation' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
   });
 
   it('expanded mode renders group labels: Dashboard + System', () => {
     renderSidebar();
     expect(screen.getByRole('button', { name: 'Dashboard' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'System' })).toBeInTheDocument();
-  });
-
-  it('collapsed mode hides the version pill and group labels (icon rail only)', async () => {
-    const user = userEvent.setup();
-    renderSidebar();
-    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
-    expect(screen.queryByTestId('sidebar-version-pill')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Dashboard' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'System' })).not.toBeInTheDocument();
-  });
-
-  it('collapsed mode keeps the logo in place at the top (does not jump out)', async () => {
-    const user = userEvent.setup();
-    renderSidebar();
-    // Expanded logo is also rendered; after collapse we still expect the
-    // Meowth-named image to be in the DOM (now in the collapsed header).
-    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
-    expect(screen.getByAltText('Meowth')).toBeInTheDocument();
-  });
-
-  it('collapsed rows stay reachable through tooltip composition', async () => {
-    const user = userEvent.setup();
-    renderSidebar();
-    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
-    for (const label of ['Overview', 'Agents', 'Sessions', 'Tokens', 'Settings']) {
-      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
-    }
   });
 
   it('collapses a group from its label', async () => {
@@ -124,6 +87,33 @@ describe('Sidebar (Stage B1)', () => {
     expect(screen.queryByRole('button', { name: 'Overview' })).not.toBeInTheDocument();
     await user.click(dashboard);
     expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
+  });
+
+  it('collapsing the rail marks the sidebar data-collapsed (brand copy hides via library CSS)', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    const rail = screen.getByRole('complementary', { name: 'Primary navigation' });
+    expect(rail).not.toHaveAttribute('data-collapsed');
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    expect(rail).toHaveAttribute('data-collapsed', '');
+    expect(screen.queryByRole('button', { name: 'Dashboard' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'System' })).not.toBeInTheDocument();
+  });
+
+  it('collapsed mode keeps the logo in place at the top (does not jump out)', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    expect(screen.getByAltText('Meowth')).toBeInTheDocument();
+  });
+
+  it('collapsed rows stay reachable through tooltip composition', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    for (const label of ['Overview', 'Agents', 'Sessions', 'Tokens', 'Settings']) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+    }
   });
 
   it('collapsed mode renders the flat icon rail with all five nav items + Expand button', async () => {

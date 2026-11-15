@@ -2,7 +2,7 @@
 
 > **更新规则**：本文档定义 `apps/dashboard/` 的目录结构、basalt 接入、Vite + Tailwind v4 + React 19 工程接入、MVVM 三段式分层、核心页面 + `/setup` 入口判定。
 > 任何 dashboard 目录拓扑、basalt 接入方式、MVVM 边界、`/setup` 决策树的改动，必须先回到这里更新，再向下推进。
-> Chrome 与常见控件现从 **`@nocoo/basalt@3.2.1` npm 包**导入（2026-10-24 由 2.2.0 升级；`patches/@nocoo__basalt@3.2.1.patch` 继续修正 composer 停止按钮的默认动作）（[`features/07`](../features/07-dashboard-basalt-package.md)）。下文 §4 的 source-copy 清单是历史记录，不再是落地路径。
+> Chrome 与常见控件现从 **`@nocoo/basalt@3.3.6` npm 包**导入（2026-11-15 由 3.2.1 升级，壳层同步迁移到 basalt 原生 `SidebarDrawer` / `SidebarBrand` / `SidebarToggle` / `ProjectLinks` / `ThemeToggle`；`patches/@nocoo__basalt@3.3.6.patch` 继续修正 composer 停止按钮的默认动作）（[`features/07`](../features/07-dashboard-basalt-package.md)）。下文 §4 的 source-copy 清单是历史记录，不再是落地路径。
 > 历史在 `git log -- docs/architecture/06-dashboard-mvvm-and-basalt.md`。
 
 > 上层依据：[`docs/01-project-overview.md`](../01-project-overview.md) §7.5、§9.2 Phase 3.13–3.20。
@@ -115,12 +115,11 @@ apps/dashboard/
     │   │   ├── table.tsx            meowth-only table (Basalt has DataTable only)
     │   │   └── ...
     │   ├── layout/
-    │   │   ├── app-shell.tsx        Basalt AppShell / AppHeader / ContentIsland
-    │   │   ├── sidebar.tsx          Basalt Sidebar rail; collapsed logo pl-6
-    │   │   ├── sidebar-context.tsx  collapsed + mobileOpen
+    │   │   ├── app-shell.tsx        Basalt AppShell / AppHeader / SidebarDrawer / ContentIsland
+    │   │   ├── sidebar.tsx          Basalt Sidebar rail（SidebarBrand + SidebarToggle + SidebarUser）
+    │   │   ├── mobile-nav-context.tsx  mobileOpen only（collapsed 由 basalt SidebarProvider 持有）
     │   │   └── index.ts
     │   ├── StatCard.tsx             Overview metric LayerCard
-    │   ├── ThemeToggle.tsx          meowth-local; storage key meowth_theme
     │   ├── SecretReveal.tsx         meowth-local (see 07)
     │   └── ...
     └── lib/
@@ -335,12 +334,10 @@ Provenance class is **source-derived** because biome reformatted line breaks and
 Meowth-local adaptations on top of the surety triplet (bug-fix Commits 1 + 4):
 
 - `sidebar.tsx` expanded view renders **two nav groups** — `Dashboard` (Overview / Agents / Sessions / Tokens) and `System` (Settings) — driven by `lib/navigation.ts NAV_GROUPS`. Collapsed view stays a flat icon rail driven by `NAV_ITEMS = NAV_GROUPS.flatMap(...)` so the two views cannot drift. Group labels use basalt `SidebarGroup` defaults (no site-side typography overrides). Active-state for `/sessions/:id` is preserved via the `isItemActive(item, pathname)` pure helper (NavLink isActive widens the match without re-implementing it inline).
-- `sidebar.tsx` collapsed view keeps the logo block in place at the top (`h-14 pl-6 pr-3 justify-start`) so the brand mark does not jump when the rail collapses; the collapse/expand toggle sits **below** the logo as its own `h-10 w-10 rounded-lg` control (matches surety).
-- `sidebar.tsx` bottom user section is meowth-local content on the surety footprint: collapsed centers an `h-9 w-9` Avatar with "M" fallback in `py-3`; expanded pairs the same avatar with a two-line static label (`Meowth` / `Local daemon`) in `px-4 py-3 flex gap-3 min-w-0`. meowth has no real user data, so the labels are fixed; surety's `useMe()` + `getDisplayName()` is not pulled in.
-- `app-shell.tsx` header right renders the GitHub repository link before the ThemeToggle:
-  - `<a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">` carrying `<Github className="h-[18px] w-[18px]" strokeWidth={1.5}>` (meowth-local icon at `components/icons/github.tsx`, §4.1.4).
-  - `GITHUB_REPO_URL` is a module-level constant (`https://github.com/nocoo/meowth`); keeping the URL out of the JSX `href=` literal lets the `scripts/check-dashboard-source.sh` rule 1 regex (which cannot distinguish `<a href>` from `<link rel="stylesheet" href>`) pass without weakening the gate. `rel="noopener noreferrer"` blocks `window.opener` access from the new tab.
-- `components/ThemeToggle.tsx` (meowth-local, §4.1.4) is visually aligned to surety's ghost header action: `h-8 w-8 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors`, icon `h-4 w-4 strokeWidth={1.5}`. **Behaviour is unchanged** — the existing two-state light/dark toggle, `meowth_theme` localStorage key, and `prefers-color-scheme` fallback are kept; surety's three-state `system/light/dark` is intentionally **not** adopted.
+- `sidebar.tsx` collapsed view is owned by basalt `SidebarBrand`：mark 固定在 24px 槽位、collapse/expand 由 `SidebarToggle`（expanded 时在 brand action 槽、collapsed 时下移为轨道行）驱动；导航图标由库行类 `[&>svg:first-child]:size-basalt-sidebar-brand-slot`（20px）定尺寸。
+- `sidebar.tsx` bottom user section uses basalt `SidebarUser`：expanded 双行静态标签（`Meowth` / `Local daemon`）+ Avatar "M" fallback；collapsed 自动只渲染头像 + 右侧 tooltip。meowth 无真实用户数据与登出流，故不传 `onSignOut`/`signOutHref`。
+- `app-shell.tsx` header right renders basalt `ProjectLinks`（GitHub + hexly.ai，34px `HeaderAction`，新标签页 + `noopener noreferrer` 由库内置）before the basalt `ThemeToggle`（HeaderAction 形态，system→light→dark 三态循环；`meowth_theme` 存储键与 `lib/theme-init.ts` 预 hydration 不变）。
+- basalt `ThemeToggle` 为库内置控件；meowth 不再维护本地 ThemeToggle。
 
 #### 4.1.3 G1 + G2 primitives — surety source-derived inventory
 
@@ -514,7 +511,7 @@ basalt 当前没有 `text-h1` / `text-h2` 等 6 typography utility token。dashb
 
 ### 5.4 配色
 
-basalt 已包含 light/dark 两套（`@custom-variant dark (&:where(.dark, .dark *))`）。dashboard 通过 meowth-local `ThemeToggle.tsx`（§4.1.2 adapted，不 verbatim）复用 basalt 的 dark class / token 约定（`.dark` 触发 `@custom-variant dark` 切换），不修改 token 值。
+basalt 自带 light/dark 两套 token（样式入口内建 `basalt-dark` variant）。dashboard 通过库 `ThemeProvider` / `ThemeToggle` 复用 basalt 的 dark class / token 约定，不重声明 token，也不再维护本地 `@custom-variant dark`。
 
 ---
 

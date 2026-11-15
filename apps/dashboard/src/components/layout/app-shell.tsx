@@ -1,40 +1,25 @@
-import {
-  Button,
-  ContentIsland,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@nocoo/basalt';
-import { AppHeader } from '@nocoo/basalt/components/app-header';
+import { ContentIsland, SidebarDrawer, ThemeToggle } from '@nocoo/basalt';
+import { AppHeader, AppHeaderMenuButton, ProjectLinks } from '@nocoo/basalt/components/app-header';
 import {
   AppMain,
   AppSkipLink,
   AppShell as BasaltAppShell,
 } from '@nocoo/basalt/components/app-shell';
-import { Menu } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router';
-import { HexlyLink } from '@/components/HexlyLink';
-import { Github } from '@/components/icons/github';
-import ThemeToggle from '@/components/ThemeToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { activeNavItem } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
+import { MobileNavProvider, useMobileNav } from './mobile-nav-context';
 import { Sidebar } from './sidebar';
-import { SidebarProvider, useSidebar } from './sidebar-context';
-
-const GITHUB_REPO_URL = 'https://github.com/nocoo/meowth';
 
 function AppShellInner() {
   const isMobile = useIsMobile();
-  const { mobileOpen, setMobileOpen } = useSidebar();
+  const { mobileOpen, setMobileOpen } = useMobileNav();
   const { pathname } = useLocation();
   const current = activeNavItem(pathname);
   const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const drawerId = useId();
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: pathname change is the trigger; setMobileOpen identity is stable
   useEffect(() => {
@@ -42,75 +27,49 @@ function AppShellInner() {
   }, [pathname, setMobileOpen]);
 
   useEffect(() => {
-    document.body.style.overflow = mobileOpen ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [mobileOpen]);
+    if (!isMobile) setMobileOpen(false);
+  }, [isMobile, setMobileOpen]);
 
   return (
-    <BasaltAppShell className="h-dvh">
+    <BasaltAppShell>
       <AppSkipLink>Skip to main content</AppSkipLink>
       {!isMobile && <Sidebar />}
 
       {isMobile && (
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent
-            side="left"
-            className="w-[260px] max-w-[260px] border-0 bg-basalt-background p-0"
-            onCloseAutoFocus={(event) => {
-              event.preventDefault();
-              menuTriggerRef.current?.focus();
-            }}
-          >
-            <SheetTitle className="sr-only">Navigation</SheetTitle>
-            <SheetDescription className="sr-only">Browse Meowth pages</SheetDescription>
-            <Sidebar mobile />
-          </SheetContent>
-        </Sheet>
+        <SidebarDrawer
+          id={drawerId}
+          open={mobileOpen}
+          onOpenChange={setMobileOpen}
+          returnFocusRef={menuTriggerRef}
+          title="Navigation"
+          description="Browse Meowth pages"
+        >
+          <Sidebar mobile onDismiss={() => setMobileOpen(false)} />
+        </SidebarDrawer>
       )}
 
       <AppMain>
         <AppHeader
           leading={
             isMobile ? (
-              <Button
+              <AppHeaderMenuButton
                 ref={menuTriggerRef}
-                type="button"
-                variant="ghost"
-                size="icon"
+                aria-controls={drawerId}
+                aria-expanded={mobileOpen}
                 onClick={() => setMobileOpen(true)}
-                aria-label="Open navigation"
-              >
-                <Menu className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-              </Button>
+              />
             ) : null
           }
           breadcrumbs={[{ href: '/', label: 'Meowth' }]}
           title={current?.label}
           actions={
             <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button asChild variant="ghost" size="icon">
-                    <a
-                      href={GITHUB_REPO_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="GitHub repository"
-                    >
-                      <Github className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-                    </a>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">GitHub repository</TooltipContent>
-              </Tooltip>
-              <HexlyLink />
+              <ProjectLinks github="nocoo/meowth" hexly="meowth" name="Meowth" />
               <ThemeToggle />
             </>
           }
         />
-        <div className="flex min-h-0 flex-1 flex-col px-2 pb-2 md:px-3 md:pb-3">
+        <div className="flex min-h-0 flex-1 flex-col px-basalt-space-lg pb-basalt-space-lg md:px-basalt-layout-sm md:pb-basalt-layout-sm">
           <ContentIsland
             className={cn(
               'h-full w-full',
@@ -127,8 +86,8 @@ function AppShellInner() {
 
 export function AppShell() {
   return (
-    <SidebarProvider>
+    <MobileNavProvider>
       <AppShellInner />
-    </SidebarProvider>
+    </MobileNavProvider>
   );
 }

@@ -8,11 +8,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import { AppShell } from './app-shell';
 
-// Stage B1 — AppShell tests. The mobile Sheet a11y contract (route
-// change closes drawer, body scroll unlock, aria title/description,
-// escape/overlay close, focus return) is exercised here. Desktop
-// (non-mobile) tests cover the static floating-island + breadcrumb
-// shape.
+// AppShell tests against the basalt 3.3.6 shell contract: SidebarDrawer
+// mobile navigation (route-change close, a11y title/description,
+// escape/overlay close, focus return) and the desktop floating-island +
+// breadcrumb shape.
 
 const ORIGINAL_INNER_WIDTH = window.innerWidth;
 
@@ -55,7 +54,7 @@ afterEach(() => {
   document.body.style.overflow = '';
 });
 
-describe('AppShell (Stage B1) — desktop layout', () => {
+describe('AppShell — desktop layout', () => {
   it('renders the floating island wrapper around the route Outlet', () => {
     const { container } = render(<ShellWithChildPage child={<div>page-body</div>} />);
     expect(screen.getByText('page-body')).toBeInTheDocument();
@@ -86,7 +85,8 @@ describe('AppShell (Stage B1) — desktop layout', () => {
 
   it('header right exposes the GitHub repo link (target=_blank, secure rel, decorative svg)', () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
-    const link = screen.getByRole('link', { name: 'GitHub repository' });
+    // ProjectLinks appends the new-tab suffix to the accessible name.
+    const link = screen.getByRole('link', { name: /GitHub repository/ });
     expect(link.getAttribute('href')).toBe('https://github.com/nocoo/meowth');
     expect(link.getAttribute('target')).toBe('_blank');
     // rel must include both noopener and noreferrer so the new
@@ -94,31 +94,73 @@ describe('AppShell (Stage B1) — desktop layout', () => {
     const rel = link.getAttribute('rel') ?? '';
     expect(rel).toContain('noopener');
     expect(rel).toContain('noreferrer');
-    // Inline svg uses h-4 w-4 (surety idiom) and is
-    // decorative — aria-hidden=true.
+    // The glyph is decorative — aria-hidden=true; the library owns its size.
     const svg = link.querySelector('svg');
     expect(svg).not.toBeNull();
     expect(svg?.getAttribute('aria-hidden')).toBe('true');
-    expect(svg?.getAttribute('class') ?? '').toContain('h-4');
-    expect(svg?.getAttribute('class') ?? '').toContain('w-4');
   });
 
-  it('header right also renders the ThemeToggle button next to the GitHub link', () => {
+  it('header right also renders the hexly.ai project link', () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
-    // Initial state in jsdom (no prefers-dark) starts in light mode,
-    // so the toggle advertises "Switch to dark theme".
+    const link = screen.getByRole('link', { name: /Meowth on hexly\.ai/ });
+    expect(link.getAttribute('href')).toBe('https://hexly.ai/projects/meowth');
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
+
+  it('header right renders the ThemeToggle control', () => {
+    render(<ShellWithChildPage child={<div>x</div>} />);
+    // Basalt ThemeToggle names the theme the next click switches to; in
+    // the default system state that is the light theme.
     expect(
       screen.getByRole('button', { name: /Switch to (dark|light) theme/ }),
     ).toBeInTheDocument();
   });
+
+  it('chat route switches the island into the full-height composer layout', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <ThemeProvider defaultTheme="system" storageKey={THEME_STORAGE_KEY}>
+          <MemoryRouter initialEntries={['/chat']}>
+            <Routes>
+              <Route element={<AppShell />}>
+                <Route path="/chat" element={<div>chat-body</div>} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </TooltipProvider>,
+    );
+    expect(screen.getByText('chat-body')).toBeInTheDocument();
+    const island = container.querySelector('[data-basalt-surface-root]');
+    expect(island?.className ?? '').toContain('flex');
+    expect(island?.className ?? '').toContain('overflow-hidden');
+  });
+
+  it('unmatched routes render the shell without a page title', () => {
+    render(
+      <TooltipProvider>
+        <ThemeProvider defaultTheme="system" storageKey={THEME_STORAGE_KEY}>
+          <MemoryRouter initialEntries={['/nowhere']}>
+            <Routes>
+              <Route element={<AppShell />}>
+                <Route path="*" element={<div>unknown-body</div>} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </TooltipProvider>,
+    );
+    expect(screen.getByText('unknown-body')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+  });
 });
 
-describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
+describe('AppShell — mobile SidebarDrawer a11y', () => {
   beforeEach(() => {
     setViewport(420);
   });
 
-  it('opens the Sheet drawer when the menu trigger fires', async () => {
+  it('opens the drawer when the menu trigger fires', async () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
     await waitFor(() => {
@@ -132,9 +174,21 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
-    // SheetTitle / SheetDescription are sr-only but still in the DOM.
+    // SidebarDrawer renders the sr-only title/description.
     expect(screen.getByText('Navigation')).toBeInTheDocument();
     expect(screen.getByText('Browse Meowth pages')).toBeInTheDocument();
+  });
+
+  it('menu trigger wires aria-controls to the drawer content id', async () => {
+    render(<ShellWithChildPage child={<div>x</div>} />);
+    const trigger = screen.getByRole('button', { name: 'Open navigation' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(trigger);
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+    expect(trigger.getAttribute('aria-controls')).toBeTruthy();
+    expect(document.getElementById(trigger.getAttribute('aria-controls') ?? '')).toBeTruthy();
   });
 
   it('escape key closes the drawer', async () => {
@@ -147,27 +201,14 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     });
   });
 
-  it('locks body scroll while open and unlocks on close', async () => {
-    render(<ShellWithChildPage child={<div>x</div>} />);
-    expect(document.body.style.overflow).toBe('');
-    await userEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
-    await waitFor(() => {
-      expect(document.body.style.overflow).toBe('hidden');
-    });
-    fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
-    await waitFor(() => {
-      expect(document.body.style.overflow).toBe('');
-    });
-  });
-
   it('closes the drawer on route change', async () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
     // Activate a sidebar row to trigger a route change; the AppShell's
     // `useLocation` effect should then call `setMobileOpen(false)`. The
-    // mobile drawer renders the Sidebar with `mobile=true`, so its 5 nav
-    // items are inside the dialog.
+    // drawer renders the Sidebar with `mobile`, so its 5 nav items are
+    // inside the dialog.
     const dialog = screen.getByRole('dialog');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Agents' }));
     await waitFor(() => {
@@ -175,7 +216,7 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     });
   });
 
-  it('overlay click closes the drawer and unlocks body scroll', async () => {
+  it('overlay click closes the drawer', async () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
     await userEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
@@ -188,9 +229,6 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
-    await waitFor(() => {
-      expect(document.body.style.overflow).toBe('');
-    });
   });
 
   it('returns focus to the menu trigger when the drawer closes', async () => {
@@ -202,9 +240,7 @@ describe('AppShell (Stage B1) — mobile Sheet a11y', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
-    // AppShell pins the toggle ref and drives `onCloseAutoFocus`
-    // explicitly because the trigger lives outside the Sheet
-    // subtree (Radix's default trigger-return cannot find it).
+    // SidebarDrawer's returnFocusRef restores focus to the AppHeaderMenuButton.
     await waitFor(() => {
       expect(document.activeElement).toBe(trigger);
     });

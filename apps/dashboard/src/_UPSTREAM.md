@@ -7,7 +7,7 @@ basalt / surety / zhe / pew trees.
 | Field         | Value |
 |---------------|-------|
 | package       | `@nocoo/basalt` |
-| version       | `2.1.2` |
+| version       | `3.3.6` (chat-composer stop-button patch in `patches/`) |
 | adopted_at    | 2026-09-09 |
 | contract      | `docs/features/07-dashboard-basalt-package.md`, `docs/features/08-dashboard-theme-and-vite.md` |
 | integration   | `~/workspace/personal/basalt/INTEGRATION.md` |
@@ -25,7 +25,6 @@ These connect Basalt controls to Meowth's layout and behavior:
 - `components/ui/skeleton.tsx` — pulse placeholder
 - `components/ui/empty-state.tsx` — LayerCard.Empty adapter
 - `components/ui/button.tsx` — size map (`xs` / `icon-sm`)
-- `components/ThemeToggle.tsx` — `meowth_theme` two-state storage
 - `components/SecretReveal.tsx` — token one-shot reveal (architecture/07)
 - Chat bubbles / composer / AgentPicker
 
