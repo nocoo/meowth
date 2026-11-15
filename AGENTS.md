@@ -23,7 +23,7 @@ This file is the quality contract; hooks, CI and config are enforcement. Close i
 - Normal services use existing user config/tokens/sessions; do not rerun `init` or inject `MEOWTH_TEST`, `MEOWTH_TEST_HOME` or fake backends into them.
 - Agent processes run with the current user permissions and can call paid models or perform external actions. Tokens grant full daemon access; never expose them in logs, traces or fixtures.
 - Keep Go outside the pnpm workspace and preserve dashboard Model/ViewModel boundaries. Rebuild/embed the dashboard when producing a daemon binary.
-- Use numbered design docs, independent directory indexes and atomic commits; long-task plans include code references and 6DQ without effort estimates. Preserve existing coverage floors; add no new exceptions.
+- Use numbered design docs, independent directory indexes and atomic commits; long-task plans include code references and quality slot plans without effort estimates. Preserve existing coverage floors; add no new exceptions.
 
 ## Stack / Layout
 
@@ -52,25 +52,26 @@ pnpm scan:d1
 
 ## Verification
 
-6DQ = unified L1 (absorbing former G1) + L2/L3 + G2 + D1 (test isolation). Status: `enforced`, `planned`, `manual`, or `N/A`; partial enforcement below does not certify the full required bar.
-L1 requires statements, branches, functions and lines each ≥95% plus check-only strict analysis/formatting with zero errors/warnings, installed snapshot hooks and proven rejection, with no skipped/focused tests; preserve any stricter package threshold. Native tools must identify unmeasured metrics as gaps.
-G2 requires dependency and secret scans, with missing required scanners failing.
+Quality follows `system1-quality` (12 slots `S1..Z1` in `.github/workflows/quality-slots.yml`, `nocoo/base-ci v2026.15` for pinned actions). Statuses: `impl`, `na`, `manual`, or `planned`.
 
-| Dimension | Status | Required proof and current evidence/gap |
-|---|---|---|
-| L1 — complete unified contract | partial (B→A) | Pre-commit runs `scripts/hooks/pre-commit-l1.sh` on a `git checkout-index` snapshot: staged gitleaks, hook contract tests, check-only `daemon:g1` + `dashboard:g1`, parallel UT + package coverage gates, and merged TypeScript four-metric gate (`scripts/check-l1-ts-four-metrics.sh`). Rejection cases are proven in `scripts/__tests__/pre-commit-l1.test.cjs`. **Attainment gap:** merged TS branches `93.97%` (floor `95%`) as of last `pnpm dashboard:test:cover`; statements/functions/lines meet `95%`. **Timing gap:** full L1 pre-commit is ~90–120s warm (not <30s). Go branch/function/line metrics are not measured natively. |
-| L1 subcheck — Go coverage | partial | Pre-commit/CI gate per-package **statement** coverage at 95% with frozen baseline floors (69–94%). Branches/functions/lines unmeasured — reported as a native-tool gap. |
-| L1 subcheck — TypeScript coverage | partial | Four-metric merged gate at 95% on vitest scope (structural exempt list aligned with `check-dashboard-coverage.sh`). Branches still below floor until lifted; per-file statement baselines (82/87) remain on pre-push/CI package gate. |
-| L1 subcheck — static lanes (former G1) | enforced locally + CI | Pre-commit snapshot runs check-only fmt/lint/types/depcruise/source scans (no autofix). `MEOWTH_PRECOMMIT_SKIP_L1=1` keeps lint-staged-only for hook harness fixtures. |
-| L2 HTTP / CLI | planned | `test:l2` runs five real local daemon/CLI matrices with fake agent backends; `test:l2:embed` checks embedded serving. Complete 100% route/command mapping is not yet enforced. |
-| L3 dashboard / CLI | planned | CI runs UI, embed and mint Playwright projects; the dev project and real-agent Chat lane are separate. Require complete page/CLI workflow proof; real providers remain explicitly manual. |
-| G2 | enforced | Pre-push/CI scan pnpm/Go dependencies and secrets through OSV, govulncheck and gitleaks. |
-| D1 | planned | Homes and DB markers separate test/prod; L2 creates unique child homes. Arbitrary test-home overrides and browser marker-file cleanup lack canonical-path ownership guards; static `scan:d1` alone is insufficient. |
+| Slot | Status | Implementation / Evidence |
+| --- | --- | --- |
+| S1: Typecheck | impl | `pnpm dashboard:typecheck` and `pnpm daemon:vet` |
+| S2: Lint | impl | `pnpm test:hooks`, `daemon:fmt:check`/`lint`, `dashboard:fmt:check`/`lint`/`depcruise`, `scan:dashboard-source` |
+| S3: Workflow Lint | impl | `actionlint`, immutable `nocoo/base-ci` SHA check, and `yamllint` |
+| G1: Secret Scan | impl | `pnpm scan:gitleaks:detect` (and staged gitleaks in pre-commit) |
+| G2: Dependency Vulnerabilities | impl | `pnpm scan:osv` and `pnpm scan:govulncheck` |
+| B1: Build | impl | `pnpm daemon:build` (`darwin/arm64` and `darwin/amd64`) |
+| L1: Unit Tests & Coverage | impl | `daemon:test:cover` + `daemon:cover:check` (per-pkg 95% with frozen floors); `dashboard:test:cover` + `dashboard:cover:check` (merged TS branches `93.97%` vs `95%` floor) |
+| L2: Runtime | na | Not a Cloudflare Worker project |
+| L3: Integration | impl | `pnpm test:l2` (daemon HTTP/CLI matrices with fake backends) and `pnpm test:l2:embed` |
+| L4: E2E | impl | Playwright (`dashboard-ui`, `dashboard-embed`, `dashboard-embed-mint`) |
+| P1: Package Check | na | Private packages; not published to npm |
+| Z1: Gate | impl | Aggregates all 11 slots + `compile-windows` and verifies `tested-sha` |
 
-Pre-commit enforces unified L1 on the Git index snapshot (`git checkout-index`). Pre-push still runs vet/types, package coverage gates, L2 and G2 sequentially. CI supplies broader static/build/L3.
+Pre-commit enforces L1 on a `git checkout-index` snapshot via `scripts/hooks/pre-commit-l1.sh` (~90–120s warm). Pre-push runs vet/types, package coverage gates, L3 (`test:l2`), and G1/G2 (`scan:g2`). CI supplies all macOS native slots + `compile-windows`.
 
-Target hooks: pre-commit unified L1 **under 30s** on ordinary commits (timing gap open); pre-push checks L2 and G2 in parallel against every stdin push ref/commit in <3min, plus build where applicable. L3 runs in CI or an explicit manual lane. Close TS branch coverage to ≥95% before claiming S-tier L1 attainment.
-Never bypass commit/push hooks, force-push, or use autofix in checks. Documentation changes do not authorize deploying or implementing new gates. The owner merged former G1 into L1 on 2026-09-21; the framework keeps the 6DQ name.
+Never bypass commit/push hooks, force-push, or use autofix in checks. Documentation changes do not authorize deploying or implementing new gates.
 
 ## Resources / Isolation
 

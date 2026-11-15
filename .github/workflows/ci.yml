@@ -1,5 +1,5 @@
-# CI slot standard v1 (nocoo/base-ci docs/slots.md): impl S1–S3, G1–G2, B1, L1, L2, L3, Z1 on macOS jobs;
-# na L1.5, P1 (skipped)。检查名前缀 quality / 与 fan-out 一致；命令逻辑不变。nocoo/base-ci v2026.12。
+# CI slot standard v1.3.0 (system1-quality): impl S1-S3, G1-G2, B1, L1, L3, L4, Z1 on macOS jobs;
+# na L2, P1 (skipped). Check names prefix `quality / `; command logic unchanged. nocoo/base-ci v2026.15.
 name: CI
 
 on:
@@ -16,4 +16,4 @@ permissions:
 
 jobs:
   quality:
-    uses: ./.github/workflows/quality-macos.yml
+    uses: ./.github/workflows/quality-slots.yml

@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 # Phase 2.11 — pre-push hook.
 #
-# Implements steps 1–4 of docs/architecture/08-6dq-hooks-wiring.md §5.2.
+# Implements pre-push quality checks (vet/types, L1 coverage, L3 integration, G1/G2 scans).
 # Step 5 (dashboard dist build + scripts/check-dashboard-dist.sh) is
 # intentionally deferred:
 #   - apps/dashboard's `build` script is still a placeholder; the real
