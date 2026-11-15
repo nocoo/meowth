@@ -1,11 +1,11 @@
-import { ContentIsland, SidebarDrawer, ThemeToggle } from '@nocoo/basalt';
+import { ContentIsland, SidebarDrawer, SidebarProvider, ThemeToggle } from '@nocoo/basalt';
 import { AppHeader, AppHeaderMenuButton, ProjectLinks } from '@nocoo/basalt/components/app-header';
 import {
   AppMain,
   AppSkipLink,
   AppShell as BasaltAppShell,
 } from '@nocoo/basalt/components/app-shell';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { activeNavItem } from '@/lib/navigation';
@@ -85,9 +85,12 @@ function AppShellInner() {
 }
 
 export function AppShell() {
+  const [collapsed, setCollapsed] = useState(false);
   return (
-    <MobileNavProvider>
-      <AppShellInner />
-    </MobileNavProvider>
+    <SidebarProvider collapsed={collapsed} onCollapsedChange={setCollapsed}>
+      <MobileNavProvider>
+        <AppShellInner />
+      </MobileNavProvider>
+    </SidebarProvider>
   );
 }

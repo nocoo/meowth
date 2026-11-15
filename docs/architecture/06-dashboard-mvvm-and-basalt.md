@@ -117,7 +117,7 @@ apps/dashboard/
     │   ├── layout/
     │   │   ├── app-shell.tsx        Basalt AppShell / AppHeader / SidebarDrawer / ContentIsland
     │   │   ├── sidebar.tsx          Basalt Sidebar rail（SidebarBrand + SidebarToggle + SidebarUser）
-    │   │   ├── mobile-nav-context.tsx  mobileOpen only（collapsed 由 basalt SidebarProvider 持有）
+    │   │   ├── mobile-nav-context.tsx  mobileOpen only（collapsed 由 AppShell 的受控 basalt SidebarProvider 持有）
     │   │   └── index.ts
     │   ├── StatCard.tsx             Overview metric LayerCard
     │   ├── SecretReveal.tsx         meowth-local (see 07)
@@ -334,7 +334,7 @@ Provenance class is **source-derived** because biome reformatted line breaks and
 Meowth-local adaptations on top of the surety triplet (bug-fix Commits 1 + 4):
 
 - `sidebar.tsx` expanded view renders **two nav groups** — `Dashboard` (Overview / Agents / Sessions / Tokens) and `System` (Settings) — driven by `lib/navigation.ts NAV_GROUPS`. Collapsed view stays a flat icon rail driven by `NAV_ITEMS = NAV_GROUPS.flatMap(...)` so the two views cannot drift. Group labels use basalt `SidebarGroup` defaults (no site-side typography overrides). Active-state for `/sessions/:id` is preserved via the `isItemActive(item, pathname)` pure helper (NavLink isActive widens the match without re-implementing it inline).
-- `sidebar.tsx` collapsed view is owned by basalt `SidebarBrand`：mark 固定在 24px 槽位、collapse/expand 由 `SidebarToggle`（expanded 时在 brand action 槽、collapsed 时下移为轨道行）驱动；导航图标由库行类 `[&>svg:first-child]:size-basalt-sidebar-brand-slot`（20px）定尺寸。
+- `sidebar.tsx` collapsed view is owned by basalt `SidebarBrand`：mark 固定在 24px 槽位、collapse/expand 由 `SidebarToggle`（expanded 时在 brand action 槽、collapsed 时下移为轨道行）驱动；导航图标由库行类 `[&>svg:first-child]:size-basalt-sidebar-brand-slot`（20px）定尺寸。折叠状态由持久挂载的 `AppShell` 中的受控 `SidebarProvider` 持有；断点切换只卸载 desktop rail/mobile drawer，不重置 collapsed 偏好。
 - `sidebar.tsx` bottom user section uses basalt `SidebarUser`：expanded 双行静态标签（`Meowth` / `Local daemon`）+ Avatar "M" fallback；collapsed 自动只渲染头像 + 右侧 tooltip。meowth 无真实用户数据与登出流，故不传 `onSignOut`/`signOutHref`。
 - `app-shell.tsx` header right renders basalt `ProjectLinks`（GitHub + hexly.ai，34px `HeaderAction`，新标签页 + `noopener noreferrer` 由库内置）before the basalt `ThemeToggle`（HeaderAction 形态，system→light→dark 三态循环；`meowth_theme` 存储键与 `lib/theme-init.ts` 预 hydration 不变）。
 - basalt `ThemeToggle` 为库内置控件；meowth 不再维护本地 ThemeToggle。

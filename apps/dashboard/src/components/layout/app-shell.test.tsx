@@ -83,6 +83,30 @@ describe('AppShell — desktop layout', () => {
     expect(screen.queryByRole('button', { name: 'Open navigation' })).not.toBeInTheDocument();
   });
 
+  it('preserves collapsed state across a mobile breakpoint round trip', async () => {
+    render(<ShellWithChildPage child={<div>x</div>} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    await waitFor(() => {
+      expect(screen.getByRole('complementary', { name: 'Primary navigation' })).toHaveAttribute(
+        'data-collapsed',
+        '',
+      );
+    });
+
+    setViewport(420);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Open navigation' })).toBeInTheDocument();
+    });
+
+    setViewport(1280);
+    await waitFor(() => {
+      const rail = screen.getByRole('complementary', { name: 'Primary navigation' });
+      expect(rail).toHaveAttribute('data-collapsed', '');
+      expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();
+    });
+  });
+
   it('header right exposes the GitHub repo link (target=_blank, secure rel, decorative svg)', () => {
     render(<ShellWithChildPage child={<div>x</div>} />);
     // ProjectLinks appends the new-tab suffix to the accessible name.

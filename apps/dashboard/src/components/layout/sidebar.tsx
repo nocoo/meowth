@@ -9,7 +9,6 @@ import {
   SidebarIconItem,
   SidebarItem,
   SidebarNav,
-  SidebarProvider,
   SidebarToggle,
   SidebarUser,
   Tooltip,
@@ -18,7 +17,6 @@ import {
   TooltipTrigger,
 } from '@nocoo/basalt';
 import { useSidebar as useBasaltSidebar } from '@nocoo/basalt/components/sidebar';
-import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import BrandMark from '@/components/BrandMark';
 import { isItemActive, NAV_GROUPS, NAV_ITEMS } from '@/lib/navigation';
@@ -110,14 +108,11 @@ function SidebarBody({ mobile, onDismiss }: { mobile: boolean; onDismiss?: () =>
 }
 
 export function Sidebar({ mobile = false, onDismiss }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
   return (
-    <SidebarProvider collapsed={collapsed} onCollapsedChange={setCollapsed}>
-      <TooltipProvider delayDuration={0}>
-        <BasaltSidebar aria-label="Primary navigation" resizable={false}>
-          <SidebarBody mobile={mobile} {...(onDismiss ? { onDismiss } : {})} />
-        </BasaltSidebar>
-      </TooltipProvider>
-    </SidebarProvider>
+    <TooltipProvider delayDuration={0}>
+      <BasaltSidebar aria-label="Primary navigation" resizable={false}>
+        <SidebarBody mobile={mobile} {...(onDismiss ? { onDismiss } : {})} />
+      </BasaltSidebar>
+    </TooltipProvider>
   );
 }

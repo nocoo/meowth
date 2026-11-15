@@ -1,3 +1,4 @@
+import { SidebarProvider } from '@nocoo/basalt';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
@@ -7,7 +8,9 @@ import { Sidebar } from './sidebar';
 function renderSidebar(opts: { mobile?: boolean; route?: string } = {}) {
   return render(
     <MemoryRouter initialEntries={[opts.route ?? '/overview']}>
-      <Sidebar mobile={opts.mobile ?? false} />
+      <SidebarProvider>
+        <Sidebar mobile={opts.mobile ?? false} />
+      </SidebarProvider>
     </MemoryRouter>,
   );
 }
