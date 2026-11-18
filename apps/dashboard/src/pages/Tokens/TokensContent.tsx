@@ -1,9 +1,5 @@
-import { KeyRound } from 'lucide-react';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { EmptyState } from '@/components/ui/empty-state';
+import { ConfirmDialog, LayerCard } from '@nocoo/basalt';
+import { Button } from '@nocoo/basalt/components/button';
 import {
   Table,
   TableBody,
@@ -11,7 +7,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@nocoo/basalt/components/table';
+import { KeyRound } from '@nocoo/basalt/icons';
+import { useState } from 'react';
+import { EmptyState } from '@/components/EmptyState';
 import type { TokenView } from '@/viewmodels/useTokensViewModel';
 
 export interface TokensContentProps {
@@ -35,45 +34,47 @@ export default function TokensContent({ tokens, onRevoke }: TokensContentProps) 
   }
   return (
     <>
-      <Card className="overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Prefix</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Last used</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tokens.map((tok) => (
-              <TableRow key={tok.id}>
-                <TableCell>{tok.name}</TableCell>
-                <TableCell className="font-mono text-xs text-basalt-muted-foreground">
-                  {tok.prefix}
-                </TableCell>
-                <TableCell className="font-mono text-xs text-basalt-muted-foreground">
-                  {tok.created_at}
-                </TableCell>
-                <TableCell className="font-mono text-xs text-basalt-muted-foreground">
-                  {tok.last_used_at ?? '—'}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    onClick={() => setPendingId(tok.id)}
-                  >
-                    Revoke
-                  </Button>
-                </TableCell>
+      <LayerCard padding="none" outlined className="overflow-x-auto">
+        <div data-slot="table-container" className="relative w-full overflow-x-auto">
+          <Table className="whitespace-nowrap">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Prefix</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Last used</TableHead>
+                <TableHead />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+            </TableHeader>
+            <TableBody>
+              {tokens.map((tok) => (
+                <TableRow key={tok.id}>
+                  <TableCell>{tok.name}</TableCell>
+                  <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                    {tok.prefix}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                    {tok.created_at}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                    {tok.last_used_at ?? '—'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPendingId(tok.id)}
+                    >
+                      Revoke
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </LayerCard>
       <ConfirmDialog
         open={pendingId !== null}
         loading={revoking}
@@ -97,7 +98,7 @@ export default function TokensContent({ tokens, onRevoke }: TokensContentProps) 
             : 'Clients using this token will stop immediately.'
         }
         variant="destructive"
-        confirmText="Revoke"
+        confirmLabel="Revoke"
       />
     </>
   );

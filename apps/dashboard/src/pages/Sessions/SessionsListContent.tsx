@@ -1,8 +1,4 @@
-import { ListTree } from 'lucide-react';
-import { Link } from 'react-router';
-import SessionStatusBadge from '@/components/SessionStatusBadge';
-import { Card } from '@/components/ui/card';
-import { EmptyState } from '@/components/ui/empty-state';
+import { LayerCard } from '@nocoo/basalt';
 import {
   Table,
   TableBody,
@@ -10,7 +6,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@nocoo/basalt/components/table';
+import { ListTree } from '@nocoo/basalt/icons';
+import { Link } from 'react-router';
+import { EmptyState } from '@/components/EmptyState';
+import SessionStatusBadge from '@/components/SessionStatusBadge';
 import { displayLabel } from '@/lib/labels';
 import type { Session } from '@/viewmodels/useSessionsViewModel';
 
@@ -46,42 +46,44 @@ export default function SessionsListContent({ sessions }: SessionsListContentPro
     );
   }
   return (
-    <Card className="overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Backend</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Model</TableHead>
-            <TableHead>Started</TableHead>
-            <TableHead>Thread</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sessions.map((session) => (
-            <TableRow key={session.id}>
-              <TableCell className="font-medium">
-                <Link
-                  to={`/sessions/${session.id}`}
-                  className="text-basalt-primary hover:underline"
-                >
-                  {displayLabel(session.backend_type)}
-                </Link>
-              </TableCell>
-              <TableCell>
-                <SessionStatusBadge status={session.status} />
-              </TableCell>
-              <TableCell className="font-mono text-xs text-basalt-muted-foreground">
-                {session.model}
-              </TableCell>
-              <TableCell className="font-mono text-xs text-basalt-muted-foreground">
-                {session.started_at}
-              </TableCell>
-              <TableCell className="text-xs">{session.thread_name}</TableCell>
+    <LayerCard padding="none" outlined className="overflow-x-auto">
+      <div data-slot="table-container" className="relative w-full overflow-x-auto">
+        <Table className="whitespace-nowrap">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Backend</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead>Started</TableHead>
+              <TableHead>Thread</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+          </TableHeader>
+          <TableBody>
+            {sessions.map((session) => (
+              <TableRow key={session.id}>
+                <TableCell className="font-medium">
+                  <Link
+                    to={`/sessions/${session.id}`}
+                    className="text-basalt-primary hover:underline"
+                  >
+                    {displayLabel(session.backend_type)}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <SessionStatusBadge status={session.status} />
+                </TableCell>
+                <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                  {session.model}
+                </TableCell>
+                <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                  {session.started_at}
+                </TableCell>
+                <TableCell className="text-xs">{session.thread_name}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </LayerCard>
   );
 }

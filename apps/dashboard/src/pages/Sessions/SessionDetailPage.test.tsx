@@ -59,7 +59,7 @@ describe('SessionDetailPage (shell, Stage C3b)', () => {
   it('loading branch renders the SessionDetailSkeleton (no content yet)', () => {
     mockUseDetail.mockImplementation((sid: string) => vmFor(sid, { kind: 'loading' }));
     const { container } = renderShellAt();
-    const pulses = container.querySelectorAll('.animate-pulse');
+    const pulses = container.querySelectorAll('.animate-basalt-shimmer');
     expect(pulses.length).toBeGreaterThan(0);
     expect(screen.queryByTestId('session-messages')).toBeNull();
   });

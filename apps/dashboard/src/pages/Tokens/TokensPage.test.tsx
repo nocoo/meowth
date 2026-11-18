@@ -72,7 +72,7 @@ describe('TokensPage (shell, Stage C4)', () => {
   it('loading branch renders the TokensSkeleton (5 row × 5 col placeholders)', () => {
     mockUseTokens.mockReturnValue(vmFor({ status: { kind: 'loading' } }));
     const { container } = render(<TokensPage />);
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(5 * 5);
+    expect(container.querySelectorAll('.animate-basalt-shimmer').length).toBe(5 * 5);
   });
 
   it('error branch routes to EmptyState (tone="error") with the vm message', () => {

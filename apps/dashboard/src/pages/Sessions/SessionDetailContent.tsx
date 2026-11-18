@@ -1,6 +1,6 @@
+import { LayerCard } from '@nocoo/basalt';
 import AgentResponse from '@/components/chat/AgentResponse';
 import SessionStatusBadge from '@/components/SessionStatusBadge';
-import { Card } from '@/components/ui/card';
 import { displayLabel } from '@/lib/labels';
 import type { SessionInfo, SessionMessageRow } from '@/viewmodels/useSessionDetailViewModel';
 
@@ -12,7 +12,7 @@ export interface SessionDetailContentProps {
 export default function SessionDetailContent({ session, messages }: SessionDetailContentProps) {
   return (
     <div className="chat-reading-column mx-auto min-w-0 w-full space-y-8">
-      <Card className="space-y-3 p-4 sm:p-6">
+      <LayerCard outlined padding="none" className="space-y-3 p-4 sm:p-6">
         {session.thread_name ? (
           <h2 className="break-words text-base font-semibold">{session.thread_name}</h2>
         ) : null}
@@ -33,7 +33,7 @@ export default function SessionDetailContent({ session, messages }: SessionDetai
           Started {session.started_at}
           {session.ended_at !== null ? ` · Ended ${session.ended_at}` : ''}
         </p>
-      </Card>
+      </LayerCard>
       <div data-testid="session-messages">
         <AgentResponse
           envelopes={messages}

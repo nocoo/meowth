@@ -1,6 +1,6 @@
-import { ChatBubble } from '@nocoo/basalt/components/chat-bubble';
-import { Sparkles } from 'lucide-react';
+import { Sparkles } from '@nocoo/basalt/icons';
 import AgentResponse from '@/components/chat/AgentResponse';
+import { ChatBubble } from '@/components/chat/ChatBubble';
 import MessageText from '@/components/MessageText';
 import type { ChatTurn } from '@/viewmodels/useChatViewModel';
 

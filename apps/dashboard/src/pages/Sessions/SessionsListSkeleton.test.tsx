@@ -15,7 +15,7 @@ describe('SessionsListSkeleton (Stage C3a)', () => {
 
   it('renders 25 animate-pulse cells (5 rows × 5 cols)', () => {
     const { container } = render(<SessionsListSkeleton />);
-    const pulses = container.querySelectorAll('.animate-pulse');
+    const pulses = container.querySelectorAll('.animate-basalt-shimmer');
     expect(pulses.length).toBe(5 * 5);
   });
 

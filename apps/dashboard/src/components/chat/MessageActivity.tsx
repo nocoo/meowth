@@ -1,4 +1,4 @@
-import { Brain, ListChecks, Terminal } from 'lucide-react';
+import { Brain, ListChecks, Terminal } from '@nocoo/basalt/icons';
 import { displayLabel } from '@/lib/labels';
 import type { Envelope } from '@/models/types';
 import ActivityDisclosure from './ActivityDisclosure';

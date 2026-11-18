@@ -52,7 +52,7 @@ describe('OverviewPage (shell, Stage C1)', () => {
     mockUseOverview.mockReturnValue(vm({ kind: 'loading' }));
     const { container } = render(<OverviewPage />);
     // Four metrics plus two activity panels reserve the content layout.
-    const pulses = container.querySelectorAll('.animate-pulse');
+    const pulses = container.querySelectorAll('.animate-basalt-shimmer');
     expect(pulses.length).toBe(16);
     expect(screen.queryByText('Reachable')).not.toBeInTheDocument();
   });

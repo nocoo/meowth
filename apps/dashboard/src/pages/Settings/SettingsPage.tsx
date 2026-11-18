@@ -1,6 +1,6 @@
+import { LayerCard } from '@nocoo/basalt';
+import { Button } from '@nocoo/basalt/components/button';
 import { PageHeader } from '@nocoo/basalt/components/page-header';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import useSettingsViewModel from '@/viewmodels/useSettingsViewModel';
 import SettingsContent from './SettingsContent';
 import SettingsSkeleton from './SettingsSkeleton';
@@ -21,7 +21,7 @@ export default function SettingsPage() {
         description="Dashboard version and daemon connection."
         title={<span id="settings-heading">Settings</span>}
       />
-      <Card className="max-w-3xl space-y-5 p-6">
+      <LayerCard outlined className="max-w-3xl space-y-5 p-6" padding="none">
         <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-[10rem_1fr]">
           <dt className="text-basalt-muted-foreground">Dashboard build</dt>
           <dd className="font-mono">{vm.version}</dd>
@@ -33,11 +33,11 @@ export default function SettingsPage() {
         )}
         {vm.status.kind === 'error' ||
         (vm.status.kind === 'ready' && !vm.status.daemonReachable) ? (
-          <Button variant="outline" size="xs" onClick={vm.refresh}>
+          <Button variant="outline" size="sm" onClick={vm.refresh}>
             Retry connection
           </Button>
         ) : null}
-      </Card>
+      </LayerCard>
     </section>
   );
 }

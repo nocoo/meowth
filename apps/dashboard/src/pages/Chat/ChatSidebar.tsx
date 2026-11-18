@@ -1,8 +1,8 @@
-import { ChatInbox } from '@nocoo/basalt/components/chat-inbox';
-import { ArrowUpRight, History, Search, SquarePen } from 'lucide-react';
+import { Button } from '@nocoo/basalt/components/button';
+import { Input } from '@nocoo/basalt/components/input';
+import { ArrowUpRight, History, Search, SquarePen } from '@nocoo/basalt/icons';
 import { Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ChatInbox } from '@/components/chat/ChatInbox';
 import { chatStatusLabel, displayLabel } from '@/lib/labels';
 import type { ChatViewModel } from '@/viewmodels/useChatViewModel';
 
@@ -14,7 +14,7 @@ export default function ChatSidebar({ vm, onNavigate }: { vm: ChatViewModel; onN
         <Button
           variant="outline"
           className="h-10 w-full justify-start gap-2.5 rounded-xl bg-basalt-control/50 px-3 shadow-none"
-          size="xs"
+          size="sm"
           onClick={() => {
             vm.newChat();
             onNavigate();
@@ -61,7 +61,7 @@ export default function ChatSidebar({ vm, onNavigate }: { vm: ChatViewModel; onN
         <Button
           asChild
           variant="ghost"
-          size="xs"
+          size="sm"
           className="w-full justify-between text-basalt-muted-foreground"
         >
           <Link to="/sessions">

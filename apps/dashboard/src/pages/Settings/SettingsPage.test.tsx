@@ -48,7 +48,7 @@ describe('SettingsPage (shell, Stage C5)', () => {
   it('loading branch renders SettingsSkeleton and no Notice yet', () => {
     mockUseSettings.mockReturnValue(vmFor({ status: { kind: 'loading' }, version: '1.2.3' }));
     const { container } = render(<SettingsPage />);
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.animate-basalt-shimmer').length).toBeGreaterThan(0);
     expect(screen.queryByText('Daemon reachable.')).toBeNull();
     expect(screen.queryByText('Daemon unreachable.')).toBeNull();
     // Build row stays visible even while healthz is still loading.

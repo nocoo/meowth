@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@nocoo/basalt';
 import { displayLabel } from '@/lib/labels';
 
 const VARIANTS: Record<string, 'success' | 'error' | 'info'> = {

@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { THEME_STORAGE_KEY } from '@/lib/theme-init';
 import { AppShell } from './app-shell';
 
-// AppShell tests against the basalt 3.3.6 shell contract: SidebarDrawer
+// AppShell tests against the Basalt 3.5.1 shell contract: SidebarDrawer
 // mobile navigation (route-change close, a11y title/description,
 // escape/overlay close, focus return) and the desktop floating-island +
 // breadcrumb shape.

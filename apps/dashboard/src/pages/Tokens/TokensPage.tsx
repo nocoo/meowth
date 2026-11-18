@@ -1,7 +1,7 @@
+import { Button } from '@nocoo/basalt/components/button';
 import { PageHeader } from '@nocoo/basalt/components/page-header';
-import { AlertCircle, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
+import { AlertCircle, Plus } from '@nocoo/basalt/icons';
+import { EmptyState } from '@/components/EmptyState';
 import useTokensViewModel from '@/viewmodels/useTokensViewModel';
 import TokensContent from './TokensContent';
 import TokensCreateDialog from './TokensCreateDialog';
@@ -28,7 +28,7 @@ export default function TokensPage() {
           <TokensCreateDialog
             vm={vm}
             trigger={
-              <Button type="button" size="xs">
+              <Button type="button" size="sm">
                 <Plus className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
                 Create token
               </Button>
@@ -46,7 +46,7 @@ export default function TokensPage() {
           description={vm.status.message}
           tone="error"
           action={
-            <Button variant="outline" size="xs" onClick={vm.refresh}>
+            <Button variant="outline" size="sm" onClick={vm.refresh}>
               Retry
             </Button>
           }

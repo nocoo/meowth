@@ -43,7 +43,7 @@ describe('AgentsPage (shell, Stage C2)', () => {
   it('loading branch shows the AgentsSkeleton (5 row × 4 col placeholders)', () => {
     mockUseAgents.mockReturnValue(vm({ kind: 'loading' }));
     const { container } = render(<AgentsPage />);
-    const pulses = container.querySelectorAll('.animate-pulse');
+    const pulses = container.querySelectorAll('.animate-basalt-shimmer');
     expect(pulses.length).toBe(5 * 4);
     expect(screen.queryByText('Claude')).not.toBeInTheDocument();
   });

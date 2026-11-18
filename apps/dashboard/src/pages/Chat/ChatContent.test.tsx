@@ -75,6 +75,27 @@ describe('Chat workspace', () => {
     expect(screen.getByRole('textbox', { name: 'Message' })).toBeEnabled();
   });
 
+  it('marks the active conversation in the inbox', () => {
+    renderContent(
+      makeVM({
+        conversations: [
+          {
+            id: 'conversation-1',
+            agent: 'claude',
+            title: 'Current conversation',
+            status: 'completed',
+            updatedAt: '2026-09-08',
+            turnCount: 1,
+          },
+        ],
+      }),
+    );
+    expect(screen.getByRole('button', { name: /Current conversation/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
   it('shows inbox placeholders when the conversation list is empty', () => {
     renderContent(makeVM({ conversations: [], search: '' }));
     expect(screen.getByText('Your conversations will appear here.')).toBeInTheDocument();

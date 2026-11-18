@@ -1,13 +1,13 @@
-import { ChatBubble } from '@nocoo/basalt/components/chat-bubble';
-import { ArrowUpRight, Bot, RotateCcw } from 'lucide-react';
+import { Button } from '@nocoo/basalt/components/button';
+import { ArrowUpRight, Bot, RotateCcw } from '@nocoo/basalt/icons';
 import { Link } from 'react-router';
 import CopyButton from '@/components/CopyButton';
 import MessageText from '@/components/MessageText';
-import { Button } from '@/components/ui/button';
-import { Notice } from '@/components/ui/notice';
+import { Notice } from '@/components/Notice';
 import { chatStatusLabel } from '@/lib/labels';
 import type { ChatTurnStatus } from '@/models/chat';
 import type { Envelope, Session } from '@/models/types';
+import { ChatBubble } from './ChatBubble';
 import MessageActivity from './MessageActivity';
 import MessageBubble from './MessageBubble';
 import { groupEnvelopes, groupMessageActivity, messageField, messageKind } from './messageGroups';
@@ -129,7 +129,7 @@ export default function AgentResponse({
               <CopyButton text={responseText} label="Copy response" iconOnly />
             ) : null}
             {onRetry ? (
-              <Button variant="ghost" size="xs" onClick={onRetry}>
+              <Button variant="ghost" size="sm" onClick={onRetry}>
                 <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
                 Retry response
               </Button>

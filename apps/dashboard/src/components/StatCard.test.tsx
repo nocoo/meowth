@@ -1,5 +1,5 @@
+import { Activity } from '@nocoo/basalt/icons';
 import { render, screen } from '@testing-library/react';
-import { Activity } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import StatCard from './StatCard';
 

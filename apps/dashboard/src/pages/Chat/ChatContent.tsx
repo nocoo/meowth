@@ -1,11 +1,11 @@
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@nocoo/basalt';
-import { ChatComposer } from '@nocoo/basalt/components/chat-composer';
-import { ChatHeader } from '@nocoo/basalt/components/chat-header';
-import { ArrowDown, Bot, CornerDownLeft, PanelLeft, SquarePen } from 'lucide-react';
+import { Button } from '@nocoo/basalt/components/button';
+import { ArrowDown, Bot, CornerDownLeft, PanelLeft, SquarePen } from '@nocoo/basalt/icons';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
+import { ChatComposer } from '@/components/chat/ChatComposer';
+import { ChatHeader } from '@/components/chat/ChatHeader';
+import { EmptyState } from '@/components/EmptyState';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { displayLabel } from '@/lib/labels';
 import type { ChatViewModel } from '@/viewmodels/useChatViewModel';
@@ -53,7 +53,7 @@ export default function ChatContent({ vm }: ChatContentProps) {
           title="No agents installed"
           description="Connect a local coding agent to start a conversation."
           action={
-            <Button asChild size="xs" variant="outline">
+            <Button asChild size="sm" variant="outline">
               <Link to="/agents">View agents</Link>
             </Button>
           }
@@ -164,8 +164,8 @@ export default function ChatContent({ vm }: ChatContentProps) {
             {showLatest ? (
               <Button
                 variant="outline"
-                size="xs"
-                className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-basalt-card px-3 shadow-sm"
+                size="sm"
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-basalt-card px-3 shadow-basalt-card"
                 onClick={() => {
                   following.current = true;
                   setShowLatest(false);

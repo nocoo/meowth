@@ -1,4 +1,4 @@
-import { Notice } from '@/components/ui/notice';
+import { Notice } from '@/components/Notice';
 import type { SettingsStatus } from '@/viewmodels/useSettingsViewModel';
 
 // docs/architecture/06 §7.5 + features/02 §4.4 — Phase 2 Stage C5.

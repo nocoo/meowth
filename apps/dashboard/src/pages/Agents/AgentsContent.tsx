@@ -1,7 +1,4 @@
-import { Bot } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { EmptyState } from '@/components/ui/empty-state';
+import { Badge, LayerCard } from '@nocoo/basalt';
 import {
   Table,
   TableBody,
@@ -9,7 +6,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@nocoo/basalt/components/table';
+import { Bot } from '@nocoo/basalt/icons';
+import { EmptyState } from '@/components/EmptyState';
 import { displayLabel } from '@/lib/labels';
 import type { Agent } from '@/viewmodels/useAgentsViewModel';
 
@@ -40,35 +39,37 @@ export default function AgentsContent({ agents }: AgentsContentProps) {
     );
   }
   return (
-    <Card className="overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Type</TableHead>
-            <TableHead>Installed</TableHead>
-            <TableHead>Executable</TableHead>
-            <TableHead>Version</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {agents.map((agent) => (
-            <TableRow key={agent.type}>
-              <TableCell className="font-medium">{displayLabel(agent.type)}</TableCell>
-              <TableCell>
-                <Badge variant={agent.installed ? 'success' : 'outline'} dot>
-                  {agent.installed ? 'Yes' : 'No'}
-                </Badge>
-              </TableCell>
-              <TableCell className="font-mono text-xs text-basalt-muted-foreground">
-                {agent.executable || '—'}
-              </TableCell>
-              <TableCell className="font-mono text-xs text-basalt-muted-foreground">
-                {agent.version || '—'}
-              </TableCell>
+    <LayerCard padding="none" outlined className="overflow-x-auto">
+      <div data-slot="table-container" className="relative w-full overflow-x-auto">
+        <Table className="whitespace-nowrap">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Type</TableHead>
+              <TableHead>Installed</TableHead>
+              <TableHead>Executable</TableHead>
+              <TableHead>Version</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+          </TableHeader>
+          <TableBody>
+            {agents.map((agent) => (
+              <TableRow key={agent.type}>
+                <TableCell className="font-medium">{displayLabel(agent.type)}</TableCell>
+                <TableCell>
+                  <Badge variant={agent.installed ? 'success' : 'outline'} dot>
+                    {agent.installed ? 'Yes' : 'No'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                  {agent.executable || '—'}
+                </TableCell>
+                <TableCell className="font-mono text-xs text-basalt-muted-foreground">
+                  {agent.version || '—'}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </LayerCard>
   );
 }

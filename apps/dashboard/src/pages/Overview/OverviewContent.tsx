@@ -1,11 +1,17 @@
-import { LayerCard } from '@nocoo/basalt';
+import { Badge, LayerCard } from '@nocoo/basalt';
+import { Button } from '@nocoo/basalt/components/button';
 import { SectionRule } from '@nocoo/basalt/components/section-rule';
-import { Activity, ArrowUpRight, Bot, KeyRound, ListTree, MessageSquare } from 'lucide-react';
+import {
+  Activity,
+  ArrowUpRight,
+  Bot,
+  KeyRound,
+  ListTree,
+  MessageSquare,
+} from '@nocoo/basalt/icons';
 import { Link } from 'react-router';
 import SessionStatusBadge from '@/components/SessionStatusBadge';
 import StatCard from '@/components/StatCard';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { displayLabel } from '@/lib/labels';
 import type { OverviewData } from '@/viewmodels/useOverviewViewModel';
 
@@ -56,7 +62,7 @@ export default function OverviewContent({ data }: OverviewContentProps) {
           <SectionRule
             title="Recent activity"
             actions={
-              <Button asChild variant="ghost" size="xs">
+              <Button asChild variant="ghost" size="sm">
                 <Link to="/sessions">
                   View sessions
                   <ArrowUpRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
@@ -76,7 +82,7 @@ export default function OverviewContent({ data }: OverviewContentProps) {
                 <p className="max-w-xs text-sm text-basalt-muted-foreground">
                   Start a conversation with a local agent to see activity here.
                 </p>
-                <Button asChild variant="outline" size="xs">
+                <Button asChild variant="outline" size="sm">
                   <Link to="/chat">
                     <MessageSquare className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
                     Open chat
@@ -116,7 +122,7 @@ export default function OverviewContent({ data }: OverviewContentProps) {
           <SectionRule
             title="Agent availability"
             actions={
-              <Button asChild variant="ghost" size="xs">
+              <Button asChild variant="ghost" size="sm">
                 <Link to="/agents">
                   View agents
                   <ArrowUpRight className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />

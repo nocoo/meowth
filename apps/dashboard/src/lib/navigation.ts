@@ -5,7 +5,7 @@ import {
   ListTree,
   MessageSquare,
   Settings as SettingsIcon,
-} from 'lucide-react';
+} from '@nocoo/basalt/icons';
 import type { ComponentType, SVGProps } from 'react';
 
 // Pure-data navigation table for the Gen 2 sidebar. Driven by

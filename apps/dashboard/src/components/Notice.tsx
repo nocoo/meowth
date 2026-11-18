@@ -1,6 +1,6 @@
-import { cn } from '@/lib/utils';
-import { type VariantProps, cva } from 'class-variance-authority';
+import { cva, type VariantProps } from 'class-variance-authority';
 import type { HTMLAttributes } from 'react';
+import { cn } from '@/lib/utils';
 
 const noticeVariants = cva('rounded-basalt-widget border p-3 text-sm leading-relaxed', {
   variants: {

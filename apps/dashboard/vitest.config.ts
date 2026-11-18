@@ -42,7 +42,7 @@ export default defineConfig({
       reporter: ['text', 'json-summary', 'html'],
       reportsDirectory: 'coverage',
       include: ['src/**'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/components/ui/**', 'src/index.css'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/index.css'],
     },
   },
 });

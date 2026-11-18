@@ -1,7 +1,7 @@
+import { Inbox } from '@nocoo/basalt/icons';
 import { render, screen } from '@testing-library/react';
-import { Inbox } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
-import { EmptyState } from './empty-state';
+import { EmptyState } from './EmptyState';
 
 describe('EmptyState', () => {
   it('renders icon, title, description, and action', () => {
