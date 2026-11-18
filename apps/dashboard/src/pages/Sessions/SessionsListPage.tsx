@@ -1,7 +1,7 @@
+import { Button } from '@nocoo/basalt/components/button';
 import { PageHeader } from '@nocoo/basalt/components/page-header';
-import { AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
+import { AlertCircle } from '@nocoo/basalt/icons';
+import { EmptyState } from '@/components/EmptyState';
 import useSessionsViewModel from '@/viewmodels/useSessionsViewModel';
 import SessionsListContent from './SessionsListContent';
 import SessionsListSkeleton from './SessionsListSkeleton';
@@ -30,7 +30,7 @@ export default function SessionsListPage() {
           description={vm.status.message}
           tone="error"
           action={
-            <Button variant="outline" size="xs" onClick={vm.refresh}>
+            <Button variant="outline" size="sm" onClick={vm.refresh}>
               Retry
             </Button>
           }

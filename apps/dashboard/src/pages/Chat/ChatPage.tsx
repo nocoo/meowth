@@ -1,6 +1,6 @@
-import { AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
+import { Button } from '@nocoo/basalt/components/button';
+import { AlertCircle } from '@nocoo/basalt/icons';
+import { EmptyState } from '@/components/EmptyState';
 import useChatViewModel from '@/viewmodels/useChatViewModel';
 import ChatContent from './ChatContent';
 import ChatSkeleton from './ChatSkeleton';
@@ -27,7 +27,7 @@ export default function ChatPage() {
             description={vm.agentsStatus.message}
             tone="error"
             action={
-              <Button size="xs" variant="outline" onClick={vm.refresh}>
+              <Button size="sm" variant="outline" onClick={vm.refresh}>
                 Retry connection
               </Button>
             }

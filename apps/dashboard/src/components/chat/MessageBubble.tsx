@@ -8,11 +8,11 @@ import {
   ScrollText,
   Terminal,
   X,
-} from 'lucide-react';
+} from '@nocoo/basalt/icons';
 import { Link } from 'react-router';
 import MessageMarkdown from '@/components/MessageMarkdown';
 import MessageText from '@/components/MessageText';
-import { Notice } from '@/components/ui/notice';
+import { Notice } from '@/components/Notice';
 import { displayLabel } from '@/lib/labels';
 import type { Envelope } from '@/models/types';
 import ActivityDisclosure from './ActivityDisclosure';

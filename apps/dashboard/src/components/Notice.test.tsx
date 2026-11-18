@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Notice, noticeVariants } from './notice';
+import { Notice, noticeVariants } from './Notice';
 
 describe('Notice (G2 smoke)', () => {
   it('renders body content (default variant)', () => {

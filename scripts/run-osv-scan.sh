@@ -13,6 +13,7 @@ set -euo pipefail
 
 EXPECTED="${OSV_SCANNER_VERSION_HINT:-2.3.8}"
 LOCKFILE="${OSV_LOCKFILE:-pnpm-lock.yaml}"
+CONFIG="${OSV_CONFIG:-.osv-scanner.toml}"
 
 if ! command -v osv-scanner >/dev/null 2>&1; then
   cat >&2 <<EOF
@@ -32,5 +33,9 @@ fi
 
 ACTUAL="$(osv-scanner --version 2>&1 | head -1 | awk '{print $NF}')"
 echo "osv-scanner: actual=$ACTUAL hint=$EXPECTED lockfile=$LOCKFILE"
+
+if [[ -f "$CONFIG" ]]; then
+  exec osv-scanner --config "$CONFIG" --lockfile "$LOCKFILE"
+fi
 
 exec osv-scanner --lockfile "$LOCKFILE"

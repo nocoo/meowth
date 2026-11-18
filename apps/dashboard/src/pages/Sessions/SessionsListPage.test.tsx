@@ -53,7 +53,7 @@ describe('SessionsListPage (shell, Stage C3a)', () => {
   it('loading branch shows the SessionsListSkeleton (5 row × 5 col placeholders)', () => {
     mockUseSessions.mockReturnValue(vm({ kind: 'loading' }));
     const { container } = renderShell();
-    const pulses = container.querySelectorAll('.animate-pulse');
+    const pulses = container.querySelectorAll('.animate-basalt-shimmer');
     expect(pulses.length).toBe(5 * 5);
     expect(screen.queryByText('No sessions yet')).not.toBeInTheDocument();
   });

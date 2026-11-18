@@ -1,9 +1,9 @@
+import { Button } from '@nocoo/basalt/components/button';
 import { PageHeader } from '@nocoo/basalt/components/page-header';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle } from '@nocoo/basalt/icons';
 import { lazy, Suspense } from 'react';
 import { useParams } from 'react-router';
-import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
+import { EmptyState } from '@/components/EmptyState';
 import useSessionDetailViewModel from '@/viewmodels/useSessionDetailViewModel';
 import SessionDetailSkeleton from './SessionDetailSkeleton';
 
@@ -43,7 +43,7 @@ export default function SessionDetailPage() {
             description={vm.status.message}
             tone="error"
             action={
-              <Button variant="outline" size="xs" onClick={vm.refresh}>
+              <Button variant="outline" size="sm" onClick={vm.refresh}>
                 Retry
               </Button>
             }

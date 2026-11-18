@@ -1,13 +1,12 @@
 # Basalt provenance
 
 Dashboard chrome and common controls come from the published
-`@nocoo/basalt` package. Do not source-copy primitives from the
-basalt / surety / zhe / pew trees.
+`@nocoo/basalt` package. Do not source-copy Basalt primitives.
 
 | Field         | Value |
 |---------------|-------|
 | package       | `@nocoo/basalt` |
-| version       | `3.3.6` (chat-composer stop-button patch in `patches/`) |
+| version       | `^3.5.1` |
 | adopted_at    | 2026-09-09 |
 | contract      | `docs/features/07-dashboard-basalt-package.md`, `docs/features/08-dashboard-theme-and-vite.md` |
 | integration   | `~/workspace/personal/basalt/INTEGRATION.md` |
@@ -15,18 +14,12 @@ basalt / surety / zhe / pew trees.
 Brand accent is Meowth blue, applied through `AccentProvider`
 `paletteOverrides.primary` in `components/basalt-providers.tsx`.
 
-## Local aliases and adapters
+## Application-owned controls
 
-These connect Basalt controls to Meowth's layout and behavior:
+- `components/Notice.tsx` — Meowth semantic status colors
+- `components/EmptyState.tsx` — Meowth empty/error card composition
+- `components/SecretReveal.tsx` — token one-shot reveal
+- `components/chat/*` — agent transcript, composer, header and inbox behavior
 
-- `components/ui/notice.tsx` — inline status block
-- `components/ui/table.tsx` — Basalt Table with a horizontal scroll container
-- `components/ui/textarea.tsx` — Basalt InputArea alias for the chat composer
-- `components/ui/skeleton.tsx` — pulse placeholder
-- `components/ui/empty-state.tsx` — LayerCard.Empty adapter
-- `components/ui/button.tsx` — size map (`xs` / `icon-sm`)
-- `components/SecretReveal.tsx` — token one-shot reveal (architecture/07)
-- Chat bubbles / composer / AgentPicker
-
-Historical source-copy tables (basalt / surety / zhe / pew) lived
-in this file before features/07. They are obsolete.
+All shared controls, icons and layout primitives import directly from
+`@nocoo/basalt`; `components/ui/` is intentionally absent.

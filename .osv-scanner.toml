@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "GHSA-fc5q-39xc-vjpf"
+ignoreUntil = 2026-12-18
+reason = "Dev-only picomatch 4.0.7 transitive dependency has no fixed version upstream."

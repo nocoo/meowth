@@ -1,6 +1,3 @@
-import { CodeXml, Compass, Pi, Sparkles } from 'lucide-react';
-import { useId } from 'react';
-import { Github } from '@/components/icons/github';
 import {
   Select,
   SelectContent,
@@ -9,7 +6,10 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@nocoo/basalt/components/select';
+import { CodeXml, Compass, Pi, Sparkles } from '@nocoo/basalt/icons';
+import { useId } from 'react';
+import { Github } from '@/components/icons/github';
 import { displayLabel } from '@/lib/labels';
 import type { Agent, AgentType } from '@/viewmodels/useChatViewModel';
 

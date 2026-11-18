@@ -39,7 +39,7 @@ describe('NAV_ITEMS / activeNavItem (Stage B1)', () => {
     expect(activeNavItem('/unknown')).toBeUndefined();
   });
 
-  it('every nav item carries a label and a lucide-react icon', () => {
+  it('every nav item carries a label and a Basalt icon', () => {
     for (const item of NAV_ITEMS) {
       expect(typeof item.label).toBe('string');
       expect(item.label.length).toBeGreaterThan(0);

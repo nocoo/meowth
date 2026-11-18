@@ -10,6 +10,6 @@ import SettingsSkeleton from './SettingsSkeleton';
 describe('SettingsSkeleton (Stage C5)', () => {
   it('renders 2 animate-pulse placeholders (Daemon label + Notice slot)', () => {
     const { container } = render(<SettingsSkeleton />);
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(2);
+    expect(container.querySelectorAll('.animate-basalt-shimmer').length).toBe(2);
   });
 });

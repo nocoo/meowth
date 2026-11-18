@@ -15,7 +15,7 @@ describe('TokensSkeleton (Stage C4)', () => {
 
   it('renders 25 animate-pulse cells (5 rows × 5 cols)', () => {
     const { container } = render(<TokensSkeleton />);
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(5 * 5);
+    expect(container.querySelectorAll('.animate-basalt-shimmer').length).toBe(5 * 5);
   });
 
   it('wraps the placeholder table in a rounded-basalt-card bg-basalt-secondary L2 surface', () => {

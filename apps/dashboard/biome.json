@@ -3,7 +3,7 @@
   "$schema": "https://biomejs.dev/schemas/2.6.6/schema.json",
   "extends": ["../../biome.json"],
   "files": {
-    "includes": ["!**/src/index.css", "!**/src/lib/utils.ts", "!**/src/components/ui"]
+    "includes": ["!**/src/index.css", "!**/src/lib/utils.ts"]
   },
   "linter": {
     "enabled": true,

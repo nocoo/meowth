@@ -9,7 +9,7 @@ import SessionDetailSkeleton from './SessionDetailSkeleton';
 describe('SessionDetailSkeleton (Stage C3b)', () => {
   it('renders 9 animate-pulse cells (3 header + 3 message rows × 2)', () => {
     const { container } = render(<SessionDetailSkeleton />);
-    const pulses = container.querySelectorAll('.animate-pulse');
+    const pulses = container.querySelectorAll('.animate-basalt-shimmer');
     expect(pulses.length).toBe(3 + 3 * 2);
   });
 });

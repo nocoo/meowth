@@ -11,7 +11,7 @@ describe('OverviewSkeleton (Stage C1)', () => {
 
   it('reserves metric values and recent activity rows', () => {
     const { container } = render(<OverviewSkeleton />);
-    const pulses = container.querySelectorAll('.animate-pulse');
+    const pulses = container.querySelectorAll('.animate-basalt-shimmer');
     expect(pulses.length).toBe(16);
   });
 });

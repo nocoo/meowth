@@ -1,6 +1,3 @@
-import { type ReactElement, useId } from 'react';
-import SecretReveal from '@/components/SecretReveal';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,10 +6,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Notice } from '@/components/ui/notice';
+  Label,
+} from '@nocoo/basalt';
+import { Button } from '@nocoo/basalt/components/button';
+import { Input } from '@nocoo/basalt/components/input';
+import { type ReactElement, useId } from 'react';
+import { Notice } from '@/components/Notice';
+import SecretReveal from '@/components/SecretReveal';
 import type { TokensViewModel } from '@/viewmodels/useTokensViewModel';
 
 export interface TokensCreateDialogProps {

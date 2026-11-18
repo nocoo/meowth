@@ -1,6 +1,6 @@
-import { Check, Copy } from 'lucide-react';
+import { Button } from '@nocoo/basalt/components/button';
+import { Check, Copy } from '@nocoo/basalt/icons';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
 
 export default function CopyButton({
   text,
@@ -23,7 +23,7 @@ export default function CopyButton({
     <Button
       type="button"
       variant="ghost"
-      size={iconOnly ? 'icon-sm' : 'xs'}
+      size={iconOnly ? 'icon-sm' : 'sm'}
       aria-label={label}
       title={
         iconOnly

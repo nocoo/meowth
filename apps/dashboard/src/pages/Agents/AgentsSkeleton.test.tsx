@@ -13,7 +13,7 @@ describe('AgentsSkeleton (Stage C2)', () => {
 
   it('emits 5 rows × 4 cells of animate-pulse skeletons', () => {
     const { container } = render(<AgentsSkeleton />);
-    const pulses = container.querySelectorAll('.animate-pulse');
+    const pulses = container.querySelectorAll('.animate-basalt-shimmer');
     expect(pulses.length).toBe(5 * 4);
   });
 

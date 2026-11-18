@@ -1,5 +1,5 @@
+import { Button } from '@nocoo/basalt/components/button';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
 
 // docs/architecture/07 §7.1 — SecretReveal component contract.
 //

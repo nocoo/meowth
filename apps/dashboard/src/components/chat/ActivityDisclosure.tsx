@@ -1,11 +1,11 @@
+import { Button } from '@nocoo/basalt/components/button';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@nocoo/basalt/components/collapsible';
-import { ChevronRight, type LucideIcon } from 'lucide-react';
+import { ChevronRight, type LucideIcon } from '@nocoo/basalt/icons';
 import type { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
 
 export default function ActivityDisclosure({
   label,
@@ -27,7 +27,7 @@ export default function ActivityDisclosure({
       <CollapsibleTrigger asChild>
         <Button
           variant="ghost"
-          size="xs"
+          size="sm"
           aria-label={label}
           className="group -ml-2 h-auto min-h-9 max-w-full justify-start gap-2 px-2 py-1.5 text-left font-normal text-basalt-muted-foreground hover:text-basalt-foreground"
         >

@@ -2,7 +2,7 @@ import { Button, Input, ThemeToggle } from '@nocoo/basalt';
 import { HexlyLink } from '@nocoo/basalt/components/app-header';
 import { Field } from '@nocoo/basalt/components/field';
 import { useId, useState } from 'react';
-import { Notice } from '@/components/ui/notice';
+import { Notice } from '@/components/Notice';
 import useSetupViewModel from '@/viewmodels/useSetupViewModel';
 
 const BADGE_SHADOW = [

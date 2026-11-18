@@ -1,6 +1,6 @@
-import { createLucideIcon } from 'lucide-react';
+import { createLucideIcon } from '@nocoo/basalt/icons';
 
-// Meowth-local Github brand icon, extracted from lucide-react
+// Meowth-local Github brand icon, extracted through Basalt's icon entrypoint.
 // v0.577.0 (ISC license). Brand icons were removed from lucide v1
 // — surety copies the same extraction at
 // `components/icons/github.tsx`, and we mirror its source so the

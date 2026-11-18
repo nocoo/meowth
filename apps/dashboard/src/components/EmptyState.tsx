@@ -1,7 +1,7 @@
-import { cn } from '@/lib/utils';
 import { LayerCard } from '@nocoo/basalt';
-import type { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from '@nocoo/basalt/icons';
 import type { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -28,7 +28,10 @@ export function EmptyState({
         {...(action ? { action } : {})}
         icon={
           <Icon
-            className={cn('h-10 w-10', tone === 'error' ? 'text-basalt-danger' : 'text-basalt-primary')}
+            className={cn(
+              'h-10 w-10',
+              tone === 'error' ? 'text-basalt-danger' : 'text-basalt-primary',
+            )}
             strokeWidth={1.5}
           />
         }
