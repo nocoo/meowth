@@ -4,6 +4,25 @@ All notable changes to **Meowth** — the macOS coding-agent bridge — are reco
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7] - 2026-11-18
+
+### Changed
+
+- Upgrade `@nocoo/basalt` to `^3.5.1`, replace direct Lucide imports with
+  `@nocoo/basalt/icons`, and switch the dashboard to Basalt's two-line CSS
+  import contract.
+- Remove all 13 local `components/ui/*` shims, moving the two Meowth-specific
+  status controls outside that directory and keeping retired chat widgets
+  application-owned.
+- Align sidebar geometry, mobile drawer behavior, card shadows and reduced-motion
+  skeletons with the Basalt 3.5.1 contract; update E2E expectations for 16px rail
+  icons.
+
+### Security
+
+- Add a 30-day OSV exception for the unfixable, dev-only `picomatch` 4.0.7
+  `GHSA-fc5q-39xc-vjpf` finding and make the G2 wrapper load the exception config.
+
 ## [0.7.6] - 2026-11-10
 
 ### Changed
