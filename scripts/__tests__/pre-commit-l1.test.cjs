@@ -111,10 +111,7 @@ test('index snapshot rejects badly staged Go while worktree formatting is health
   const stagedGo = path.join(repo, 'daemon/snapshot.go');
   writeFileSync(stagedGo, 'package daemon\nfunc SnapshotValue()int{return 1}\n');
   succeed(repo, ['add', '--', 'daemon/snapshot.go'], env);
-  writeFileSync(
-    stagedGo,
-    'package daemon\n\nfunc SnapshotValue() int { return 1 }\n',
-  );
+  writeFileSync(stagedGo, 'package daemon\n\nfunc SnapshotValue() int { return 1 }\n');
   const fail = runHook(repo, env, { skipPartial: true });
   assert.notEqual(fail.status, 0);
   assert.match(`${fail.stdout}\n${fail.stderr}`, /not formatted|gofmt/);
