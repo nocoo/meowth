@@ -75,6 +75,10 @@ describe('SessionDetailPage (shell, Stage C3b)', () => {
     expect(screen.getByText('detail-boom')).toBeInTheDocument();
   });
 
+  // The lazy SessionDetailContent chunk resolves through Suspense and
+  // can exceed testing-library's 1s default while the suite runs files
+  // in parallel. The 10s wait needs headroom over vitest's 5s default
+  // per-test timeout, so this case opts into 15s explicitly.
   it('ready branch hands session + messages to SessionDetailContent', async () => {
     mockUseDetail.mockImplementation((sid: string) =>
       vmFor(sid, {
@@ -102,11 +106,8 @@ describe('SessionDetailPage (shell, Stage C3b)', () => {
       }),
     );
     renderShellAt('/sessions/sid-ok');
-    // The lazy SessionDetailContent chunk resolves through Suspense and
-    // can exceed testing-library's 1s default while the suite runs files
-    // in parallel, so give the ready branch a generous window.
     expect(await screen.findByText('hi from c3b', {}, { timeout: 10_000 })).toBeInTheDocument();
     expect(screen.getByTestId('session-detail-id').textContent).toBe('sid-ok');
     expect(screen.getByTestId('session-messages')).toBeInTheDocument();
-  });
+  }, 15_000);
 });
