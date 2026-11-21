@@ -16,9 +16,9 @@ No accident narratives have been recorded yet.
 - 处置：用模块声明的工具链跑同一版本 linter：`GOTOOLCHAIN=go1.26.10 pnpm daemon:lint`（0 issues）。升级 golangci-lint 或钉住 CI Go 版本前，提交时携带该环境变量。
 - 预防：lint 工具链与 stdlib 版本必须同代；升级本机 Go 后先跑一次 `daemon:lint` 再提交。
 
-## 2026-11-22 · L4 session-transcript 嵌套折叠点击被 Playwright 静默吞掉（Run 44806068645）
+## 2026-11-22 · L4 session-transcript 嵌套折叠首次点击丢失（Run 44806068645）
 
-- 现象：`session transcript light 390px` 在 `toContainText(TOOL_OUTPUT)` 处以 “element(s) not found” 超时；其前的 `aria-expanded='false'`、`'the layout'` 可见断言都通过，`tool.click()` 本身无报错。同代码在 PR run 上绿、在 main push 上红（本地 300+ 次无法复现）。
-- 根因：嵌套 tool 折叠的 trigger 位于外层 disclosure 的动画 `overflow:hidden` 容器内；外层内容 mount/unmount 会让内层 trigger 的命中盒在 Playwright 动作性检查与鼠标派发之间移动，命中目标拦截器随即 `preventDefault + stopImmediatePropagation` 取消 mousedown/mouseup——`click()` 正常返回但 React 收不到事件，内层 disclosure 不展开，`[data-bubble-kind="tool-result"]` 从未进 DOM。已用一次性 click 拦截注入复现“点击丢失”观测并验证恢复逻辑。
+- 确证事实：`session transcript light 390px` 在 `toContainText(TOOL_OUTPUT)` 处以 “element(s) not found” 超时；其前的 `aria-expanded='false'`、`'the layout'` 可见断言都通过，`tool.click()` 本身无报错；内层 disclosure 从未展开（若曾展开再收起，Radix Presence 退出动画会把内容在 DOM 保留约 120ms，Playwright 首次轮询即可捕获）；同代码在 PR run 上绿、在 main push 上红，本地 300+ 次（含 8x CPU 节流、主线程打满、冷 dep 缓存）不复现；用一次性 click 拦截注入可复现同形态的“点击丢失”观测，且重发同一动作即自愈。
+- 机理假设（未定论）：`click()` 正常返回而 React 未收到事件的已知路径是 Playwright 命中目标拦截器在动作性检查与鼠标派发之间判定命中目标不符后 `preventDefault + stopImmediatePropagation` 取消 mousedown/mouseup。嵌套 trigger 位于外层 disclosure 的动画 `overflow:hidden` 容器内、外层内容 mount/unmount 重排内层命中盒，是扩大该竞态窗口的最可能候选；本地无法捕获该窗口，故按假设对待，不作为定论。
 - 修复：`session-transcript.spec.ts` 引入 `setDisclosure(trigger, expanded)`——点击后断言 `aria-expanded` 达到目标态，未达则重发同一动作；新增外层键盘展开后的 `aria-expanded='true'` 断言。所有内容断言（全文、无 img、无截断）原样保留。
 - 预防：对折叠/弹层类交互，E2E 只断言“点击成功”不够——必须断言应用状态翻转（`aria-expanded`）再断言内容；纯 “element(s) not found” 报错优先怀疑动作未生效而非内容缺失。

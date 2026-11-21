@@ -37,13 +37,16 @@ const EVENTS = [
   event(8, 'session_ended', { status: 'completed', duration_ms: 1500 }),
 ];
 
-// The nested tool trigger lives inside the outer disclosure's
-// animated `overflow:hidden` container, so a click dispatched while
-// that container is still settling can be dropped by Playwright's
-// hit-target check without surfacing any error — the click resolves
-// but React never receives it. Toggle and verify the disclosure
-// state, re-issuing the same user action when it did not take; every
-// content assertion below stays exactly as strict either way.
+// Verified on the slow CI runner: the nested tool click resolves
+// without any error, `[data-bubble-kind="tool-result"]` never enters
+// the DOM, and re-issuing the same click heals it — the app simply
+// never saw the first press. Why the first click is lost is
+// unproven; the leading hypothesis is Playwright's hit-target check
+// cancelling mousedown/mouseup while the outer disclosure's animated
+// `overflow:hidden` container re-lays out its children. So toggle,
+// verify the disclosure state, and re-issue the same user action
+// when it did not take; every content assertion below stays exactly
+// as strict either way.
 async function setDisclosure(trigger: Locator, expanded: boolean): Promise<void> {
   const state = expanded ? 'true' : 'false';
   for (let attempt = 0; attempt < 3; attempt += 1) {
