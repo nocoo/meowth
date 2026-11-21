@@ -37,13 +37,14 @@ const EVENTS = [
   event(8, 'session_ended', { status: 'completed', duration_ms: 1500 }),
 ];
 
-// Verified on the slow CI runner: the nested tool click resolves
-// without any error, `[data-bubble-kind="tool-result"]` never enters
-// the DOM, and re-issuing the same click heals it — the app simply
-// never saw the first press. Why the first click is lost is
-// unproven; the leading hypothesis is Playwright's hit-target check
-// cancelling mousedown/mouseup while the outer disclosure's animated
-// `overflow:hidden` container re-lays out its children. So toggle,
+// CI observation (run 44806068645): the nested tool click resolves
+// without error, then the assertion times out (5s) without finding
+// locator('[data-bubble-kind="tool-result"]'). Local verification:
+// one-shot interception of the click reproduces that observable
+// loss, and setDisclosure detects the unchanged disclosure state and
+// recovers by re-issuing the same action. The root cause remains
+// undetermined — animated-container re-layout, hit-box drift, and
+// similar accounts are hypotheses, not conclusions. So toggle,
 // verify the disclosure state, and re-issue the same user action
 // when it did not take; every content assertion below stays exactly
 // as strict either way.
