@@ -102,7 +102,10 @@ describe('SessionDetailPage (shell, Stage C3b)', () => {
       }),
     );
     renderShellAt('/sessions/sid-ok');
-    expect(await screen.findByText('hi from c3b')).toBeInTheDocument();
+    // The lazy SessionDetailContent chunk resolves through Suspense and
+    // can exceed testing-library's 1s default while the suite runs files
+    // in parallel, so give the ready branch a generous window.
+    expect(await screen.findByText('hi from c3b', {}, { timeout: 10_000 })).toBeInTheDocument();
     expect(screen.getByTestId('session-detail-id').textContent).toBe('sid-ok');
     expect(screen.getByTestId('session-messages')).toBeInTheDocument();
   });
