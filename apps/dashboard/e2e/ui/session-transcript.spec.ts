@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, test } from '@playwright/test';
 import type { Envelope } from '../../src/models/types';
 import { mockDashboard } from './fixtures';
 
@@ -36,6 +36,32 @@ const EVENTS = [
   event(7, 'usage', { models: { claude: { input_tokens: 1234, output_tokens: 56 } } }),
   event(8, 'session_ended', { status: 'completed', duration_ms: 1500 }),
 ];
+
+// CI observation (run 44806068645): the nested tool click resolves
+// without error, then the assertion times out (5s) without finding
+// locator('[data-bubble-kind="tool-result"]'). Local verification:
+// one-shot interception of the click reproduces that observable
+// loss, and setDisclosure detects the unchanged disclosure state and
+// recovers by re-issuing the same action. The root cause remains
+// undetermined — animated-container re-layout, hit-box drift, and
+// similar accounts are hypotheses, not conclusions. So toggle,
+// verify the disclosure state, and re-issue the same user action
+// when it did not take; every content assertion below stays exactly
+// as strict either way.
+async function setDisclosure(trigger: Locator, expanded: boolean): Promise<void> {
+  const state = expanded ? 'true' : 'false';
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if ((await trigger.getAttribute('aria-expanded')) !== state) {
+      await trigger.click();
+    }
+    try {
+      await expect(trigger).toHaveAttribute('aria-expanded', state, { timeout: 2_000 });
+      return;
+    } catch (error) {
+      if (attempt === 2) throw error;
+    }
+  }
+}
 
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [1440, 390, 320]) {
@@ -85,15 +111,16 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.locator('[data-bubble-kind="tool-result"]')).toHaveCount(0);
         await activity.focus();
         await page.keyboard.press('Enter');
+        await expect(activity).toHaveAttribute('aria-expanded', 'true');
         await expect(page.getByText('the layout', { exact: true })).toBeVisible();
         const tool = page.getByRole('button', { name: 'Read file', exact: true });
         await expect(tool).toHaveAttribute('aria-expanded', 'false');
-        await tool.click();
+        await setDisclosure(tool, true);
         const result = page.locator('[data-bubble-kind="tool-result"]');
         await expect(result).toContainText(TOOL_OUTPUT);
         await expect(result.locator('img')).toHaveCount(0);
         await expect(page.getByText(/truncated/)).toHaveCount(0);
-        await activity.click();
+        await setDisclosure(activity, false);
         await expect(result).toHaveCount(0);
 
         const bounds = await page.locator('.chat-reading-column').boundingBox();
