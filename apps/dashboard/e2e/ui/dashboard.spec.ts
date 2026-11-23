@@ -2,10 +2,63 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, test } from '@playwright/test';
 import { LONG_OUTPUT, mockDashboard } from './fixtures';
 
 const DASHBOARD_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+
+/** Compute WCAG contrast ratio of a locator's text against its composited background. */
+async function measureContrast(locator: Locator): Promise<number> {
+  return locator.evaluate((element) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('2d canvas context unavailable');
+    const alphaOf = (color: string) => {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      return context.getImageData(0, 0, 1, 1).data[3] ?? 0;
+    };
+    const luminance = (data: Uint8ClampedArray) => {
+      const linear = [0, 1, 2].map((index) => {
+        const value = (data[index] ?? 0) / 255;
+        return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+      });
+      return (linear[0] ?? 0) * 0.2126 + (linear[1] ?? 0) * 0.7152 + (linear[2] ?? 0) * 0.0722;
+    };
+
+    const layers: string[] = [];
+    let current: Element | null = element;
+    while (current) {
+      const bg = getComputedStyle(current).backgroundColor;
+      const alpha = alphaOf(bg);
+      if (alpha > 0) {
+        layers.push(bg);
+        if (alpha === 255) break;
+      }
+      current = current.parentElement;
+    }
+
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, 1, 1);
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const layer = layers[i];
+      if (layer) {
+        context.fillStyle = layer;
+        context.fillRect(0, 0, 1, 1);
+      }
+    }
+    const background = luminance(context.getImageData(0, 0, 1, 1).data);
+
+    context.fillStyle = getComputedStyle(element).color;
+    context.fillRect(0, 0, 1, 1);
+    const foreground = luminance(context.getImageData(0, 0, 1, 1).data);
+
+    return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+  });
+}
 
 for (const theme of ['light', 'dark'] as const) {
   test.describe(theme, () => {
@@ -61,47 +114,9 @@ for (const theme of ['light', 'dark'] as const) {
         .evaluate((element) => getComputedStyle(element).backgroundColor);
       expect(activeFill).not.toBe(inactiveFill);
 
-      const contrast = await create.evaluate((element) => {
-        const luminance = (color: string) => {
-          const channels =
-            color
-              .match(/[\d.]+/g)
-              ?.slice(0, 3)
-              .map(Number) ?? [];
-          const linear = channels.map((channel) => {
-            const value = channel / 255;
-            return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-          });
-          return (linear[0] ?? 0) * 0.2126 + (linear[1] ?? 0) * 0.7152 + (linear[2] ?? 0) * 0.0722;
-        };
-        const style = getComputedStyle(element);
-        const foreground = luminance(style.color);
-        const background = luminance(style.backgroundColor);
-        return (
-          (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
-        );
-      });
+      const contrast = await measureContrast(create);
       expect(contrast).toBeGreaterThanOrEqual(4.5);
-      const rowContrast = await active.evaluate((element) => {
-        const luminance = (color: string) => {
-          const channels =
-            color
-              .match(/[\d.]+/g)
-              ?.slice(0, 3)
-              .map(Number) ?? [];
-          const linear = channels.map((channel) => {
-            const value = channel / 255;
-            return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-          });
-          return (linear[0] ?? 0) * 0.2126 + (linear[1] ?? 0) * 0.7152 + (linear[2] ?? 0) * 0.0722;
-        };
-        const style = getComputedStyle(element);
-        const foreground = luminance(style.color);
-        const background = luminance(style.backgroundColor);
-        return (
-          (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
-        );
-      });
+      const rowContrast = await measureContrast(active);
       expect(rowContrast).toBeGreaterThanOrEqual(4.5);
       await create.click();
       const dialog = page.getByRole('dialog', { name: 'Create token' });
