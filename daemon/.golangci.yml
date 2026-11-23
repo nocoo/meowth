@@ -1,7 +1,7 @@
 version: "2"
 
 # meowth daemon — pinned linter set per docs/architecture/08-6dq-hooks-wiring.md §13 #5.
-# Run via `pnpm daemon:lint` (which invokes `go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run`).
+# Run via `pnpm daemon:lint` (which invokes `go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 run`).
 linters:
   default: none
   enable:

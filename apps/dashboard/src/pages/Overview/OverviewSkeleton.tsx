@@ -1,5 +1,5 @@
 import { LayerCard } from '@nocoo/basalt';
-import { SkeletonLine } from '@nocoo/basalt/components/skeleton-line';
+import { Skeleton } from '@nocoo/basalt/components/skeleton';
 
 const SKELETON_KEYS = ['daemon', 'tokens', 'sessions', 'agents'] as const;
 
@@ -14,19 +14,19 @@ export default function OverviewSkeleton() {
             className="flex min-h-36 flex-col justify-between gap-4 p-4 sm:min-h-40 sm:p-6"
             padding="lg"
           >
-            <SkeletonLine className="h-8 w-32" />
-            <SkeletonLine className="h-12 w-24" />
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-12 w-24" />
           </LayerCard>
         ))}
       </div>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         {['activity', 'availability'].map((key) => (
           <div key={key} className="space-y-3">
-            <SkeletonLine className="h-8 w-36" />
+            <Skeleton className="h-8 w-36" />
             <LayerCard outlined className="space-y-5" padding="lg">
-              <SkeletonLine className="h-8 w-full" />
-              <SkeletonLine className="h-8 w-full" />
-              <SkeletonLine className="h-8 w-2/3" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-2/3" />
             </LayerCard>
           </div>
         ))}

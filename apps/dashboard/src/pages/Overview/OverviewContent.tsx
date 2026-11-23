@@ -32,7 +32,7 @@ export default function OverviewContent({ data }: OverviewContentProps) {
           icon={Activity}
           description="Local service connection"
           body={
-            <Badge variant={reachable ? 'success' : 'warning'} dot>
+            <Badge tone={reachable ? 'success' : 'warning'} dot>
               {reachable ? 'Reachable' : 'Unknown'}
             </Badge>
           }
@@ -145,7 +145,11 @@ export default function OverviewContent({ data }: OverviewContentProps) {
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">
                       {displayLabel(agent.type)}
                     </span>
-                    <Badge variant={agent.installed ? 'success' : 'outline'} dot>
+                    <Badge
+                      tone={agent.installed ? 'success' : 'neutral'}
+                      variant={agent.installed ? 'soft' : 'outline'}
+                      dot
+                    >
                       {agent.installed ? 'Installed' : 'Not installed'}
                     </Badge>
                   </li>

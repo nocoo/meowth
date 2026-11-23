@@ -1,5 +1,5 @@
 import { LayerCard } from '@nocoo/basalt';
-import { SkeletonLine } from '@nocoo/basalt/components/skeleton-line';
+import { Skeleton } from '@nocoo/basalt/components/skeleton';
 import {
   Table,
   TableBody,
@@ -40,7 +40,7 @@ export default function SessionsListSkeleton() {
               <TableRow key={row}>
                 {SKELETON_COLS.map((col) => (
                   <TableCell key={col}>
-                    <SkeletonLine className="h-4 w-24" />
+                    <Skeleton className="h-4 w-24" />
                   </TableCell>
                 ))}
               </TableRow>

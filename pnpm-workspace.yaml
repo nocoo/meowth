@@ -5,8 +5,8 @@ allowBuilds:
   '@biomejs/biome': true
   esbuild: false
 minimumReleaseAgeExclude:
-  - '@nocoo/basalt@3.5.1'
   - vite@8.3.8
+  - '@nocoo/basalt@3.6.0'
 onlyBuiltDependencies:
   - '@biomejs/biome'
 overrides:

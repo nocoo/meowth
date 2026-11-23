@@ -1,16 +1,17 @@
 import { Badge } from '@nocoo/basalt';
+import type { BadgeTone } from '@nocoo/basalt/components/badge';
 import { displayLabel } from '@/lib/labels';
 
-const VARIANTS: Record<string, 'success' | 'error' | 'info'> = {
+const TONES: Record<string, BadgeTone> = {
   completed: 'success',
-  failed: 'error',
-  error: 'error',
+  failed: 'danger',
+  error: 'danger',
   running: 'info',
 };
 
 export default function SessionStatusBadge({ status }: { status: string }) {
   return (
-    <Badge variant={VARIANTS[status] ?? 'secondary'} dot>
+    <Badge tone={TONES[status] ?? 'neutral'} dot>
       {displayLabel(status)}
     </Badge>
   );

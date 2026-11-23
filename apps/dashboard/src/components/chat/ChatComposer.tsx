@@ -1,5 +1,5 @@
 import { Button } from '@nocoo/basalt/components/button';
-import { InputArea } from '@nocoo/basalt/components/input-area';
+import { Textarea } from '@nocoo/basalt/components/textarea';
 import { Send, Square } from '@nocoo/basalt/icons';
 import { type KeyboardEvent, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -54,7 +54,7 @@ export function ChatComposer({
   return (
     <div className={cn(className)}>
       <div>
-        <InputArea
+        <Textarea
           aria-label={label}
           placeholder={placeholder}
           value={draft}

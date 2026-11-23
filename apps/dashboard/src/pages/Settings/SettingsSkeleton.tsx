@@ -1,4 +1,4 @@
-import { SkeletonLine } from '@nocoo/basalt/components/skeleton-line';
+import { Skeleton } from '@nocoo/basalt/components/skeleton';
 
 // docs/architecture/06 §7.5 + features/02 §4.4 — Phase 2 Stage C5.
 // Pre-data placeholder for the Daemon (healthz) row + Notice slot
@@ -10,8 +10,8 @@ import { SkeletonLine } from '@nocoo/basalt/components/skeleton-line';
 export default function SettingsSkeleton() {
   return (
     <>
-      <SkeletonLine className="h-4 w-44" />
-      <SkeletonLine className="h-12 w-full" />
+      <Skeleton className="h-4 w-44" />
+      <Skeleton className="h-12 w-full" />
     </>
   );
 }

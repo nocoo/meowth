@@ -55,7 +55,11 @@ export default function AgentsContent({ agents }: AgentsContentProps) {
               <TableRow key={agent.type}>
                 <TableCell className="font-medium">{displayLabel(agent.type)}</TableCell>
                 <TableCell>
-                  <Badge variant={agent.installed ? 'success' : 'outline'} dot>
+                  <Badge
+                    tone={agent.installed ? 'success' : 'neutral'}
+                    variant={agent.installed ? 'soft' : 'outline'}
+                    dot
+                  >
                     {agent.installed ? 'Yes' : 'No'}
                   </Badge>
                 </TableCell>
