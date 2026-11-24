@@ -1,13 +1,6 @@
 const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
-const {
-  chmodSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} = require('node:fs');
+const { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
@@ -27,7 +20,7 @@ function succeed(cwd, args, env) {
   assert.equal(result.status, 0, result.stderr || result.stdout);
 }
 
-function materializeRepo(t) {
+function materializeRepo(_t) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'meowth-l1-hook-'));
   const repo = path.join(root, 'repo');
   mkdirSync(repo);

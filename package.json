@@ -10,11 +10,11 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "dashboard:dev": "pnpm --filter @meowth/dashboard dev",
-    "lint": "biome check .",
+    "lint": "biome check --error-on-warnings .",
     "format": "biome format --write .",
     "typecheck": "turbo run typecheck",
     "test": "pnpm test:hooks && turbo run test",
-    "test:hooks": "node --test scripts/__tests__/lint-staged-config.test.cjs scripts/__tests__/pre-commit-l1.test.cjs",
+    "test:hooks": "node --test scripts/__tests__/pre-commit-l1.test.cjs",
     "check:l1:ts-four-metrics": "bash scripts/check-l1-ts-four-metrics.sh",
     "precommit:l1": "bash scripts/hooks/pre-commit-l1.sh",
     "clean": "turbo run clean && rm -rf node_modules",
@@ -58,7 +58,6 @@
   "devDependencies": {
     "@biomejs/biome": "^2.6.8",
     "husky": "9.1.7",
-    "lint-staged": "17.6.1",
     "tsx": "4.23.15",
     "turbo": "^2.11.13",
     "typescript": "^7.0.2"

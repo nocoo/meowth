@@ -56,13 +56,6 @@ for (let offset = 0; offset < output.length; ) {
 }
 NODE
 
-if [ "${MEOWTH_PRECOMMIT_SKIP_L1:-}" = 1 ]; then
-  pnpm exec lint-staged \
-    --no-stash \
-    --no-hide-partially-staged \
-    --fail-on-changes
-else
-  bash scripts/hooks/pre-commit-l1.sh
-fi
+bash scripts/hooks/pre-commit-l1.sh
 
 echo "pre-commit: OK"
