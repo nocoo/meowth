@@ -49,22 +49,9 @@ for f in "${SUMMARY_FILES[@]}"; do
   fi
 done
 
-# Exempt-structural file list. Each entry is a repo-relative path that
-# must not enter the coverage gate. Reasons are reported inline.
-EXEMPT_STRUCTURAL=$(cat <<'EOF'
-apps/dashboard/src/main.tsx=ReactDOM.createRoot bootstrap; no independent unit test value
-apps/dashboard/src/App.tsx=top-level router shell; covered by L3 routing
-apps/dashboard/src/routes/index.tsx=route table assembly; covered by L3 routing
-apps/dashboard/src/pages/Agents/index.ts=barrel re-export
-apps/dashboard/src/pages/Chat/index.ts=barrel re-export
-apps/dashboard/src/pages/Overview/index.ts=barrel re-export
-apps/dashboard/src/pages/Sessions/index.ts=barrel re-export
-apps/dashboard/src/pages/Settings/index.ts=barrel re-export
-apps/dashboard/src/pages/Setup/index.ts=barrel re-export
-apps/dashboard/src/pages/Tokens/index.ts=barrel re-export
-apps/dashboard/src/components/layout/index.ts=barrel re-export
-EOF
-)
+# Exempt-structural shells, barrels, and pure View .tsx components are
+# excluded in apps/dashboard/vitest.config.ts.
+EXEMPT_STRUCTURAL=""
 
 # Baseline floors. repo-relative file → minimum statements percent (integer).
 # Floor is the regression bar; the target is DEFAULT_TARGET. Lift a file

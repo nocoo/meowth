@@ -97,6 +97,14 @@ describe('useSetupViewModel — initial state and mode switching', () => {
     });
     expect(result.current.mode).toBe('token');
   });
+
+  it('defaults currentOrigin to window.location.origin when options are omitted', () => {
+    const { result } = renderHook(() => useSetupViewModel(), {
+      wrapper: wrap(),
+    });
+    expect(result.current.mintDisabled).toBe(false);
+    expect(result.current.mintDisabledReason).toBeNull();
+  });
 });
 
 describe('useSetupViewModel.submitToken', () => {
@@ -207,6 +215,27 @@ describe('useSetupViewModel.submitToken', () => {
     } else {
       throw new Error(`expected error status, got ${result.current.status.kind}`);
     }
+  });
+
+  it('on a non-401 ApiError, surfaces problem.title without clearing stored token', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ type: '/problems/internal', title: 'Internal Server Error', status: 500 }),
+        { status: 500 },
+      ),
+    );
+    const { result } = renderHook(
+      () => useSetupViewModel({ currentOrigin: 'http://127.0.0.1:7040' }),
+      {
+        wrapper: wrap(),
+      },
+    );
+    await act(async () => {
+      await result.current.submitToken(VALID_TOKEN);
+    });
+    expect(window.localStorage.getItem(TOKEN_KEY)).toBe(VALID_TOKEN);
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(result.current.status).toEqual({ kind: 'error', message: 'Internal Server Error' });
   });
 });
 
@@ -338,6 +367,28 @@ describe('useSetupViewModel.submitMint', () => {
     } else {
       throw new Error(`expected error status, got ${result.current.status.kind}`);
     }
+  });
+
+  it('on a non-404 ApiError, stays in mint mode and surfaces problem.title', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ type: '/problems/internal', title: 'Internal Server Error', status: 500 }),
+        { status: 500 },
+      ),
+    );
+    const { result } = renderHook(
+      () => useSetupViewModel({ currentOrigin: 'http://127.0.0.1:7040' }),
+      {
+        wrapper: wrap(),
+      },
+    );
+    act(() => result.current.setMode('mint'));
+    await act(async () => {
+      await result.current.submitMint(VALID_CODE);
+    });
+    expect(result.current.mode).toBe('mint');
+    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(result.current.status).toEqual({ kind: 'error', message: 'Internal Server Error' });
   });
 });
 

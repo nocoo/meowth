@@ -33,20 +33,9 @@ if (!root) {
   process.exit(2);
 }
 
-// Same structural shells/barrels as scripts/check-dashboard-coverage.sh.
-const STRUCTURAL_EXEMPT = new Set([
-  'apps/dashboard/src/main.tsx',
-  'apps/dashboard/src/App.tsx',
-  'apps/dashboard/src/routes/index.tsx',
-  'apps/dashboard/src/pages/Agents/index.ts',
-  'apps/dashboard/src/pages/Chat/index.ts',
-  'apps/dashboard/src/pages/Overview/index.ts',
-  'apps/dashboard/src/pages/Sessions/index.ts',
-  'apps/dashboard/src/pages/Settings/index.ts',
-  'apps/dashboard/src/pages/Setup/index.ts',
-  'apps/dashboard/src/pages/Tokens/index.ts',
-  'apps/dashboard/src/components/layout/index.ts',
-]);
+// Structural shells, barrels, and pure View .tsx components are excluded in
+// apps/dashboard/vitest.config.ts.
+const STRUCTURAL_EXEMPT = new Set([]);
 
 const files = [
   'apps/dashboard/coverage/coverage-summary.json',

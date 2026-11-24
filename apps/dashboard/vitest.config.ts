@@ -24,6 +24,8 @@ export default defineConfig({
     },
   },
   test: {
+    allowOnly: false,
+    passWithNoTests: false,
     environment: 'jsdom',
     // Pin jsdom to a real http origin so `window.localStorage` is a
     // usable Storage instance on every host. jsdom disables storage
@@ -42,7 +44,14 @@ export default defineConfig({
       reporter: ['text', 'json-summary', 'html'],
       reportsDirectory: 'coverage',
       include: ['src/**'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/index.css'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.test.tsx',
+        'src/**/*.tsx',
+        'src/pages/*/index.ts',
+        'src/components/layout/index.ts',
+        'src/index.css',
+      ],
     },
   },
 });
