@@ -38,7 +38,7 @@ jobs:
 
   s2-lint:
     name: "S2: Lint"
-    runs-on: macos-26
+    runs-on: ubuntu-latest
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
@@ -55,8 +55,11 @@ jobs:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
-      - name: Install ripgrep
-        run: brew install ripgrep
+      - name: Ensure ripgrep
+        run: |
+          if ! command -v rg >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y ripgrep
+          fi
       - run: pnpm test:hooks
       - run: pnpm daemon:fmt:check
       - run: pnpm daemon:lint
@@ -118,7 +121,7 @@ jobs:
 
   g1-secret-scan:
     name: "G1: Secret Scan"
-    runs-on: macos-26
+    runs-on: ubuntu-latest
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
@@ -174,7 +177,7 @@ jobs:
 
   b1-build:
     name: "B1: Build"
-    runs-on: macos-26
+    runs-on: ubuntu-latest
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
