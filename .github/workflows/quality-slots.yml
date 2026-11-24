@@ -39,10 +39,13 @@ jobs:
   s2-lint:
     name: "S2: Lint"
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup JS and dependencies
         uses: nocoo/base-ci/.github/actions/setup-js@777bbe4f9bacab8a91d8c01974480a6ee23d28e0  # v2026.15
         with:
@@ -55,14 +58,24 @@ jobs:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
+      - name: Install verified golangci-lint
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/golangci/golangci-lint/releases/download/v2.14.0/golangci-lint-2.14.0-linux-amd64.tar.gz \
+            -o "$RUNNER_TEMP/golangci-lint.tar.gz"
+          echo "ab90aeb7b066f92a33415b638a50fe5344bbb75a0d32ad30cc248d88f81032ab  $RUNNER_TEMP/golangci-lint.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/golangci-lint.tar.gz" -C "$RUNNER_TEMP" --strip-components=1 golangci-lint-2.14.0-linux-amd64/golangci-lint
       - name: Ensure ripgrep
         run: |
           if ! command -v rg >/dev/null 2>&1; then
             sudo apt-get update && sudo apt-get install -y ripgrep
           fi
-      - run: pnpm test:hooks
+      - run: pnpm run lint
       - run: pnpm daemon:fmt:check
-      - run: pnpm daemon:lint
+      - name: S2 daemon lint
+        working-directory: daemon
+        run: '"$RUNNER_TEMP/golangci-lint" run'
       - run: pnpm dashboard:fmt:check
       - run: pnpm dashboard:lint
       - run: pnpm dashboard:depcruise
@@ -230,6 +243,8 @@ jobs:
           install-policy: "blocked"
       - name: Install ripgrep
         run: brew install ripgrep
+      - name: L1 hook contract tests
+        run: pnpm test:hooks
       - name: L1 daemon unit tests and coverage
         run: pnpm daemon:test:cover && pnpm daemon:cover:check
       - name: L1 dashboard unit tests and coverage
