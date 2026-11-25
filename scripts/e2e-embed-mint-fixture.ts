@@ -16,15 +16,14 @@
  * path so 3.22's `meowthd-embed` is not overwritten.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { type AddressInfo, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { ensureMeowthdBinary } from './lib/build-meowthd';
 
 const REPO_ROOT = resolve(__dirname, '..');
 const DAEMON_DIR = join(REPO_ROOT, 'daemon');
-const OUTPUT_DIR = join(REPO_ROOT, 'scripts/run-l2-output');
-const BINARY = join(OUTPUT_DIR, 'meowthd-embed-mint');
 const CODE_FILE = join(tmpdir(), 'meowth-e2e-embed-mint-code');
 const HOME_MARKER = join(tmpdir(), 'meowth-e2e-embed-mint-home-path');
 const FIXED_PORT = 17041;
@@ -69,20 +68,7 @@ async function main(): Promise<void> {
   log(`port preflight on 127.0.0.1:${FIXED_PORT}`);
   await assertPortFree(FIXED_PORT);
 
-  log('pnpm daemon:build (dashboard build + prepare + go build)');
-  const build = spawnSync('pnpm', ['daemon:build'], {
-    cwd: REPO_ROOT,
-    stdio: 'inherit',
-  });
-  if (build.status !== 0) throw new Error(`pnpm daemon:build status ${build.status}`);
-
-  mkdirSync(OUTPUT_DIR, { recursive: true });
-  log(`go build -o ${BINARY} ./cmd/meowthd`);
-  const goBuild = spawnSync('go', ['build', '-o', BINARY, './cmd/meowthd'], {
-    cwd: DAEMON_DIR,
-    stdio: 'inherit',
-  });
-  if (goBuild.status !== 0) throw new Error(`go build status ${goBuild.status}`);
+  const BINARY = ensureMeowthdBinary('meowthd-embed-mint');
 
   const home = mkdtempSync(join(tmpdir(), 'meowth-e2e-embed-mint-home-'));
   writeFileSync(HOME_MARKER, home, { encoding: 'utf8', mode: 0o600 });

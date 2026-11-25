@@ -45,7 +45,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
-import { buildMeowthd } from './lib/build-meowthd';
+import { ensureMeowthdBinary } from './lib/build-meowthd';
 
 const REPO_ROOT = process.cwd();
 const { MEOWTH_TEST_HOME } = process.env;
@@ -185,8 +185,7 @@ async function main(): Promise<void> {
   // Build daemon binary once and exec it directly so Kill() reaches
   // the meowthd process (not a `go run` wrapper) — orphan procs were
   // accumulating across L2 runs.
-  execFileSync('pnpm', ['daemon:build'], { stdio: 'inherit', cwd: REPO_ROOT });
-  meowthdBinary = buildMeowthd('meowthd-exec-l2');
+  meowthdBinary = ensureMeowthdBinary('meowthd-exec-l2');
 
   // Provision an isolated test home + bearer (`init` writes a root
   // token to stdout). Then spawn `meowthd serve` against it with

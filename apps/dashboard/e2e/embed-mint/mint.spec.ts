@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { pasteAndMint } from './_fixtures';
 
+test.use({ baseURL: 'http://127.0.0.1:17041' });
+
 // docs/architecture/06 §11 (b) + 04 §4 — embed mint happy path B:
 //   meowthd init --skip-token → mint window OPEN → paste setup-code
 //   at same-origin /setup mint form → mint → /overview render →

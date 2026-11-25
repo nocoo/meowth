@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { handpasteToken } from './_fixtures';
 
+test.use({ baseURL: 'http://127.0.0.1:17040' });
+
 // docs/architecture/06 §11 (a) — embed happy path A:
 //   meowthd init → paste token at same-origin /setup → /overview
 //   renders → /agents lists the 5 fake backends from

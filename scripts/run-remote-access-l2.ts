@@ -44,7 +44,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
-import { buildMeowthd } from './lib/build-meowthd';
+import { ensureMeowthdBinary } from './lib/build-meowthd';
 
 const REPO_ROOT = process.cwd();
 const { MEOWTH_TEST_HOME } = process.env;
@@ -472,8 +472,7 @@ async function step(label: string, fn: () => Promise<void>): Promise<void> {
 async function main(): Promise<void> {
   // Build daemon binary once and exec it directly so Kill() reaches
   // the actual meowthd process rather than a `go run` wrapper.
-  execFileSync('pnpm', ['daemon:build'], { stdio: 'inherit', cwd: REPO_ROOT });
-  meowthdBinary = buildMeowthd('meowthd-remote-access-l2');
+  meowthdBinary = ensureMeowthdBinary('meowthd-remote-access-l2');
 
   for (const c of cases) {
     await step(c.label, c.build);

@@ -18,7 +18,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@dc858360aa7812db61fd9d825943e4efd4dcd0e7  # v2026.17
+        uses: nocoo/base-ci/.github/actions/setup-js@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -49,7 +49,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@dc858360aa7812db61fd9d825943e4efd4dcd0e7  # v2026.17
+        uses: nocoo/base-ci/.github/actions/setup-js@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -110,7 +110,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: nocoo/base-ci/.github/actions/lint-workflows@dc858360aa7812db61fd9d825943e4efd4dcd0e7  # v2026.17
+      - uses: nocoo/base-ci/.github/actions/lint-workflows@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
       - name: Record tested SHA
         id: record-sha
         if: always()
@@ -126,7 +126,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 1
-      - uses: nocoo/base-ci/.github/actions/scan-secrets@dc858360aa7812db61fd9d825943e4efd4dcd0e7  # v2026.17
+      - uses: nocoo/base-ci/.github/actions/scan-secrets@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
       - name: Record tested SHA
         id: record-sha
         if: always()
@@ -141,7 +141,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: nocoo/base-ci/.github/actions/scan-dependencies@dc858360aa7812db61fd9d825943e4efd4dcd0e7  # v2026.17
+      - uses: nocoo/base-ci/.github/actions/scan-dependencies@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
         with:
           lockfiles: "pnpm-lock.yaml,daemon/go.mod"
       - name: Record tested SHA
@@ -156,8 +156,10 @@ jobs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@dc858360aa7812db61fd9d825943e4efd4dcd0e7  # v2026.17
+        uses: nocoo/base-ci/.github/actions/setup-js@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -173,6 +175,12 @@ jobs:
           GOOS: darwin
           GOARCH: arm64
         run: pnpm daemon:build
+      - name: Upload darwin/arm64 daemon artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: b1-daemon
+          path: daemon/meowthd
+          retention-days: 1
       - name: Record tested SHA
         id: record-sha
         if: always()
@@ -186,6 +194,8 @@ jobs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
           go-version-file: daemon/go.mod
@@ -215,13 +225,15 @@ jobs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@dc858360aa7812db61fd9d825943e4efd4dcd0e7  # v2026.17
+        uses: nocoo/base-ci/.github/actions/setup-js@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
@@ -250,27 +262,36 @@ jobs:
 
   l3-integration:
     name: "L3: Integration"
+    needs: [b1-build]
     runs-on: macos-26
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
-          go-version-file: daemon/go.mod
-          cache: true
-          cache-dependency-path: daemon/go.sum
+          persist-credentials: false
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@dc858360aa7812db61fd9d825943e4efd4dcd0e7  # v2026.17
+        uses: nocoo/base-ci/.github/actions/setup-js@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
           node-version: "26.12.1"
           install-policy: "blocked"
+      - name: Download B1 daemon artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: b1-daemon
+          path: daemon
+      - name: Prepare prebuilt daemon binary
+        run: chmod +x daemon/meowthd
       - name: L3 daemon HTTP/CLI matrices (fake backends)
+        env:
+          MEOWTH_PREBUILT_DAEMON: ${{ github.workspace }}/daemon/meowthd
         run: pnpm test:l2
       - name: L3 embedded dashboard serving
-        run: pnpm daemon:build && pnpm test:l2:embed
+        env:
+          MEOWTH_PREBUILT_DAEMON: ${{ github.workspace }}/daemon/meowthd
+        run: pnpm test:l2:embed
       - name: Record tested SHA
         id: record-sha
         if: always()
@@ -278,32 +299,38 @@ jobs:
 
   l4-e2e:
     name: "L4: E2E"
+    needs: [b1-build]
     runs-on: macos-26
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup JS and dependencies
-        uses: nocoo/base-ci/.github/actions/setup-js@dc858360aa7812db61fd9d825943e4efd4dcd0e7  # v2026.17
+        uses: nocoo/base-ci/.github/actions/setup-js@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
         with:
           package-manager: "pnpm"
           runtime-version: "11.6.0"
           node-version: "26.12.1"
           install-policy: "blocked"
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+      - name: Download B1 daemon artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
-          go-version-file: daemon/go.mod
-          cache: true
-          cache-dependency-path: daemon/go.sum
-      - name: Cache Playwright browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+          name: b1-daemon
+          path: daemon
+      - name: Prepare prebuilt daemon binary
+        run: chmod +x daemon/meowthd
+      - name: Setup Playwright
+        uses: nocoo/base-ci/.github/actions/setup-playwright@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
         with:
-          path: ~/Library/Caches/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('apps/dashboard/package.json') }}
-      - name: L4 install Playwright browsers
-        run: pnpm --filter @meowth/dashboard e2e:install
-      - name: L4 Playwright (UI + embed + embed-mint)
-        run: pnpm --filter @meowth/dashboard e2e --project=dashboard-ui --project=dashboard-embed --project=dashboard-embed-mint
+          working-directory: "apps/dashboard"
+          package-manager: "pnpm"
+          browsers: "chromium"
+      - name: L4 Playwright smoke suite
+        env:
+          MEOWTH_PREBUILT_DAEMON: ${{ github.workspace }}/daemon/meowthd
+        run: pnpm --filter @meowth/dashboard e2e
       - name: Record tested SHA
         id: record-sha
         if: always()
@@ -333,64 +360,26 @@ jobs:
       - l4-e2e
       - p1-package-check
     if: always()
+    outputs:
+      tested-sha: ${{ steps.gate.outputs.tested-sha }}
     steps:
-      - name: "Z1: Require every implemented slot job on this commit"
-        env:
-          S1_RESULT: ${{ needs.s1-typecheck.result }}
-          S2_RESULT: ${{ needs.s2-lint.result }}
-          S3_RESULT: ${{ needs.s3-workflow-lint.result }}
-          G1_RESULT: ${{ needs.g1-secret-scan.result }}
-          G2_RESULT: ${{ needs.g2-dependency-vulnerabilities.result }}
-          B1_RESULT: ${{ needs.b1-build.result }}
-          B1_WIN_RESULT: ${{ needs.b1-build-windows.result }}
-          L1_RESULT: ${{ needs.l1-unit-tests.result }}
-          L2_RESULT: ${{ needs.l2-runtime.result }}
-          L3_RESULT: ${{ needs.l3-integration.result }}
-          L4_RESULT: ${{ needs.l4-e2e.result }}
-          P1_RESULT: ${{ needs.p1-package-check.result }}
-          S1_SHA: ${{ needs.s1-typecheck.outputs.tested-sha }}
-          S2_SHA: ${{ needs.s2-lint.outputs.tested-sha }}
-          S3_SHA: ${{ needs.s3-workflow-lint.outputs.tested-sha }}
-          G1_SHA: ${{ needs.g1-secret-scan.outputs.tested-sha }}
-          G2_SHA: ${{ needs.g2-dependency-vulnerabilities.outputs.tested-sha }}
-          B1_SHA: ${{ needs.b1-build.outputs.tested-sha }}
-          B1_WIN_SHA: ${{ needs.b1-build-windows.outputs.tested-sha }}
-          L1_SHA: ${{ needs.l1-unit-tests.outputs.tested-sha }}
-          L3_SHA: ${{ needs.l3-integration.outputs.tested-sha }}
-          L4_SHA: ${{ needs.l4-e2e.outputs.tested-sha }}
-          EXPECTED_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          require_success() {
-            local label="$1" result="$2"
-            if [ "$result" != success ]; then
-              echo "::error::Z1: Gate — $label result was '$result' (expected success)."
-              exit 1
-            fi
-          }
-          require_skipped() {
-            local label="$1" result="$2"
-            if [ "$result" != skipped ]; then
-              echo "::error::Z1: Gate — $label result was '$result' (expected skipped)."
-              exit 1
-            fi
-          }
-          require_success "S1: Types" "$S1_RESULT"
-          require_success "S2: Lint" "$S2_RESULT"
-          require_success "S3: Workflow" "$S3_RESULT"
-          require_success "G1: Secrets" "$G1_RESULT"
-          require_success "G2: Dependencies" "$G2_RESULT"
-          require_success "B1: Build" "$B1_RESULT"
-          require_success "B1: Build (Windows)" "$B1_WIN_RESULT"
-          require_success "L1: Unit" "$L1_RESULT"
-          require_skipped "L2: Runtime" "$L2_RESULT"
-          require_success "L3: Integration" "$L3_RESULT"
-          require_success "L4: E2E" "$L4_RESULT"
-          require_skipped "P1: Package Check" "$P1_RESULT"
-          for sha in "$S1_SHA" "$S2_SHA" "$S3_SHA" "$G1_SHA" "$G2_SHA" "$B1_SHA" "$B1_WIN_SHA" "$L1_SHA" "$L3_SHA" "$L4_SHA"; do
-            if [ "$sha" != "$EXPECTED_SHA" ]; then
-              echo "::error::Z1: Gate — tested-sha mismatch (got '$sha', expected '$EXPECTED_SHA')."
-              exit 1
-            fi
-          done
-          echo "Z1: Gate — all slots match declaration on $EXPECTED_SHA"
+      - name: Verify required and skipped slots
+        id: gate
+        uses: nocoo/base-ci/.github/actions/z1-gate@bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c  # v2026.18
+        with:
+          needs-json: ${{ toJSON(needs) }}
+          expected-sha: ${{ github.sha }}
+          required-jobs: |
+            s1-typecheck=S1: Types
+            s2-lint=S2: Lint
+            s3-workflow-lint=S3: Workflow
+            g1-secret-scan=G1: Secrets
+            g2-dependency-vulnerabilities=G2: Dependencies
+            b1-build=B1: Build
+            b1-build-windows=B1: Build (Windows)
+            l1-unit-tests=L1: Unit
+            l3-integration=L3: Integration
+            l4-e2e=L4: E2E
+          skipped-jobs: |
+            l2-runtime=L2: Runtime
+            p1-package-check=P1: Package Check

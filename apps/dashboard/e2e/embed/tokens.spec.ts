@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { handpasteToken } from './_fixtures';
 
+test.use({ baseURL: 'http://127.0.0.1:17040' });
+
 // 3.22 light coverage of the Create token dialog: dialog opens,
 // dialog closes, the new row name appears in the table. Plaintext
 // secret reveal / copy / storage assertions are deferred to 3.24

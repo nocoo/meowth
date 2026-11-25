@@ -20,7 +20,7 @@ pnpm dashboard:test:cover && pnpm dashboard:cover:check    # TS L1 + per-file fl
 pnpm check:l1:ts-four-metrics  # Merged TS 80% four-metric L1 gate (pre-commit)
 pnpm test:l2                   # L3 daemon HTTP/CLI matrices (fake backends)
 pnpm test:l2:embed             # L3 embedded dashboard serving (after daemon:build)
-pnpm dashboard:e2e --project=dashboard-ui --project=dashboard-embed --project=dashboard-embed-mint
+pnpm dashboard:e2e               # L4 Desktop Chromium core smoke suite (UI + embed + embed-mint)
 pnpm scan:g2                   # OSV, gitleaks detect, govulncheck (G1/G2)
 pnpm scan:d1                   # Static prod/test home path separation check
 ```
@@ -39,7 +39,7 @@ pnpm scan:d1                   # Static prod/test home path separation check
 
 ## Quality & Local Gates
 
-Follows `system1-quality`; `S1`–`S3`, `G1`–`G2`, `B1` (including `B1: Build (Windows)`), `L1`, `L3`–`L4`, and `Z1` (with `tested-sha` checks) are `enforced` in `.github/workflows/quality-slots.yml` (`quality / Z1: Gate` required on `main`, pinned `base-ci` actions). Status vocabulary: `enforced`, `planned`, `manual`, `N/A`.
+Follows `system1-quality`; `S1`–`S3`, `G1`–`G2`, `B1` (including `B1: Build (Windows)`), `L1`, `L3`–`L4` (reusing `B1` `darwin/arm64` daemon artifact), and `Z1` (via `nocoo/base-ci` `z1-gate`) are `enforced` in `.github/workflows/quality-slots.yml` (`quality / Z1: Gate` required on `main`, pinned `base-ci` `v2026.18` actions). Status vocabulary: `enforced`, `planned`, `manual`, `N/A`.
 
 - **Exceptions / gaps**: `L2 Runtime` is `N/A` (not a Worker); `P1 Package` is `N/A` (private, unpublished); real-agent smoke (`test:l2:real`, `dashboard:e2e:real`) is `manual` (opt-in live providers).
 - **Coverage**: Go `L1` gates 80% per-package statements with frozen floors (`cmd/`, `store/gen` exempt); TS `L1` gates 80% per-file floors and 80% merged four-metric pre-commit (pure View `.tsx` components and shells/barrels excluded in Vitest config).

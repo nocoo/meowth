@@ -11,13 +11,12 @@
 //
 // The output binary lives in scripts/run-l2-output/ (gitignored).
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
+import { buildMeowthd } from './lib/build-meowthd';
 
-const REPO_ROOT = resolve(__dirname, '..');
-const OUTPUT_DIR = join(REPO_ROOT, 'scripts/run-l2-output');
-const BINARY = join(OUTPUT_DIR, 'meowthd-embed');
+const BINARY = buildMeowthd('meowthd-embed');
 
 function step(msg: string): void {
   process.stdout.write(`[l2-embed] ${msg}\n`);
@@ -27,18 +26,6 @@ function fail(msg: string): never {
   process.stderr.write(`[l2-embed] FAIL: ${msg}\n`);
   process.exit(1);
 }
-
-function exec(cmd: string, args: string[], cwd: string): void {
-  const res = spawnSync(cmd, args, { cwd, stdio: 'inherit' });
-  if (res.status !== 0) fail(`${cmd} ${args.join(' ')} → status ${res.status}`);
-}
-
-// Step 1: build embed binary (rely on caller having run
-// `pnpm daemon:build` first; we just re-emit the binary to a
-// deterministic output path so we can spawn it).
-mkdirSync(OUTPUT_DIR, { recursive: true });
-step(`go build -o ${BINARY} ./cmd/meowthd`);
-exec('go', ['build', '-o', BINARY, './cmd/meowthd'], join(REPO_ROOT, 'daemon'));
 
 // Step 2: mint a root token via path A inside a throw-away home.
 const home = mkdtempSync(join(tmpdir(), 'meowth-l2-embed-home-'));

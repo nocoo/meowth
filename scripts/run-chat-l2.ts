@@ -44,7 +44,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
-import { buildMeowthd } from './lib/build-meowthd';
+import { ensureMeowthdBinary } from './lib/build-meowthd';
 
 const REPO_ROOT = process.cwd();
 const { MEOWTH_TEST_HOME } = process.env;
@@ -345,8 +345,7 @@ function redactionScan(rootBearer: string): void {
 }
 
 async function main(): Promise<void> {
-  execFileSync('pnpm', ['daemon:build'], { stdio: 'inherit', cwd: REPO_ROOT });
-  meowthdBinary = buildMeowthd('meowthd-chat-l2');
+  meowthdBinary = ensureMeowthdBinary('meowthd-chat-l2');
 
   mkdirSync(TEST_ROOT, { recursive: true });
   runHome = mkdtempSync(join(TEST_ROOT, 'chat-'));

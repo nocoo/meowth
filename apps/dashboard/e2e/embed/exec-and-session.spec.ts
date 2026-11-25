@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { handpasteToken } from './_fixtures';
 
+test.use({ baseURL: 'http://127.0.0.1:17040' });
+
 // docs/architecture/02 §5 + 06 §11 (a) — drive a fake agent exec
 // against the same-origin daemon, then assert the dashboard
 // renders the resulting session's messages via the existing

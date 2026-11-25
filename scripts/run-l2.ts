@@ -49,7 +49,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
-import { buildMeowthd } from './lib/build-meowthd';
+import { ensureMeowthdBinary } from './lib/build-meowthd';
 
 const REPO_ROOT = process.cwd();
 const { MEOWTH_TEST_HOME } = process.env;
@@ -218,8 +218,7 @@ async function main(): Promise<void> {
   });
 
   await step('build daemon binary', () => {
-    execFileSync('pnpm', ['daemon:build'], { stdio: 'inherit', cwd: REPO_ROOT });
-    meowthdBinary = buildMeowthd('meowthd-l2');
+    meowthdBinary = ensureMeowthdBinary('meowthd-l2');
   });
 
   await step('meowthd init (path A) seeds DB + root token', () => {
