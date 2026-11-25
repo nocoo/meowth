@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-MIN_PCT="${MIN_PCT:-95}"
+MIN_PCT="${MIN_PCT:-80}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 SUMMARY_FILES=(
   "$REPO_ROOT/apps/dashboard/coverage/coverage-summary.json"

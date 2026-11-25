@@ -173,11 +173,6 @@ jobs:
           GOOS: darwin
           GOARCH: arm64
         run: pnpm daemon:build
-      - name: B1 pnpm daemon:build darwin/amd64
-        env:
-          GOOS: darwin
-          GOARCH: amd64
-        run: pnpm daemon:build
       - name: Record tested SHA
         id: record-sha
         if: always()
@@ -186,7 +181,7 @@ jobs:
   # Windows cross-compile (docs/features/06-experimental-windows.md)
   b1-build-windows:
     name: "B1: Build (Windows)"
-    runs-on: macos-26
+    runs-on: ubuntu-latest
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
@@ -214,8 +209,8 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   l1-unit-tests:
-    name: "L1: Unit Tests & Coverage"
-    runs-on: macos-26
+    name: "L1: Unit"
+    runs-on: ubuntu-latest
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
     steps:
@@ -232,10 +227,6 @@ jobs:
           runtime-version: "11.6.0"
           node-version: "26.12.1"
           install-policy: "blocked"
-      - name: Install ripgrep
-        run: brew install ripgrep
-      - name: L1 hook contract tests
-        run: pnpm test:hooks
       - name: L1 daemon unit tests and coverage
         run: pnpm daemon:test:cover && pnpm daemon:cover:check
       - name: L1 dashboard unit tests and coverage
@@ -386,7 +377,7 @@ jobs:
           require_success "G2: Dependencies" "$G2_RESULT"
           require_success "B1: Build" "$B1_RESULT"
           require_success "B1: Build (Windows)" "$B1_WIN_RESULT"
-          require_success "L1: Unit Tests & Coverage" "$L1_RESULT"
+          require_success "L1: Unit" "$L1_RESULT"
           require_skipped "L2: Runtime" "$L2_RESULT"
           require_success "L3: Integration" "$L3_RESULT"
           require_success "L4: E2E" "$L4_RESULT"

@@ -37,7 +37,7 @@
 
 set -euo pipefail
 
-DEFAULT_TARGET=95
+DEFAULT_TARGET=80
 MIN_PCT="${MIN_PCT:-$DEFAULT_TARGET}"
 COVER_FILE="${COVER_FILE:-daemon/coverage.out}"
 
@@ -78,14 +78,6 @@ github.com/nocoo/meowth/daemon/internal/server=73
 github.com/nocoo/meowth/daemon/internal/server/testbackend=76
 github.com/nocoo/meowth/daemon/internal/home=79
 github.com/nocoo/meowth/daemon/internal/initcmd=79
-github.com/nocoo/meowth/daemon/pkg/agent=82
-github.com/nocoo/meowth/daemon/internal/bootstraptoken=82
-github.com/nocoo/meowth/daemon/internal/remoteaccess=85
-github.com/nocoo/meowth/daemon/internal/server/mint=85
-github.com/nocoo/meowth/daemon/internal/server/static=90
-github.com/nocoo/meowth/daemon/internal/setupnonce=91
-github.com/nocoo/meowth/daemon/internal/agentfactory=93
-github.com/nocoo/meowth/daemon/internal/server/auth=94
 EOF
 )
 

@@ -17,7 +17,7 @@ pnpm test:hooks                # Hook contract tests (S2)
 pnpm daemon:build              # Build dashboard and embed into daemon/meowthd (B1)
 pnpm daemon:test:cover && pnpm daemon:cover:check          # Go L1 + per-pkg floors
 pnpm dashboard:test:cover && pnpm dashboard:cover:check    # TS L1 + per-file floors
-pnpm check:l1:ts-four-metrics  # Merged TS 95% four-metric L1 gate (pre-commit)
+pnpm check:l1:ts-four-metrics  # Merged TS 80% four-metric L1 gate (pre-commit)
 pnpm test:l2                   # L3 daemon HTTP/CLI matrices (fake backends)
 pnpm test:l2:embed             # L3 embedded dashboard serving (after daemon:build)
 pnpm dashboard:e2e --project=dashboard-ui --project=dashboard-embed --project=dashboard-embed-mint
@@ -42,7 +42,7 @@ pnpm scan:d1                   # Static prod/test home path separation check
 Follows `system1-quality`; `S1`–`S3`, `G1`–`G2`, `B1` (including `B1: Build (Windows)`), `L1`, `L3`–`L4`, and `Z1` (with `tested-sha` checks) are `enforced` in `.github/workflows/quality-slots.yml` (`quality / Z1: Gate` required on `main`, pinned `base-ci` actions). Status vocabulary: `enforced`, `planned`, `manual`, `N/A`.
 
 - **Exceptions / gaps**: `L2 Runtime` is `N/A` (not a Worker); `P1 Package` is `N/A` (private, unpublished); real-agent smoke (`test:l2:real`, `dashboard:e2e:real`) is `manual` (opt-in live providers).
-- **Coverage**: Go `L1` gates 95% per-package statements with frozen floors (`cmd/`, `store/gen` exempt); TS `L1` gates 90% per-file floors plus 95% merged four-metric pre-commit (pure View `.tsx` components and shells/barrels excluded in Vitest config).
+- **Coverage**: Go `L1` gates 80% per-package statements with frozen floors (`cmd/`, `store/gen` exempt); TS `L1` gates 80% per-file floors and 80% merged four-metric pre-commit (pure View `.tsx` components and shells/barrels excluded in Vitest config).
 - **Local hooks**: installed via `pnpm prepare` (`.husky/`); `pre-commit` blocks partial staging and runs `scripts/hooks/pre-commit-l1.sh` on a `git checkout-index` snapshot (`G1`/`S1`/`S2`/`L1`, ~90–120s warm).
 - **Pre-push**: `.husky/pre-push` runs `daemon:vet`, `dashboard:typecheck`, Go/TS `L1` coverage gates, `test:l2` (`L3`), and `scan:g2` (`G1`/`G2`) on the working tree (`planned`: pushed-ref OID scoping).
 

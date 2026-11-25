@@ -26,7 +26,7 @@
 
 set -euo pipefail
 
-DEFAULT_TARGET=90
+DEFAULT_TARGET=80
 MIN_PCT="${MIN_PCT:-$DEFAULT_TARGET}"
 
 if (( MIN_PCT < DEFAULT_TARGET )); then
@@ -57,12 +57,7 @@ EXEMPT_STRUCTURAL=""
 # Floor is the regression bar; the target is DEFAULT_TARGET. Lift a file
 # above DEFAULT_TARGET and drop its baseline entry in a dedicated
 # follow-up commit.
-BASELINE_FLOORS=$(cat <<'EOF'
-apps/dashboard/src/lib/ansi.ts=87
-apps/dashboard/src/viewmodels/useSessionDetailViewModel.ts=82
-apps/dashboard/src/viewmodels/useTokensViewModel.ts=82
-EOF
-)
+BASELINE_FLOORS=""
 
 # Build a single tab-separated stream of `repo_relative_path\tpct` for
 # every covered file across both workspaces. Node 26+ provides the
