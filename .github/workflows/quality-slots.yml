@@ -329,9 +329,9 @@ jobs:
     steps:
       - run: echo "na — private packages, not published to npm"
 
-  # Outside slot taxonomy (docs/features/06-experimental-windows.md)
-  compile-windows:
-    name: compile-windows
+  # Windows cross-compile (docs/features/06-experimental-windows.md)
+  b1-build-windows:
+    name: "B1: Build (Windows)"
     runs-on: macos-26
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
@@ -374,7 +374,7 @@ jobs:
       - l3-integration
       - l4-e2e
       - p1-package-check
-      - compile-windows
+      - b1-build-windows
     if: always()
     steps:
       - name: "Z1: Require every implemented slot job on this commit"
@@ -390,7 +390,7 @@ jobs:
           L3_RESULT: ${{ needs.l3-integration.result }}
           L4_RESULT: ${{ needs.l4-e2e.result }}
           P1_RESULT: ${{ needs.p1-package-check.result }}
-          WIN_RESULT: ${{ needs.compile-windows.result }}
+          B1_WIN_RESULT: ${{ needs.b1-build-windows.result }}
           S1_SHA: ${{ needs.s1-typecheck.outputs.tested-sha }}
           S2_SHA: ${{ needs.s2-lint.outputs.tested-sha }}
           S3_SHA: ${{ needs.s3-workflow-lint.outputs.tested-sha }}
@@ -400,7 +400,7 @@ jobs:
           L1_SHA: ${{ needs.l1-unit-tests.outputs.tested-sha }}
           L3_SHA: ${{ needs.l3-integration.outputs.tested-sha }}
           L4_SHA: ${{ needs.l4-e2e.outputs.tested-sha }}
-          WIN_SHA: ${{ needs.compile-windows.outputs.tested-sha }}
+          B1_WIN_SHA: ${{ needs.b1-build-windows.outputs.tested-sha }}
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
@@ -429,8 +429,8 @@ jobs:
           require_success "L3: Integration" "$L3_RESULT"
           require_success "L4: E2E" "$L4_RESULT"
           require_skipped "P1: Package Check" "$P1_RESULT"
-          require_success "compile-windows" "$WIN_RESULT"
-          for sha in "$S1_SHA" "$S2_SHA" "$S3_SHA" "$G1_SHA" "$G2_SHA" "$B1_SHA" "$L1_SHA" "$L3_SHA" "$L4_SHA" "$WIN_SHA"; do
+          require_success "B1: Build (Windows)" "$B1_WIN_RESULT"
+          for sha in "$S1_SHA" "$S2_SHA" "$S3_SHA" "$G1_SHA" "$G2_SHA" "$B1_SHA" "$L1_SHA" "$L3_SHA" "$L4_SHA" "$B1_WIN_SHA"; do
             if [ "$sha" != "$EXPECTED_SHA" ]; then
               echo "::error::Z1: Gate — tested-sha mismatch (got '$sha', expected '$EXPECTED_SHA')."
               exit 1
