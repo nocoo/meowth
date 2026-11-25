@@ -13,7 +13,7 @@ set -euo pipefail
 
 EXPECTED="${OSV_SCANNER_VERSION_HINT:-2.3.8}"
 LOCKFILE="${OSV_LOCKFILE:-pnpm-lock.yaml}"
-CONFIG="${OSV_CONFIG:-.osv-scanner.toml}"
+CONFIG="${OSV_CONFIG:-osv-scanner.toml}"
 
 if ! command -v osv-scanner >/dev/null 2>&1; then
   cat >&2 <<EOF
