@@ -39,7 +39,7 @@ pnpm scan:d1                   # Static prod/test home path separation check
 
 ## Quality & Local Gates
 
-Follows `system1-quality`; `S1`–`S3`, `G1`–`G2`, `B1` (including `B1: Build (Windows)`), `L1`, `L3`–`L4` (reusing `B1` `darwin/arm64` daemon artifact), and `Z1` (via `nocoo/base-ci` `z1-gate`) are `enforced` in `.github/workflows/quality-slots.yml` (`quality / Z1: Gate` required on `main`, pinned `base-ci` `v2026.19` actions). Status vocabulary: `enforced`, `planned`, `manual`, `N/A`.
+Follows `system1-quality`; `S1`–`S3`, `G1`–`G2`, `B1` (including `B1: Build (Windows)`), `L1`, `L3`–`L4` (reusing `B1` `darwin/arm64` daemon artifact), and `Z1` (via `nocoo/base-ci` `z1-gate`) are `enforced` in `.github/workflows/quality-slots.yml` (`quality / Z1: Gate` required on `main`, pinned `base-ci` `v2026.20` actions). Status vocabulary: `enforced`, `planned`, `manual`, `N/A`.
 
 - **Exceptions / gaps**: `L2 Runtime` is `N/A` (not a Worker); `P1 Package` is `N/A` (private, unpublished); real-agent smoke (`test:l2:real`, `dashboard:e2e:real`) is `manual` (opt-in live providers).
 - **Coverage**: Go `L1` gates 80% per-package statements with frozen floors (`cmd/`, `store/gen` exempt); TS `L1` gates 80% per-file floors and 80% merged four-metric pre-commit (pure View `.tsx` components and shells/barrels excluded in Vitest config).
