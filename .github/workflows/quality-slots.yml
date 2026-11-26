@@ -276,6 +276,11 @@ jobs:
           runtime-version: "11.6.0"
           node-version: "26.12.1"
           install-policy: "blocked"
+      - name: Ensure ripgrep
+        run: |
+          if ! command -v rg >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y ripgrep
+          fi
       - name: L1 dashboard unit tests and coverage
         run: pnpm dashboard:test:cover && pnpm dashboard:cover:check
       - name: Record tested SHA
