@@ -187,8 +187,8 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   # Windows cross-compile (docs/features/06-experimental-windows.md)
-  b1-build-windows:
-    name: "B1: Build (Windows)"
+  b1-build-windows-amd64:
+    name: "B1: Build (Windows amd64)"
     runs-on: ubuntu-latest
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
@@ -207,19 +207,13 @@ jobs:
           GOOS: windows
           GOARCH: amd64
         run: go test -exec true ./...
-      - name: compile daemon for windows/arm64
-        working-directory: daemon
-        env:
-          GOOS: windows
-          GOARCH: arm64
-        run: go test -exec true ./...
       - name: Record tested SHA
         id: record-sha
         if: always()
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-  l1-unit-tests:
-    name: "L1: Unit"
+  b1-build-windows-arm64:
+    name: "B1: Build (Windows arm64)"
     runs-on: ubuntu-latest
     outputs:
       tested-sha: ${{ steps.record-sha.outputs.sha }}
@@ -232,6 +226,49 @@ jobs:
           go-version-file: daemon/go.mod
           cache: true
           cache-dependency-path: daemon/go.sum
+      - name: compile daemon for windows/arm64
+        working-directory: daemon
+        env:
+          GOOS: windows
+          GOARCH: arm64
+        run: go test -exec true ./...
+      - name: Record tested SHA
+        id: record-sha
+        if: always()
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  l1-unit-daemon:
+    name: "L1: Unit (Daemon)"
+    runs-on: ubuntu-latest
+    outputs:
+      tested-sha: ${{ steps.record-sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+        with:
+          go-version-file: daemon/go.mod
+          cache: true
+          cache-dependency-path: daemon/go.sum
+      - name: L1 daemon unit tests and coverage
+        run: |
+          (cd daemon && go test ./... -count=1 -coverprofile=coverage.out -covermode=count)
+          bash scripts/check-daemon-coverage.sh
+      - name: Record tested SHA
+        id: record-sha
+        if: always()
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  l1-unit-dashboard:
+    name: "L1: Unit (Dashboard)"
+    runs-on: ubuntu-latest
+    outputs:
+      tested-sha: ${{ steps.record-sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup JS and dependencies
         uses: nocoo/base-ci/.github/actions/setup-js@e5876a604547b1ddb0916f16dd841a4f832609a0  # v2026.20
         with:
@@ -239,13 +276,6 @@ jobs:
           runtime-version: "11.6.0"
           node-version: "26.12.1"
           install-policy: "blocked"
-      - name: Ensure ripgrep
-        run: |
-          if ! command -v rg >/dev/null 2>&1; then
-            sudo apt-get update && sudo apt-get install -y ripgrep
-          fi
-      - name: L1 daemon unit tests and coverage
-        run: pnpm daemon:test:cover && pnpm daemon:cover:check
       - name: L1 dashboard unit tests and coverage
         run: pnpm dashboard:test:cover && pnpm dashboard:cover:check
       - name: Record tested SHA
@@ -353,8 +383,10 @@ jobs:
       - g1-secret-scan
       - g2-dependency-vulnerabilities
       - b1-build
-      - b1-build-windows
-      - l1-unit-tests
+      - b1-build-windows-amd64
+      - b1-build-windows-arm64
+      - l1-unit-daemon
+      - l1-unit-dashboard
       - l2-runtime
       - l3-integration
       - l4-e2e
@@ -376,8 +408,10 @@ jobs:
             g1-secret-scan=G1: Secrets
             g2-dependency-vulnerabilities=G2: Dependencies
             b1-build=B1: Build
-            b1-build-windows=B1: Build (Windows)
-            l1-unit-tests=L1: Unit
+            b1-build-windows-amd64=B1: Build (Windows amd64)
+            b1-build-windows-arm64=B1: Build (Windows arm64)
+            l1-unit-daemon=L1: Unit (Daemon)
+            l1-unit-dashboard=L1: Unit (Dashboard)
             l3-integration=L3: Integration
             l4-e2e=L4: E2E
           skipped-jobs: |
