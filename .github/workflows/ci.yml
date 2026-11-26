@@ -1,5 +1,5 @@
 # CI slot standard v1.3.0 (system1-quality): impl S1-S3, G1-G2, B1, L1, L3, L4, Z1;
-# na L2, P1 (skipped). Check names prefix `quality / `; command logic unchanged. nocoo/base-ci v2026.18.
+# na L2, P1 (skipped). Check names prefix `quality / `; command logic unchanged. nocoo/base-ci v2026.19.
 name: CI
 
 on:
