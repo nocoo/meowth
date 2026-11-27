@@ -140,14 +140,6 @@
   box-shadow: none;
 }
 
-.chat-composer button:hover:not(:disabled) {
-  opacity: 0.8;
-}
-
-.chat-composer button:disabled {
-  opacity: 0.2;
-}
-
 .chat-composer-hint {
   position: absolute;
   bottom: 1.5rem;
@@ -164,6 +156,14 @@
 .chat-inbox > button {
   border-radius: 0.75rem;
   padding: 0.75rem;
+}
+
+.chat-composer button:disabled {
+  opacity: 0.2;
+}
+
+.chat-composer button:hover:not(:disabled) {
+  opacity: 0.8;
 }
 
 @media (max-width: 639px) {
