@@ -43,7 +43,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
       reportsDirectory: 'coverage',
-      include: ['src/**'],
+      include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'src/**/*.test.ts',
         'src/**/*.test.tsx',
@@ -58,6 +58,12 @@ export default defineConfig({
         'src/app.tsx',
         'src/index.css',
       ],
+      thresholds: {
+        statements: 90,
+        lines: 90,
+        functions: 90,
+        branches: 85,
+      },
     },
   },
 });

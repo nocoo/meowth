@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestBuilderEmitsMonotonicSeq(t *testing.T) {
@@ -252,5 +253,89 @@ func TestDecodeAcceptsTrailingWhitespaceMix(t *testing.T) {
 	body := append(validHeartbeatLine(), []byte("  \t\n")...)
 	if _, err := DecodeLine(body); err != nil {
 		t.Fatalf("DecodeLine rejected whitespace tail: %v", err)
+	}
+}
+
+func TestDecodeRejectsEmptyLine(t *testing.T) {
+	if _, err := DecodeLine(nil); err == nil {
+		t.Fatal("DecodeLine accepted empty line")
+	}
+}
+
+func TestBuilderUsageHeartbeatAndAccessors(t *testing.T) {
+	b := NewBuilder("sess-meta")
+	if b.SessionID() != "sess-meta" || b.PeekSeq() != 0 {
+		t.Fatalf("initial builder state: id=%q seq=%d", b.SessionID(), b.PeekSeq())
+	}
+	now := time.Date(2026, 6, 21, 12, 0, 0, 0, time.UTC)
+	u, err := b.Usage(now, UsagePayload{Models: map[string]UsagePerModel{
+		"claude-sonnet": {InputTokens: 10, OutputTokens: 20},
+	}})
+	if err != nil || u.Type != TypeUsage || u.Seq != 0 {
+		t.Fatalf("Usage = (%+v, %v)", u, err)
+	}
+	hb, err := b.Heartbeat(now, HeartbeatPayload{SinceLastMessageMS: 5000})
+	if err != nil || hb.Type != TypeHeartbeat || hb.Seq != 1 || b.PeekSeq() != 2 {
+		t.Fatalf("Heartbeat = (%+v, %v, next=%d)", hb, err, b.PeekSeq())
+	}
+}
+
+func TestTruncateMessageContentNonMessagePassthrough(t *testing.T) {
+	b := NewBuilder("sess-hb")
+	env, err := b.Heartbeat(time.Now(), HeartbeatPayload{SinceLastMessageMS: 1})
+	if err != nil {
+		t.Fatalf("Heartbeat: %v", err)
+	}
+	_, _, truncated, err := TruncateMessageContent(env)
+	if err != nil || truncated {
+		t.Fatalf("non-message should pass through unchanged: truncated=%v err=%v", truncated, err)
+	}
+}
+
+func TestTruncateMessageContentDropsOversizedInput(t *testing.T) {
+	b := NewBuilder("sess-input")
+	env, err := b.Message(time.Now(), MessagePayload{
+		Kind:  "tool-use",
+		Tool:  "bash",
+		Input: map[string]any{"blob": strings.Repeat("x", MaxLineBytes+2048)},
+	})
+	if err != nil {
+		t.Fatalf("Message: %v", err)
+	}
+	out, _, truncated, err := TruncateMessageContent(env)
+	if err != nil || !truncated {
+		t.Fatalf("expected truncated=true, got (%v, %v)", truncated, err)
+	}
+	line, err := EncodeLine(out)
+	if err != nil || len(line) > MaxLineBytes {
+		t.Fatalf("truncated line len=%d err=%v", len(line), err)
+	}
+	var p MessagePayload
+	if err := json.Unmarshal(out.Payload, &p); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if p.Input != nil {
+		t.Fatalf("expected oversized Input to be dropped, got %+v", p.Input)
+	}
+}
+
+func TestTruncateMessageContentPreservesUTF8Boundaries(t *testing.T) {
+	b := NewBuilder("sess-utf8")
+	// 3-byte UTF-8 rune repeated past MaxLineBytes so bisection lands mid-rune.
+	big := strings.Repeat("中", (MaxLineBytes/3)+1024)
+	env, err := b.Message(time.Now(), MessagePayload{Kind: "text", Content: big})
+	if err != nil {
+		t.Fatalf("Message: %v", err)
+	}
+	out, _, truncated, err := TruncateMessageContent(env)
+	if err != nil || !truncated {
+		t.Fatalf("expected truncated=true, got (%v, %v)", truncated, err)
+	}
+	var p MessagePayload
+	if err := json.Unmarshal(out.Payload, &p); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !utf8.ValidString(p.Content) || len(p.Content) == 0 {
+		t.Fatalf("truncated content invalid UTF-8 or empty: len=%d", len(p.Content))
 	}
 }

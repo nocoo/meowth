@@ -366,3 +366,132 @@ func TestSessionsCancelUnknownAdapterReturnsAlreadyTerminated(t *testing.T) {
 		t.Fatalf("status = %q", body["status"])
 	}
 }
+
+func TestSessionsGetReturnsSession(t *testing.T) {
+	db := newSessionsTestDB(t)
+	id := mustSessUUID(t)
+	seedSession(t, db, id, store.BackendClaude, store.SessionStatusCompleted)
+	h := &SessionsHandler{DB: db}
+	rr := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/v1/sessions/"+id, nil)
+	sessionsRouter(h).ServeHTTP(rr, r)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rr.Code)
+	}
+	var body sessionWire
+	if err := json.Unmarshal(rr.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body.ID != id || body.Status != "completed" || body.EndedAt == nil {
+		t.Fatalf("unexpected session wire: %+v", body)
+	}
+}
+
+func TestSessionsListValidationAndPagination(t *testing.T) {
+	db := newSessionsTestDB(t)
+	a, b := mustSessUUID(t), mustSessUUID(t)
+	seedSession(t, db, a, store.BackendClaude, store.SessionStatusCompleted)
+	seedSession(t, db, b, store.BackendClaude, store.SessionStatusCompleted)
+	h := &SessionsHandler{DB: db}
+
+	for _, query := range []string{
+		"?limit=abc",
+		"?limit=0",
+		"?limit=201",
+		"?before=not-a-date",
+	} {
+		rr := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/v1/sessions"+query, nil)
+		sessionsRouter(h).ServeHTTP(rr, r)
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("%s status = %d, want 400", query, rr.Code)
+		}
+	}
+
+	rr := httptest.NewRecorder()
+	before := time.Now().UTC().Add(time.Minute).Format(time.RFC3339)
+	r := httptest.NewRequest(http.MethodGet, "/v1/sessions?limit=1&before="+before, nil)
+	sessionsRouter(h).ServeHTTP(rr, r)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rr.Code)
+	}
+	var body struct{ Sessions []sessionWire }
+	_ = json.Unmarshal(rr.Body.Bytes(), &body)
+	if len(body.Sessions) != 1 {
+		t.Fatalf("len = %d, want 1", len(body.Sessions))
+	}
+}
+
+func TestSessionsMessagesFilteringPaginationAndErrors(t *testing.T) {
+	db := newSessionsTestDB(t)
+	id := mustSessUUID(t)
+	seedSession(t, db, id, store.BackendClaude, store.SessionStatusCompleted)
+	_ = store.AppendMessage(context.Background(), db, store.AppendMessageParams{
+		SessionID: id, Seq: 0, EventType: store.EventSessionStarted,
+		TS: time.Now().UTC(), EnvelopeJSON: []byte(`{"v":1,"type":"session_started"}`),
+	})
+	_ = store.AppendMessage(context.Background(), db, store.AppendMessageParams{
+		SessionID: id, Seq: 1, EventType: store.EventMessage,
+		TS: time.Now().UTC(), EnvelopeJSON: []byte(`{"v":1,"type":"message"}`),
+	})
+	_ = store.AppendMessage(context.Background(), db, store.AppendMessageParams{
+		SessionID: id, Seq: 2, EventType: store.EventSessionEnded,
+		TS: time.Now().UTC(), EnvelopeJSON: []byte(`{"v":1,"type":"session_ended"}`),
+	})
+	h := &SessionsHandler{DB: db}
+
+	// Unknown session → 404.
+	rr404 := httptest.NewRecorder()
+	sessionsRouter(h).ServeHTTP(rr404, httptest.NewRequest(http.MethodGet, "/v1/sessions/01900000-0000-7000-8000-000000000000/messages", nil))
+	if rr404.Code != http.StatusNotFound {
+		t.Fatalf("unknown session status = %d, want 404", rr404.Code)
+	}
+
+	// Invalid after_seq / limit → 400.
+	for _, query := range []string{"?after_seq=nope", "?limit=0"} {
+		rr := httptest.NewRecorder()
+		sessionsRouter(h).ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/sessions/"+id+"/messages"+query, nil))
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("%s status = %d, want 400", query, rr.Code)
+		}
+	}
+
+	// types filter + limit=2 triggers has_more=true while advancing next_after_seq.
+	rr := httptest.NewRecorder()
+	sessionsRouter(h).ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/sessions/"+id+"/messages?limit=2&types=message", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rr.Code)
+	}
+	var body struct {
+		Events       []json.RawMessage `json:"events"`
+		NextAfterSeq int64             `json:"next_after_seq"`
+		HasMore      bool              `json:"has_more"`
+	}
+	_ = json.Unmarshal(rr.Body.Bytes(), &body)
+	if len(body.Events) != 1 || body.NextAfterSeq != 1 || !body.HasMore {
+		t.Fatalf("unexpected filtered messages body: %+v", body)
+	}
+}
+
+func TestRouterNotFoundAndMethodNotAllowed(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		fn         http.HandlerFunc
+		wantStatus int
+		wantType   problem.Kind
+	}{
+		{"not found", NotFound, http.StatusNotFound, problem.KindNotFound},
+		{"method not allowed", MethodNotAllowed, http.StatusMethodNotAllowed, problem.KindInvalidRequest},
+	} {
+		rr := httptest.NewRecorder()
+		tc.fn(rr, httptest.NewRequest(http.MethodGet, "/nope", nil))
+		if rr.Code != tc.wantStatus {
+			t.Fatalf("%s status = %d, want %d", tc.name, rr.Code, tc.wantStatus)
+		}
+		var p problem.Body
+		_ = json.Unmarshal(rr.Body.Bytes(), &p)
+		if p.Type != string(tc.wantType) {
+			t.Fatalf("%s type = %q, want %q", tc.name, p.Type, tc.wantType)
+		}
+	}
+}

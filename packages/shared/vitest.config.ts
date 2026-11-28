@@ -9,14 +9,21 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
       reportsDirectory: 'coverage',
-      include: ['src/**'],
+      include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'src/**/*.test.ts',
         'src/**/*.test.tsx',
         'src/**/*.d.ts',
-        'src/**/index.ts',
+        'src/**/*.tsx',
         'src/**/types.ts',
+        'src/openapi-types.ts',
       ],
+      thresholds: {
+        statements: 90,
+        lines: 90,
+        functions: 90,
+        branches: 85,
+      },
     },
   },
 });

@@ -13,7 +13,7 @@
     "lint": "biome check --error-on-warnings .",
     "format": "biome format --write .",
     "typecheck": "turbo run typecheck",
-    "test": "pnpm test:hooks && turbo run test",
+    "test": "turbo run test",
     "test:hooks": "node --test scripts/__tests__/pre-commit-l1.test.cjs",
     "check:l1:ts-four-metrics": "bash scripts/check-l1-ts-four-metrics.sh",
     "precommit:l1": "bash scripts/hooks/pre-commit-l1.sh",
